@@ -1,0 +1,66 @@
+/* Підключаємо твій фірмовий шрифт Manrope */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Наші затверджені кольори (Брендборд) */
+  --primary: #4F46E5; 
+  --bg-color: #F9FAFB;
+  --surface: #FFFFFF;
+  --text-main: #111827;
+  --text-muted: #6B7280;
+  --border: #E5E7EB;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Manrope', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  height: 100vh;
+}
+
+/* Каркас нашого додатку (AppLayout) */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-header {
+  height: 64px;
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 32px;
+}
+
+.app-header h1 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--primary); /* Логотип твого кольору Indigo */
+}
+
+.main-container {
+  display: flex;
+  flex: 1;
+  padding: 24px 32px;
+  gap: 24px; /* Ті самі відступи кратні 8 */
+}
+
+/* Три наші робочі колонки */
+.column {
+  background-color: var(--surface);
+  border-radius: 8px; /* Наші круглі кути */
+  border: 1px solid var(--border);
+  padding: 24px;
+}
+
+.settings-panel { flex: 1; }
+.preview-panel { flex: 2; display: flex; align-items: center; justify-content: center; background-color: var(--bg-color); }
+.code-panel { flex: 1; }

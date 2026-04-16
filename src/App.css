@@ -1,0 +1,11 @@
+.main-container {
+  display: flex;
+  flex-direction: row; /* ТРИ В РЯД */
+  gap: 24px;
+  padding: 24px;
+  align-items: stretch; /* ОДНАКОВА ВИСОТА */
+}
+
+.column {
+  flex: 1; /* РІВНА ШИРИНА */
+}
