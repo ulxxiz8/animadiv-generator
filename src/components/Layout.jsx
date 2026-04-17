@@ -4,7 +4,6 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 const Layout = () => {
   const location = useLocation();
 
-  // Функція для визначення активного посилання (дизайнерський підхід)
   const getLinkStyle = (path) => ({
     textDecoration: 'none',
     color: location.pathname === path ? '#4F46E5' : '#374151',
@@ -21,7 +20,7 @@ const Layout = () => {
         fontFamily: 'Inter, system-ui, sans-serif',
       }}
     >
-      {/* HEADER (Шапка з твого UX-скетчу) */}
+      {/* HEADER */}
       <header
         style={{
           display: 'flex',
@@ -39,7 +38,8 @@ const Layout = () => {
           Animadiv.
         </div>
 
-        <nav style={{ display: 'flex', gap: '24px', fontSize: '14px' }}>
+        {/* Оновлене меню з доданою сторінкою About */}
+        <nav style={{ display: 'flex', gap: '20px', fontSize: '14px' }}>
           <Link to="/" style={getLinkStyle('/')}>
             Home
           </Link>
@@ -55,11 +55,13 @@ const Layout = () => {
           <Link to="/mysets" style={getLinkStyle('/mysets')}>
             My Sets
           </Link>
+          <Link to="/about" style={getLinkStyle('/about')}>
+            About
+          </Link>
         </nav>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span style={{ fontSize: '12px', color: '#6B7280' }}>UA | Dark</span>
-          {/* Сюди потім вставимо твій перемикач теми */}
         </div>
       </header>
 
@@ -68,7 +70,7 @@ const Layout = () => {
         <Outlet />
       </main>
 
-      {/* FOOTER (Підвал) */}
+      {/* FOOTER */}
       <footer
         style={{
           textAlign: 'center',
