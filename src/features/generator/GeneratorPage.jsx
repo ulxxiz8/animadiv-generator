@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import ControlsPanel from './ControlsPanel';
 import PreviewArea from './PreviewArea';
 import CodeOutput from './CodeOutput';
@@ -6,41 +6,52 @@ import { initialParams } from '../../data/defaultParams';
 import { generateFullCSS } from '../../utils/generateCss';
 
 const GeneratorPage = () => {
-  const [params, setParams] = useState(initialParams);
+  // ТАСКА: Завантаження параметрів з localStorage при старті
+  const [params, setParams] = useState(() => {
+    const saved = localStorage.getItem('animadiv-params');
+    return saved ? JSON.parse(saved) : initialParams;
+  });
+
   const [refreshKey, setRefreshKey] = useState(0);
 
   const updateParam = (key, value) =>
     setParams((prev) => ({ ...prev, [key]: value }));
-  const resetParams = () => setParams(initialParams);
+  const resetParams = () => {
+    setParams(initialParams);
+    localStorage.removeItem('animadiv-params'); // Очищення при скиданні
+  };
   const handleReplay = () => setRefreshKey((prev) => prev + 1);
 
-  // Таска 6: Обчислення (залишається робочою)
   const fullCss = useMemo(() => generateFullCSS(params), [params]);
 
-  // ТАСКА 4: Автоматичний перезапуск при зміні пресета (ТЕПЕР ВОНО СТОЇТЬ ОКРЕМО)
-  React.useEffect(() => {
+  // ТАСКА: Збереження params у localStorage з Debounce 500мс
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      localStorage.setItem('animadiv-params', JSON.stringify(params));
+      console.log('Saved to localStorage'); // Для тестування
+    }, 500);
+
+    // Очищення таймера, якщо params змінилися швидше ніж за 500мс
+    return () => clearTimeout(timer);
+  }, [params]);
+
+  // Автоматичний перезапуск при зміні пресета
+  useEffect(() => {
     handleReplay();
   }, [params.presetId]);
 
-  // ТАСКА: Ін'єкція стилів у DOM
-  React.useEffect(() => {
-    // 1. Створюємо або знаходимо існуючий тег <style> для наших динамічних анімацій
+  // Ін'єкція стилів у DOM
+  useEffect(() => {
     let styleTag = document.getElementById('dynamic-animation-styles');
-
     if (!styleTag) {
       styleTag = document.createElement('style');
       styleTag.id = 'dynamic-animation-styles';
       document.head.appendChild(styleTag);
     }
-
-    // 2. Записуємо наш згенерований CSS у цей тег
     styleTag.innerHTML = fullCss;
 
-    // 3. Очищення при видаленні компонента
     return () => {
-      if (styleTag) {
-        styleTag.innerHTML = '';
-      }
+      if (styleTag) styleTag.innerHTML = '';
     };
   }, [fullCss]);
 
@@ -54,11 +65,9 @@ const GeneratorPage = () => {
           onReplay={handleReplay}
         />
       </div>
-
       <div className="column preview-panel">
         <PreviewArea params={params} refreshKey={refreshKey} />
       </div>
-
       <div className="column code-panel">
         <CodeOutput params={params} code={fullCss} />
       </div>

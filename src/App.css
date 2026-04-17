@@ -9,3 +9,16 @@
 .column {
   flex: 1; /* РІВНА ШИРИНА */
 }
+/* ТАСКА 3: Адаптивність для мобільних пристроїв */
+@media (max-width: 768px) {
+  .main-container {
+    flex-direction: column !important; /* Робимо блоки один під одним */
+    align-items: center;
+    gap: 20px;
+  }
+
+  .column {
+    width: 100% !important; /* Кожна колонка займає всю ширину екрану */
+    max-width: 100%;
+  }
+}
