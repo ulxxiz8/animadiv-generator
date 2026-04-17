@@ -16,6 +16,12 @@ const GeneratorPage = () => {
 
   // Таска 6: Обчислення (залишається робочою)
   const fullCss = useMemo(() => generateFullCSS(params), [params]);
+
+  // ТАСКА 4: Автоматичний перезапуск при зміні пресета (ТЕПЕР ВОНО СТОЇТЬ ОКРЕМО)
+  React.useEffect(() => {
+    handleReplay();
+  }, [params.presetId]);
+
   // ТАСКА: Ін'єкція стилів у DOM
   React.useEffect(() => {
     // 1. Створюємо або знаходимо існуючий тег <style> для наших динамічних анімацій
@@ -30,13 +36,14 @@ const GeneratorPage = () => {
     // 2. Записуємо наш згенерований CSS у цей тег
     styleTag.innerHTML = fullCss;
 
-    // 3. Очищення при видаленні компонента (опціонально, але професійно)
+    // 3. Очищення при видаленні компонента
     return () => {
       if (styleTag) {
         styleTag.innerHTML = '';
       }
     };
-  }, [fullCss]); // Ефект спрацьовує щоразу, коли змінюється текст коду
+  }, [fullCss]);
+
   return (
     <main className="main-container">
       <div className="column settings-panel">
@@ -48,7 +55,6 @@ const GeneratorPage = () => {
         />
       </div>
 
-      {/* ПОВЕРТАЄМО ПАНЕЛІ В ОДИН РЯД, ЯКЩО ТВІЙ CSS ЦЕ ПЕРЕДБАЧАЄ */}
       <div className="column preview-panel">
         <PreviewArea params={params} refreshKey={refreshKey} />
       </div>
