@@ -1,16 +1,28 @@
-import './index.css';
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import Home from './pages/Home';
+import Library from './pages/Library';
+import Collections from './pages/Collections';
+import MySets from './pages/MySets';
+import About from './pages/About';
 import GeneratorPage from './features/generator/GeneratorPage';
 
 function App() {
   return (
-    <div className="app-layout">
-      <header className="app-header">
-        <h1>AnimaDiv</h1>
-      </header>
-
-      {/* Рендеримо нашу нову сторінку */}
-      <GeneratorPage />
-    </div>
+    <BrowserRouter>
+      <Routes>
+        {/* Layout огортає всі маршрути */}
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="generator" element={<GeneratorPage />} />
+          <Route path="library" element={<Library />} />
+          <Route path="collections" element={<Collections />} />
+          <Route path="mysets" element={<MySets />} />
+          <Route path="about" element={<About />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
 
