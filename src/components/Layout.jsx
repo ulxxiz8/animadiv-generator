@@ -1,15 +1,23 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import {
+  LayoutTemplate,
+  PlaySquare,
+  Library,
+  Layers,
+  Info,
+} from 'lucide-react'; // Іконки
 
 const Layout = () => {
   const location = useLocation();
 
-  const getLinkStyle = (path) => ({
-    textDecoration: 'none',
-    color: location.pathname === path ? '#4F46E5' : '#374151',
-    fontWeight: location.pathname === path ? '700' : '500',
-    transition: 'color 0.2s ease',
-  });
+  const navItems = [
+    { name: 'Generator', path: '/generator', icon: PlaySquare },
+    { name: 'Library', path: '/library', icon: Library },
+    { name: 'UI Kit', path: '/collections', icon: LayoutTemplate },
+    { name: 'My Sets', path: '/mysets', icon: Layers },
+    { name: 'About', path: '/about', icon: Info },
+  ];
 
   return (
     <div
@@ -20,48 +28,72 @@ const Layout = () => {
         fontFamily: 'Inter, system-ui, sans-serif',
       }}
     >
-      {/* HEADER */}
+      {/* HEADER (ОНОВЛЕНИЙ) */}
       <header
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '16px 40px',
+          padding: '0 32px',
+          height: '80px',
           borderBottom: '1px solid #E5E7EB',
           backgroundColor: '#fff',
           position: 'sticky',
           top: 0,
-          zIndex: 10,
+          zIndex: 100,
         }}
       >
-        <div style={{ fontWeight: '900', fontSize: '22px', color: '#111827' }}>
-          Animadiv.
-        </div>
+        {/* Логотип */}
+        <Link
+          to="/"
+          style={{
+            fontWeight: '800',
+            fontSize: '24px',
+            color: '#111827',
+            textDecoration: 'none',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          Animadiv<span style={{ color: '#4F46E5' }}>.</span>
+        </Link>
 
-        {/* Оновлене меню з доданою сторінкою About */}
-        <nav style={{ display: 'flex', gap: '20px', fontSize: '14px' }}>
-          <Link to="/" style={getLinkStyle('/')}>
-            Home
-          </Link>
-          <Link to="/generator" style={getLinkStyle('/generator')}>
-            Generator
-          </Link>
-          <Link to="/library" style={getLinkStyle('/library')}>
-            Library
-          </Link>
-          <Link to="/collections" style={getLinkStyle('/collections')}>
-            UI Kit
-          </Link>
-          <Link to="/mysets" style={getLinkStyle('/mysets')}>
-            My Sets
-          </Link>
-          <Link to="/about" style={getLinkStyle('/about')}>
-            About
-          </Link>
+        {/* Навігація з іконками */}
+        <nav style={{ display: 'flex', gap: '8px' }}>
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.name}
+                to={item.path}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: isActive ? '#111827' : '#6B7280',
+                  background: isActive ? '#F3F4F6' : 'transparent',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <Icon size={16} strokeWidth={isActive ? 2.5 : 2} />
+                {item.name}
+              </Link>
+            );
+          })}
         </nav>
 
+        {/* Темна тема (поки що просто текст) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '12px', color: '#6B7280' }}>UA | Dark</span>
+          <span
+            style={{ fontSize: '13px', color: '#6B7280', fontWeight: '500' }}
+          >
+            UA | Dark
+          </span>
         </div>
       </header>
 
@@ -74,13 +106,14 @@ const Layout = () => {
       <footer
         style={{
           textAlign: 'center',
-          padding: '20px',
+          padding: '24px',
           borderTop: '1px solid #E5E7EB',
           fontSize: '13px',
           color: '#9CA3AF',
+          backgroundColor: '#fff',
         }}
       >
-        Created by Yuliia Riabych | GitHub | 2026
+        Created by Yuliia Riabych | 2026
       </footer>
     </div>
   );

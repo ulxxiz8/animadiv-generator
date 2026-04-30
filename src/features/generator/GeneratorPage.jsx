@@ -3,50 +3,74 @@ import ControlsPanel from './ControlsPanel';
 import PreviewArea from './PreviewArea';
 import CodeOutput from './CodeOutput';
 import { generateFullCSS } from '../../utils/generateCss';
-// Тимчасово закоментуємо старий імпорт, бо ми створили нову архітектуру прямо тут
-// import { initialParams } from '../../data/defaultParams';
+import {
+  createElement,
+  updateElementStyle,
+  updateSpecificSetting,
+} from '../../utils/elementSystem'; // ПІДКЛЮЧАЄМО НАШУ ФАБРИКУ
 
-// НОВА АРХІТЕКТУРА ДАНИХ (State)
-const advancedInitialParams = {
-  // 1. Глобальний дизайн (єдиний для всіх станів)
-  elementType: 'button',
-  color: '#4F46E5',
-  size: 64,
+// Функція ініціалізації стану
+const getInitialState = () => {
+  const saved = localStorage.getItem('animadiv-params');
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    // Перевіряємо, чи це вже нова архітектура (має бути об'єкт styles)
+    if (parsed.styles && parsed.animations) return parsed;
+  }
 
-  // 2. Локальні налаштування анімації (незалежні для кожного стану)
-  animations: {
-    load: {
-      presetId: 'bounce',
-      duration: 800,
-      easing: 'ease-out',
-      intensity: 100,
+  // Якщо нічого немає або версія стара — генеруємо базову кнопку через фабрику
+  const defaultElement = createElement('button');
+  return {
+    ...defaultElement,
+    animations: {
+      load: {
+        presetId: 'bounce',
+        duration: 800,
+        easing: 'ease-out',
+        intensity: 100,
+      },
+      hover: {
+        presetId: 'none',
+        duration: 200,
+        easing: 'ease',
+        intensity: 100,
+      },
+      click: {
+        presetId: 'none',
+        duration: 150,
+        easing: 'ease',
+        intensity: 100,
+      },
     },
-    hover: { presetId: 'none', duration: 200, easing: 'ease', intensity: 100 },
-    click: { presetId: 'none', duration: 150, easing: 'ease', intensity: 100 },
-  },
+  };
 };
 
 const GeneratorPage = () => {
-  // Завантаження параметрів з localStorage при старті
-  const [params, setParams] = useState(() => {
-    const saved = localStorage.getItem('animadiv-params');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // ЗАПОБІЖНИК: Якщо в пам'яті лежить стара версія (без об'єкта animations), скидаємо до нової
-      if (!parsed.animations) return advancedInitialParams;
-      return parsed;
-    }
-    return advancedInitialParams;
-  });
-
+  const [params, setParams] = useState(getInitialState);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // НОВА ЛОГІКА ОНОВЛЕННЯ 1: Для Дизайну (color, size, elementType)
-  const updateDesignParam = (key, value) => {
-    setParams((prev) => ({ ...prev, [key]: value }));
+  // 1. ОНОВЛЕННЯ ТИПУ ЕЛЕМЕНТА (Зберігаємо поточні анімації, але повністю міняємо об'єкт)
+  const handleTypeChange = (newType) => {
+    const newElement = createElement(newType);
+    if (newElement) {
+      setParams((prev) => ({
+        ...newElement,
+        animations: prev.animations, // Переносимо анімації на новий елемент
+      }));
+    }
   };
 
-  // НОВА ЛОГІКА ОНОВЛЕННЯ 2: Для Анімації конкретного стану (load, hover, click)
+  // 2. ОНОВЛЕННЯ БАЗОВИХ СТИЛІВ (width, height, background...)
+  const handleStyleChange = (key, value) => {
+    setParams((prev) => updateElementStyle(prev, key, value));
+  };
+
+  // 3. ОНОВЛЕННЯ СПЕЦИФІЧНИХ НАЛАШТУВАНЬ (текст кнопки, тип інпута...)
+  const handleSpecificSettingChange = (key, value) => {
+    setParams((prev) => updateSpecificSetting(prev, key, value));
+  };
+
+  // 4. ОНОВЛЕННЯ АНІМАЦІЙ
   const updateAnimationParam = (stateName, key, value) => {
     setParams((prev) => ({
       ...prev,
@@ -61,32 +85,26 @@ const GeneratorPage = () => {
   };
 
   const resetParams = () => {
-    setParams(advancedInitialParams);
-    localStorage.removeItem('animadiv-params'); // Очищення при скиданні
+    localStorage.removeItem('animadiv-params');
+    setParams(getInitialState());
   };
 
   const handleReplay = () => setRefreshKey((prev) => prev + 1);
 
-  // Примітка: Після завершення всіх 3 кроків нам доведеться оновити generateFullCSS,
-  // щоб він вмів читати нову структуру (params.animations). Поки що може не генерувати правильний CSS.
+  // CSS генератор тимчасово може видавати помилки, поки ми його не оновимо, це ок
   const fullCss = useMemo(() => generateFullCSS(params), [params]);
 
-  // Збереження params у localStorage з Debounce 500мс
   useEffect(() => {
     const timer = setTimeout(() => {
       localStorage.setItem('animadiv-params', JSON.stringify(params));
-      console.log('Saved NEW structure to localStorage');
     }, 500);
-
     return () => clearTimeout(timer);
   }, [params]);
 
-  // Автоматичний перезапуск при зміні пресета для Load (бо Hover/Click ми тестуємо мишкою)
   useEffect(() => {
     handleReplay();
   }, [params.animations.load.presetId]);
 
-  // Ін'єкція стилів у DOM
   useEffect(() => {
     let styleTag = document.getElementById('dynamic-animation-styles');
     if (!styleTag) {
@@ -95,7 +113,6 @@ const GeneratorPage = () => {
       document.head.appendChild(styleTag);
     }
     styleTag.innerHTML = fullCss;
-
     return () => {
       if (styleTag) styleTag.innerHTML = '';
     };
@@ -106,7 +123,9 @@ const GeneratorPage = () => {
       <div className="column settings-panel">
         <ControlsPanel
           params={params}
-          onUpdateDesign={updateDesignParam}
+          onTypeChange={handleTypeChange}
+          onStyleChange={handleStyleChange}
+          onSpecificSettingChange={handleSpecificSettingChange}
           onUpdateAnimation={updateAnimationParam}
           onReset={resetParams}
           onReplay={handleReplay}

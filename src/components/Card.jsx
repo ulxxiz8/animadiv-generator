@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Copy, Bookmark, Trash2, CheckCircle } from 'lucide-react'; // Підключили іконки
 
 const Card = ({ name, category, preview, animationName, mode = 'library' }) => {
   const [isHovered, setIsHovered] = useState(false);
@@ -8,13 +9,11 @@ const Card = ({ name, category, preview, animationName, mode = 'library' }) => {
     const savedItems = JSON.parse(
       localStorage.getItem('animadiv_saved') || '[]'
     );
-    const exists = savedItems.some((item) => item.name === name);
-    setIsSaved(exists);
+    setIsSaved(savedItems.some((item) => item.name === name));
   }, [name]);
 
   const toggleSave = () => {
     let savedItems = JSON.parse(localStorage.getItem('animadiv_saved') || '[]');
-
     if (isSaved) {
       savedItems = savedItems.filter((item) => item.name !== name);
       setIsSaved(false);
@@ -22,7 +21,6 @@ const Card = ({ name, category, preview, animationName, mode = 'library' }) => {
       savedItems.push({ name, category, preview, animationName });
       setIsSaved(true);
     }
-
     localStorage.setItem('animadiv_saved', JSON.stringify(savedItems));
   };
 
@@ -33,18 +31,21 @@ const Card = ({ name, category, preview, animationName, mode = 'library' }) => {
         borderRadius: '16px',
         border: '1px solid #E5E7EB',
         overflow: 'hidden',
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        transition: 'all 0.3s ease',
         cursor: 'pointer',
       }}
       onMouseEnter={(e) => {
         setIsHovered(true);
         e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.boxShadow = '0 12px 24px -8px rgba(0,0,0,0.1)';
+        e.currentTarget.style.boxShadow =
+          '0 12px 24px -8px rgba(17, 24, 39, 0.1)';
+        e.currentTarget.style.borderColor = '#D1D5DB';
       }}
       onMouseLeave={(e) => {
         setIsHovered(false);
         e.currentTarget.style.transform = 'translateY(0)';
         e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.borderColor = '#E5E7EB';
       }}
     >
       <div
@@ -65,6 +66,7 @@ const Card = ({ name, category, preview, animationName, mode = 'library' }) => {
               ? `${animationName} 1.5s ease-in-out infinite`
               : 'none',
             transformOrigin: 'center',
+            color: '#4F46E5',
           }}
         >
           {preview}
@@ -72,59 +74,77 @@ const Card = ({ name, category, preview, animationName, mode = 'library' }) => {
       </div>
 
       <div style={{ padding: '20px' }}>
-        <div style={{ marginBottom: '16px' }}>
+        <div style={{ marginBottom: '20px' }}>
           <h3
             style={{
               fontSize: '18px',
               fontWeight: '700',
               color: '#111827',
-              margin: '0 0 4px 0',
+              margin: '0 0 6px 0',
+              letterSpacing: '-0.01em',
             }}
           >
             {name}
           </h3>
           <span
             style={{
-              fontSize: '13px',
+              fontSize: '12px',
               color: '#6B7280',
               background: '#F3F4F6',
               padding: '4px 8px',
               borderRadius: '6px',
+              fontWeight: '500',
             }}
           >
             {category}
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {/* Кнопка COPY */}
           <button
             style={{
               flex: 1,
               padding: '10px',
-              background: '#EEF2FF',
-              color: '#4F46E5',
+              background: '#F3F4F6',
+              color: '#374151',
               border: 'none',
               borderRadius: '8px',
               fontWeight: '600',
               fontSize: '13px',
               cursor: 'pointer',
-              transition: 'background 0.2s',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
             }}
-            onMouseEnter={(e) => (e.target.style.background = '#E0E7FF')}
-            onMouseLeave={(e) => (e.target.style.background = '#EEF2FF')}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#E5E7EB';
+              e.target.style.color = '#111827';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = '#F3F4F6';
+              e.target.style.color = '#374151';
+            }}
           >
-            Copy
+            <Copy size={14} /> Copy
           </button>
 
+          {/* Кнопка SAVE/DELETE */}
           <button
             onClick={toggleSave}
             style={{
               flex: 1,
               padding: '10px',
-              /* Якщо ми в MySets - колір червоний. Інакше - зелений або чорний */
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
               background:
-                mode === 'mysets' ? '#EF4444' : isSaved ? '#10B981' : '#111827',
-              color: '#fff',
+                mode === 'mysets' ? '#FEE2E2' : isSaved ? '#D1FAE5' : '#111827',
+              color:
+                mode === 'mysets' ? '#EF4444' : isSaved ? '#10B981' : '#fff',
               border: 'none',
               borderRadius: '8px',
               fontWeight: '600',
@@ -135,12 +155,19 @@ const Card = ({ name, category, preview, animationName, mode = 'library' }) => {
             onMouseEnter={(e) => (e.target.style.opacity = '0.8')}
             onMouseLeave={(e) => (e.target.style.opacity = '1')}
           >
-            {/* Текст теж залежить від того, де ми знаходимося */}
-            {mode === 'mysets'
-              ? 'Видалити ✕'
-              : isSaved
-                ? 'Збережено ✓'
-                : 'Зберегти'}
+            {mode === 'mysets' ? (
+              <>
+                <Trash2 size={14} /> Delete
+              </>
+            ) : isSaved ? (
+              <>
+                <CheckCircle size={14} /> Saved
+              </>
+            ) : (
+              <>
+                <Bookmark size={14} /> Save
+              </>
+            )}
           </button>
         </div>
       </div>

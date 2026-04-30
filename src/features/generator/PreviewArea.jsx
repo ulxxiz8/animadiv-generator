@@ -1,235 +1,391 @@
 import React, { useState } from 'react';
 import { animationPresets } from '../../data/presets';
+import {
+  MousePointer2,
+  Pointer,
+  LayoutTemplate,
+  Check,
+  Square,
+  Grid,
+  RotateCcw,
+} from 'lucide-react';
 
-// --- НОВИЙ КОМПОНЕНТ: Анімований курсор-підказка ---
 const HintCursor = ({ type, isVisible }) => {
+  if (!isVisible) return null;
   const animationStyle =
     type === 'hover'
       ? 'hint-hover 3s infinite ease-in-out'
       : 'hint-click 2s infinite ease-in-out';
-
   return (
     <div
       style={{
         position: 'absolute',
-        right: '20%',
-        bottom: '20%',
-        opacity: isVisible ? 0.7 : 0,
+        right: '10%',
+        bottom: '10%',
         transition: 'opacity 0.3s ease',
         pointerEvents: 'none',
-        animation: isVisible ? animationStyle : 'none',
+        animation: animationStyle,
         zIndex: 10,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
       }}
     >
-      <div
-        style={{
-          fontSize: '24px',
-          filter: 'drop-shadow(0px 4px 4px rgba(0,0,0,0.2))',
-        }}
-      >
-        {type === 'hover' ? '🖱️' : '👆'}
+      <div style={{ filter: 'drop-shadow(0px 8px 12px rgba(0,0,0,0.15))' }}>
+        {type === 'hover' ? (
+          <MousePointer2 size={32} fill="#ffffff" />
+        ) : (
+          <Pointer size={32} fill="#ffffff" />
+        )}
       </div>
-      <div
-        style={{
-          background: '#111827',
-          color: '#fff',
-          fontSize: '10px',
-          padding: '2px 6px',
-          borderRadius: '4px',
-          marginTop: '4px',
-          fontWeight: 'bold',
-        }}
-      >
-        {type === 'hover' ? 'Наведи' : 'Клікни'}
-      </div>
-
       <style>{`
-        @keyframes hint-hover {
-          0%, 100% { transform: translate(20px, 20px); }
-          50% { transform: translate(-10px, -10px); }
-        }
-        @keyframes hint-click {
-          0%, 100% { transform: translateY(10px) scale(1); }
-          50% { transform: translateY(-5px) scale(0.9); }
-        }
+        @keyframes hint-hover { 0%, 100% { transform: translate(20px, 20px); } 50% { transform: translate(-10px, -10px); } }
+        @keyframes hint-click { 0%, 100% { transform: translateY(10px) scale(1); } 50% { transform: translateY(-5px) scale(0.9); } }
       `}</style>
     </div>
   );
 };
 
-// --- ВНУТРІШНІЙ КОМПОНЕНТ: Елемент, що анімується ---
-const AnimatedItem = ({ params, activeState, Tag }) => {
-  const [triggerCount, setTriggerCount] = useState(0);
+const AnimatedItem = ({ params, activeState, localReplayKey }) => {
   const [isActive, setIsActive] = useState(false);
 
+  if (!params || !params.styles || !params.specificSettings) return null;
+
+  const s = params.specificSettings;
+  const styles = params.styles;
   const stateConfig =
     params.animations[activeState === 'static' ? 'load' : activeState];
   const activePreset = animationPresets.find(
-    (p) => p.id === stateConfig.presetId
+    (p) => p.id === stateConfig?.presetId
   );
-
   const animationString =
     activePreset && activePreset.id !== 'none'
       ? `ag_${activePreset.id} ${stateConfig.duration}ms ${stateConfig.easing} both`
       : 'none';
 
-  const handleMouseEnter = () => {
-    if (activeState === 'hover') {
-      setTriggerCount((c) => c + 1);
-      setIsActive(true);
+  const isHovered = activeState === 'hover' && isActive;
+  const isClicked = activeState === 'click' && isActive;
+  const shouldPlayKeyframes = activeState === 'load' || isHovered || isClicked;
+
+  let Tag = params.tag || 'div';
+  if (params.type === 'text') Tag = s.tag || 'p';
+  if (params.type === 'checkbox' || params.type === 'radio') Tag = 'label';
+
+  const isVoidElement = Tag === 'input' || Tag === 'img' || Tag === 'textarea';
+
+  const elementStyles = {
+    width: styles.width !== 'auto' ? `${styles.width}px` : 'auto',
+    height: styles.height !== 'auto' ? `${styles.height}px` : 'auto',
+    backgroundColor: styles.backgroundColor,
+    color: styles.color,
+    borderRadius: `${styles.borderRadius || 0}px`,
+    border:
+      styles.borderWidth > 0
+        ? `${styles.borderWidth}px solid ${styles.borderColor || '#E5E7EB'}`
+        : 'none',
+    filter:
+      styles.opacity !== undefined && styles.opacity < 1
+        ? `opacity(${styles.opacity})`
+        : 'none',
+    padding: styles.padding || 0,
+    boxSizing: 'border-box',
+    outline: 'none',
+    margin: 0,
+    fontFamily: s.fontFamily || 'inherit',
+    boxShadow:
+      isHovered && s.hoverShadow
+        ? s.hoverShadow
+        : isHovered
+          ? '0 10px 15px -3px rgba(0,0,0,0.1)'
+          : 'none',
+    animation: shouldPlayKeyframes ? animationString : 'none',
+    '--animation-intensity': stateConfig?.intensity || 1,
+    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+    transform: isClicked
+      ? `scale(${s.activeScale || 0.95})`
+      : isHovered
+        ? `scale(${s.hoverScale || 1.02})`
+        : 'scale(1)',
+  };
+
+  if (params.type === 'block') {
+    elementStyles.display = 'flex';
+    elementStyles.flexDirection = 'column';
+    elementStyles.justifyContent = s.alignY || 'center';
+    elementStyles.alignItems = s.alignX || 'center';
+    elementStyles.gap = `${s.gap || 0}px`;
+    elementStyles.overflow = s.overflow || 'visible';
+  }
+
+  if (params.type === 'button') {
+    elementStyles.display = 'flex';
+    elementStyles.alignItems = 'center';
+    elementStyles.justifyContent = 'center';
+    elementStyles.fontSize = `${s.fontSize || 14}px`;
+    elementStyles.fontWeight = s.fontWeight || 600;
+    elementStyles.cursor = 'pointer';
+    elementStyles.whiteSpace = 'pre-wrap';
+    elementStyles.textAlign = 'center';
+    if (isHovered && s.hoverBackground)
+      elementStyles.backgroundColor = s.hoverBackground;
+    if (isHovered && s.hoverColor) elementStyles.color = s.hoverColor;
+  }
+
+  if (params.type === 'input') {
+    elementStyles.fontSize = `${s.fontSize || 14}px`;
+    elementStyles.fontWeight = s.fontWeight || 400;
+    elementStyles.padding = styles.padding || '0 16px';
+    if (s.disabled) elementStyles.filter = 'opacity(0.5)';
+    if (isHovered || isClicked) {
+      elementStyles.borderColor = s.focusBorderColor;
+      elementStyles.boxShadow =
+        s.focusShadow || `0 0 0 3px ${s.focusBorderColor}33`;
     }
-  };
+  }
 
-  const handleMouseLeave = () => {
-    if (activeState === 'hover' || activeState === 'click') setIsActive(false);
-  };
-
-  const handleMouseDown = () => {
-    if (activeState === 'click') {
-      setTriggerCount((c) => c + 1);
-      setIsActive(true);
+  if (params.type === 'textarea') {
+    elementStyles.fontSize = `${s.fontSize || 14}px`;
+    elementStyles.padding = '12px 16px';
+    elementStyles.resize = s.resize || 'both';
+    if (s.disabled) elementStyles.opacity = 0.5;
+    if (isHovered || isClicked) {
+      elementStyles.borderColor = s.focusBorderColor;
+      elementStyles.boxShadow =
+        s.focusShadow || `0 0 0 3px ${s.focusBorderColor}33`;
     }
+  }
+
+  if (params.type === 'text') {
+    elementStyles.fontSize = `${s.fontSize || 24}px`;
+    elementStyles.fontWeight = s.fontWeight || 800;
+    elementStyles.textAlign = s.textAlign || 'center';
+    elementStyles.lineHeight = s.lineHeight || 1.5;
+    elementStyles.whiteSpace = 'pre-wrap';
+  }
+
+  if (params.type === 'image') {
+    elementStyles.objectFit = s.objectFit || 'cover';
+    elementStyles.display = 'block';
+    elementStyles.padding = 0;
+  }
+
+  if (params.type === 'link') {
+    elementStyles.fontSize = `${s.fontSize || 14}px`;
+    elementStyles.fontWeight = s.fontWeight || 500;
+    elementStyles.display = 'inline-flex';
+    elementStyles.cursor = 'pointer';
+    if (isHovered && s.hoverColor) elementStyles.color = s.hoverColor;
+    elementStyles.textDecoration =
+      s.underline === 'always'
+        ? 'underline'
+        : s.underline === 'hover' && isHovered
+          ? 'underline'
+          : 'none';
+  }
+
+  if (params.type === 'checkbox' || params.type === 'radio') {
+    elementStyles.display = 'flex';
+    elementStyles.alignItems = 'center';
+    elementStyles.gap = '12px';
+    elementStyles.cursor = 'pointer';
+    elementStyles.backgroundColor = 'transparent';
+    elementStyles.border = 'none';
+    elementStyles.width = 'auto';
+    elementStyles.height = 'auto';
+  }
+
+  const elementProps = {
+    onMouseEnter: () => setIsActive(true),
+    onMouseLeave: () => setIsActive(false),
+    onMouseDown: () => setIsActive(true),
+    onMouseUp: () => setIsActive(false),
+    style: elementStyles,
+    className: 'animadiv-element',
   };
 
-  const handleMouseUp = () => {
-    if (activeState === 'click') setIsActive(false);
-  };
+  if (params.type === 'input') {
+    elementProps.type = s.inputType || 'text';
+    elementProps.placeholder = s.placeholder || '';
+    elementProps.readOnly = true;
+  }
 
-  const shouldPlayKeyframes =
-    activeState === 'load' ||
-    (activeState === 'hover' && isActive) ||
-    (activeState === 'click' && isActive);
+  if (params.type === 'textarea') {
+    elementProps.placeholder = s.placeholder || '';
+    elementProps.rows = s.rows || 4;
+    elementProps.readOnly = true;
+  }
+
+  if (params.type === 'image') {
+    elementProps.src = s.src;
+    elementProps.alt = s.alt || 'image';
+    elementProps.draggable = false;
+  }
+
+  if (params.type === 'link') {
+    elementProps.href = s.href || '#';
+    elementProps.onClick = (e) => e.preventDefault();
+  }
+
+  const renderContent = () => {
+    if (params.type === 'button') return s.text;
+    if (params.type === 'text') return s.content;
+    if (params.type === 'link') return s.text;
+    if (params.type === 'block')
+      return (
+        <div
+          style={{
+            opacity: 0.4,
+            border: '1px dashed currentColor',
+            padding: '12px',
+            borderRadius: 8,
+          }}
+        >
+          Inner Content
+        </div>
+      );
+
+    if (params.type === 'checkbox') {
+      const iconSize = s.size || 24;
+      return (
+        <>
+          <div
+            style={{
+              width: `${iconSize}px`,
+              height: `${iconSize}px`,
+              flexShrink: 0,
+              backgroundColor: s.checked ? styles.backgroundColor : '#fff',
+              border: `2px solid ${styles.backgroundColor}`,
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+            }}
+          >
+            {s.checked && (
+              <Check
+                size={iconSize * 0.7}
+                color={s.checkColor || '#fff'}
+                strokeWidth={3}
+              />
+            )}
+          </div>
+          <span
+            style={{
+              fontSize: `${s.fontSize || 14}px`,
+              fontWeight: s.fontWeight || 500,
+              color: styles.color,
+              fontFamily: s.fontFamily,
+            }}
+          >
+            {s.label}
+          </span>
+        </>
+      );
+    }
+
+    if (params.type === 'radio') {
+      const iconSize = s.size || 24;
+      return (
+        <>
+          <div
+            style={{
+              width: `${iconSize}px`,
+              height: `${iconSize}px`,
+              flexShrink: 0,
+              backgroundColor: '#fff',
+              border: `2px solid ${s.color || '#4F46E5'}`,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+            }}
+          >
+            {s.checked && (
+              <div
+                style={{
+                  width: '50%',
+                  height: '50%',
+                  backgroundColor: s.color || '#4F46E5',
+                  borderRadius: '50%',
+                }}
+              />
+            )}
+          </div>
+          <span
+            style={{
+              fontSize: `${s.fontSize || 14}px`,
+              fontWeight: s.fontWeight || 500,
+              color: styles.color,
+              fontFamily: s.fontFamily,
+            }}
+          >
+            {s.label}
+          </span>
+        </>
+      );
+    }
+
+    return null;
+  };
 
   return (
     <div
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
       style={{
         width: '100%',
         height: '100%',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        cursor: activeState !== 'static' ? 'pointer' : 'default',
         position: 'relative',
       }}
     >
-      {(activeState === 'hover' || activeState === 'click') && (
-        <HintCursor type={activeState} isVisible={!isActive} />
+      <HintCursor
+        type={activeState}
+        isVisible={
+          !isActive && (activeState === 'hover' || activeState === 'click')
+        }
+      />
+
+      {isVoidElement ? (
+        <Tag key={`${activeState}-${localReplayKey}`} {...elementProps} />
+      ) : (
+        <Tag key={`${activeState}-${localReplayKey}`} {...elementProps}>
+          {renderContent()}
+        </Tag>
       )}
-
-      <Tag
-        key={`${activeState}-${triggerCount}`}
-        // ТАСКА: ПІДКЛЮЧАЄМО КЛАСИ ДЛЯ ЗВ'ЯЗКУ З ГЕНЕРАТОРОМ
-        className={`animadiv-element ${activeState === 'load' ? 'is-load' : ''}`}
-        style={{
-          width: `${params.size}px`,
-          height: `${params.size}px`,
-          backgroundColor: params.color,
-          borderRadius:
-            params.elementType === 'span'
-              ? '50%'
-              : params.elementType === 'button'
-                ? '8px'
-                : '16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxSizing: 'border-box',
-          color: 'white',
-          border: 'none',
-          outline: 'none',
-
-          animation: shouldPlayKeyframes ? animationString : 'none',
-          '--animation-intensity': stateConfig.intensity,
-
-          // Ми залишаємо ці стилі тут для миттєвого відгуку в прев'ю,
-          // але вони дублюють логіку класів для надійності
-          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-          transform:
-            activeState === 'click' && isActive
-              ? 'scale(0.95)'
-              : activeState === 'hover' && isActive
-                ? 'scale(1.02)'
-                : 'scale(1)',
-          boxShadow:
-            activeState === 'hover' && isActive
-              ? '0 20px 25px -5px rgba(0,0,0,0.15)'
-              : '0 10px 15px -3px rgba(0,0,0,0.1)',
-        }}
-      >
-        {params.elementType === 'button' && (
-          <span style={{ fontWeight: '600', letterSpacing: '0.5px' }}>
-            Button
-          </span>
-        )}
-        {params.elementType === 'div' && (
-          <span style={{ fontSize: '24px' }}>✨</span>
-        )}
-        {params.elementType === 'article' && (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '5px',
-            }}
-          >
-            <div
-              style={{
-                width: '24px',
-                height: '4px',
-                background: 'rgba(255,255,255,0.8)',
-                borderRadius: '2px',
-              }}
-            />
-            <div
-              style={{
-                width: '32px',
-                height: '4px',
-                background: 'rgba(255,255,255,0.5)',
-                borderRadius: '2px',
-              }}
-            />
-          </div>
-        )}
-        {params.elementType === 'span' && (
-          <svg
-            width={params.size * 0.5}
-            height={params.size * 0.5}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
-        )}
-      </Tag>
     </div>
   );
 };
 
-// --- ОСНОВНИЙ КОМПОНЕНТ ---
 const PreviewArea = ({ params, refreshKey }) => {
   const [activeState, setActiveState] = useState('load');
   const [isGridView, setIsGridView] = useState(false);
+  const [localReplays, setLocalReplays] = useState({ load: 0 });
 
-  const Tag = params.elementType || 'div';
+  if (!params || !params.styles)
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          background: '#F9FAFB',
+          borderRadius: 24,
+        }}
+      />
+    );
 
   const states = [
-    { id: 'static', label: 'Static', icon: '📍', desc: 'Стан спокою' },
-    { id: 'hover', label: 'Hover', icon: '🖱️', desc: 'При наведенні' },
-    { id: 'click', label: 'Click', icon: '🔘', desc: 'При кліку' },
-    { id: 'load', label: 'Load', icon: '🚀', desc: 'При появі' },
+    { id: 'static', label: 'Static' },
+    { id: 'hover', label: 'Hover' },
+    { id: 'click', label: 'Click' },
+    { id: 'load', label: 'Load' },
   ];
+
+  const handleLocalReplay = (stateId) => {
+    setLocalReplays((prev) => ({
+      ...prev,
+      [stateId]: (prev[stateId] || 0) + 1,
+    }));
+  };
 
   return (
     <div
@@ -241,105 +397,131 @@ const PreviewArea = ({ params, refreshKey }) => {
         flexDirection: 'column',
       }}
     >
-      {!isGridView && (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '8px',
-            padding: '12px',
-            background: '#fff',
-            borderRadius: '12px',
-            border: '1px solid var(--border)',
-            marginBottom: '20px',
-          }}
-        >
-          {states.map((state) => (
-            <button
-              key={state.id}
-              onClick={() => setActiveState(state.id)}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                border: 'none',
-                background:
-                  activeState === state.id ? '#EEF2FF' : 'transparent',
-                color: activeState === state.id ? '#4F46E5' : '#6B7280',
-                fontSize: '13px',
-                fontWeight: activeState === state.id ? '700' : '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              <span>{state.icon}</span> {state.label}
-            </button>
-          ))}
-        </div>
-      )}
-
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: '20px',
+          background: '#ffffff',
+          padding: '12px 20px',
+          borderRadius: '16px',
+          border: '1px solid #E5E7EB',
         }}
       >
-        <h4
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <h4
+            style={{
+              fontSize: '14px',
+              fontWeight: '800',
+              color: '#111827',
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <LayoutTemplate size={18} color="#111827" /> Canvas
+          </h4>
+
+          {/* ВИПРАВЛЕНО: Кнопки станів повернено для режиму "Один стан" */}
+          {!isGridView && (
+            <div
+              style={{
+                display: 'flex',
+                gap: '4px',
+                borderLeft: '1px solid #E5E7EB',
+                paddingLeft: '16px',
+              }}
+            >
+              {states.map((state) => (
+                <button
+                  key={state.id}
+                  onClick={() => setActiveState(state.id)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background:
+                      activeState === state.id ? '#111827' : 'transparent',
+                    color: activeState === state.id ? '#D6F854' : '#6B7280',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {state.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ВИПРАВЛЕНО: Тепер активна кнопка чорна з лимонним текстом! */}
+        <div
           style={{
-            fontSize: '12px',
-            textTransform: 'uppercase',
-            color: 'var(--text-muted)',
+            display: 'flex',
+            background: '#F3F4F6',
+            padding: '4px',
+            borderRadius: '10px',
           }}
         >
-          Попередній перегляд
-        </h4>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <button
-            onClick={() => setIsGridView(!isGridView)}
+            onClick={() => setIsGridView(false)}
             style={{
-              padding: '6px 12px',
-              background: isGridView ? '#4F46E5' : '#F3F4F6',
-              color: isGridView ? '#fff' : '#4B5563',
-              border: '1px solid',
-              borderColor: isGridView ? '#4F46E5' : '#D1D5DB',
-              borderRadius: '6px',
+              padding: '6px 16px',
+              background: !isGridView ? '#111827' : 'transparent',
+              color: !isGridView ? '#D6F854' : '#6B7280',
+              border: 'none',
+              borderRadius: '8px',
               fontSize: '12px',
-              fontWeight: '600',
+              fontWeight: '800',
               cursor: 'pointer',
-              transition: 'all 0.2s ease',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
+              transition: 'all 0.2s',
+              boxShadow: !isGridView
+                ? '0 4px 6px -1px rgba(0,0,0,0.1)'
+                : 'none',
             }}
           >
-            {isGridView ? '⊞ Вітрина станів' : '🔲 Один стан'}
+            <Square size={14} /> Один стан
           </button>
-          <span
+          <button
+            onClick={() => setIsGridView(true)}
             style={{
+              padding: '6px 16px',
+              background: isGridView ? '#111827' : 'transparent',
+              color: isGridView ? '#D6F854' : '#6B7280',
+              border: 'none',
+              borderRadius: '8px',
               fontSize: '12px',
-              color: 'var(--primary)',
-              fontWeight: '600',
+              fontWeight: '800',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s',
+              boxShadow: isGridView ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
             }}
           >
-            {params.size}x{params.size}px
-          </span>
+            <Grid size={14} /> Вітрина
+          </button>
         </div>
       </div>
 
       <div
         style={{
           flex: 1,
-          background: '#F3F4F6',
-          borderRadius: '12px',
-          border: '1px solid var(--border)',
+          background: '#F9FAFB',
+          borderRadius: '24px',
+          border: '1px solid #E5E7EB',
           position: 'relative',
           overflow: 'hidden',
           backgroundImage: 'radial-gradient(#D1D5DB 1px, transparent 1px)',
-          backgroundSize: '20px 20px',
+          backgroundSize: '24px 24px',
           display: isGridView ? 'grid' : 'flex',
           gridTemplateColumns: isGridView ? '1fr 1fr' : 'none',
           gridTemplateRows: isGridView ? '1fr 1fr' : 'none',
@@ -357,6 +539,7 @@ const PreviewArea = ({ params, refreshKey }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                position: 'relative',
                 borderRight:
                   state.id === 'static' || state.id === 'click'
                     ? '1px dashed #D1D5DB'
@@ -365,44 +548,70 @@ const PreviewArea = ({ params, refreshKey }) => {
                   state.id === 'static' || state.id === 'hover'
                     ? '1px dashed #D1D5DB'
                     : 'none',
-                position: 'relative',
               }}
             >
               <div
                 style={{
                   position: 'absolute',
-                  top: '12px',
-                  left: '12px',
-                  background: 'rgba(255,255,255,0.9)',
-                  padding: '4px 8px',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  color: '#4B5563',
+                  top: '16px',
+                  left: '16px',
+                  background: '#ffffff',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
                   border: '1px solid #E5E7EB',
                   display: 'flex',
                   flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  gap: '2px',
+                  gap: '4px',
                   zIndex: 5,
                 }}
               >
                 <div
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                >
-                  <span>{state.icon}</span> {state.label}
-                </div>
-                <span
                   style={{
-                    fontSize: '9px',
-                    color: '#9CA3AF',
-                    fontWeight: 'normal',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '12px',
+                    fontWeight: '800',
+                    color: '#111827',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
                   }}
                 >
-                  {state.desc}
-                </span>
+                  {state.label}
+                </div>
               </div>
-              <AnimatedItem params={params} activeState={state.id} Tag={Tag} />
+
+              {state.id === 'load' && (
+                <button
+                  onClick={() => handleLocalReplay(state.id)}
+                  style={{
+                    position: 'absolute',
+                    top: '16px',
+                    right: '16px',
+                    zIndex: 10,
+                    background: '#111827',
+                    color: '#D6F854',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  <RotateCcw size={12} /> Play
+                </button>
+              )}
+
+              <AnimatedItem
+                params={params}
+                activeState={state.id}
+                localReplayKey={localReplays[state.id] || 0}
+              />
             </div>
           ))
         ) : (
@@ -410,7 +619,7 @@ const PreviewArea = ({ params, refreshKey }) => {
             key={refreshKey}
             params={params}
             activeState={activeState}
-            Tag={Tag}
+            localReplayKey={0}
           />
         )}
       </div>

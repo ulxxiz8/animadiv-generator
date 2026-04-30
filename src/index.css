@@ -1,14 +1,13 @@
-/* Підключаємо твій фірмовий шрифт Manrope */
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
 :root {
-  /* Наші затверджені кольори (Брендборд) */
-  --primary: #4F46E5; 
-  --bg-color: #F9FAFB;
-  --surface: #FFFFFF;
+  --primary: #4f46e5;
+  --bg-color: #f9fafb;
+  --surface: #ffffff;
   --text-main: #111827;
-  --text-muted: #6B7280;
-  --border: #E5E7EB;
+  --text-muted: #6b7280;
+  --border: #e5e7eb;
 }
 
 * {
@@ -21,46 +20,77 @@ body {
   font-family: 'Manrope', sans-serif;
   background-color: var(--bg-color);
   color: var(--text-main);
-  height: 100vh;
+  margin: 0;
 }
 
-/* Каркас нашого додатку (AppLayout) */
+/* Каркас додатка */
 .app-layout {
   display: flex;
   flex-direction: column;
   height: 100vh;
 }
-
 .app-header {
   height: 64px;
   background-color: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex;
-  align-items: center;
+  alignitems: center;
   padding: 0 32px;
+  flex-shrink: 0;
 }
-
 .app-header h1 {
   font-size: 24px;
   font-weight: 800;
-  color: var(--primary); /* Логотип твого кольору Indigo */
+  color: var(--text-main);
 }
 
+/* Головний контейнер (ТРИ В РЯД) */
 .main-container {
   display: flex;
   flex: 1;
-  padding: 24px 32px;
-  gap: 24px; /* Ті самі відступи кратні 8 */
+  height: calc(100vh - 80px); /* 80px — це висота твого хедера */
+  padding: 24px;
+  gap: 24px;
+  overflow: hidden; /* ✅ Блокуємо скрол ТІЛЬКИ для Генератора! */
 }
 
-/* Три наші робочі колонки */
+/* Налаштування колонок */
 .column {
   background-color: var(--surface);
-  border-radius: 8px; /* Наші круглі кути */
+  border-radius: 12px;
   border: 1px solid var(--border);
-  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Важливо для внутрішнього скролу */
 }
 
-.settings-panel { flex: 1; }
-.preview-panel { flex: 2; display: flex; align-items: center; justify-content: center; background-color: var(--bg-color); }
-.code-panel { flex: 1; }
+/* Ліва і права панелі (Фіксовані) */
+.settings-panel,
+.code-panel {
+  width: 340px;
+  flex-shrink: 0; /* ЗАБОРОНА СТИСКАННЯ І РОЗТЯГУВАННЯ */
+}
+
+/* Канвас (Гнучкий) */
+.preview-panel {
+  flex: 1;
+  background-color: var(--bg-color);
+}
+
+/* Адаптивність (залишаємо як ти писала) */
+@media (max-width: 1024px) {
+  .main-container {
+    flex-direction: column !important;
+    overflow-y: auto;
+    height: auto;
+  }
+  .settings-panel,
+  .code-panel {
+    width: 100% !important;
+    flex-shrink: 1;
+    overflow-y: visible;
+  }
+  .column {
+    min-height: 500px;
+  }
+}
