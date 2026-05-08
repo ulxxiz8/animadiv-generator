@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { RangeSlider, Button, ColorPicker } from '../../components/UIElements';
 import { easingOptions } from '../../data/easingOptions';
-import { animationPresets } from '../../data/presets';
+import {
+  getAvailablePresetsForType,
+  PRESET_SUPPORTED_PARAMS,
+} from '../../utils/semanticMapping';
+import { MOTION_TOKENS } from '../../utils/motionTokens';
 import {
   Paintbrush,
   Activity,
@@ -16,9 +20,10 @@ import {
   ChevronDown,
   ChevronUp,
   FormInput,
+  Zap,
+  Accessibility,
 } from 'lucide-react';
 
-// ВИПРАВЛЕНІ ІКОНКИ
 const figmaElements = [
   {
     id: 'block',
@@ -102,10 +107,57 @@ const ControlsPanel = ({
   if (!params || !params.styles)
     return <div style={{ padding: 20 }}>Loading...</div>;
 
-  const currentAnimParams = params.animations[activeMotionState];
-  const supportsIntensity =
-    animationPresets.find((p) => p.id === currentAnimParams?.presetId)
-      ?.supportsIntensity || false;
+  const currentAnimParams = params.animations[activeMotionState] || {};
+  const currentPresetVal =
+    currentAnimParams.effectPreset || currentAnimParams.presetId || 'none';
+  const hasPreset = currentPresetVal !== 'none';
+  const isPhysicsOn =
+    currentAnimParams.usePhysics || currentPresetVal.startsWith('physics');
+
+  // РОЗУМНА ФІЛЬТРАЦІЯ
+  const getSupportedControls = () => {
+    if (!hasPreset) return [];
+    const presets = currentPresetVal.split('+');
+    const paramsSet = new Set();
+
+    paramsSet.add('motionToken');
+
+    presets.forEach((p) => {
+      let targetP = p;
+      if (currentAnimParams.usePhysics) {
+        if (p === 'scale') targetP = 'physicsScale';
+        if (p === 'slide') targetP = 'physicsBounce';
+      }
+      const sp = PRESET_SUPPORTED_PARAMS[targetP] || [
+        'duration',
+        'delay',
+        'easing',
+        'intensity',
+      ];
+      sp.forEach((param) => paramsSet.add(param));
+    });
+
+    return Array.from(paramsSet);
+  };
+
+  const supportedControls = getSupportedControls();
+  const isSupported = (key) => supportedControls.includes(key);
+
+  const hasPlaybackParams =
+    isSupported('iterationCount') ||
+    isSupported('direction') ||
+    isSupported('fillMode') ||
+    isSupported('motionAxis');
+  const hasVisualParams =
+    isSupported('transformOrigin') ||
+    isSupported('intensity') ||
+    isSupported('blurAmount') ||
+    isSupported('rotationAngle') ||
+    isSupported('floatingAmount') ||
+    isSupported('stagger') ||
+    isSupported('scaleRange') ||
+    isSupported('zoomIntensity') ||
+    isSupported('hoverDepth');
 
   const inputStyle = {
     width: '100%',
@@ -125,6 +177,25 @@ const ControlsPanel = ({
     color: '#6B7280',
     display: 'block',
     marginBottom: '6px',
+  };
+
+  const handleAnimChange = (key, value) => {
+    onUpdateAnimation(activeMotionState, key, value);
+    if (key === 'effectPreset') {
+      onUpdateAnimation(activeMotionState, 'presetId', value);
+    }
+  };
+
+  const handleTokenApply = (tokenId) => {
+    handleAnimChange('motionToken', tokenId);
+    if (MOTION_TOKENS[tokenId] && tokenId !== 'custom') {
+      const t = MOTION_TOKENS[tokenId];
+      handleAnimChange('duration', t.duration);
+      handleAnimChange('easing', t.easing);
+      handleAnimChange('intensity', t.intensity);
+      handleAnimChange('blurAmount', t.blurAmount);
+      handleAnimChange('stagger', t.stagger);
+    }
   };
 
   const renderSettingField = (key, label, type, options = [], step = 1) => {
@@ -365,7 +436,6 @@ const ControlsPanel = ({
                 { label: 'Bold', value: 700 },
               ])}
             </div>
-            {/* ВИПРАВЛЕНО: Більше не в одній лінійці з Color Picker, щоб повзунок не стискався */}
             <div
               style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
             >
@@ -376,7 +446,6 @@ const ControlsPanel = ({
             </div>
           </>
         );
-      // ВІДНОВЛЕНО: Налаштування для Image
       case 'image':
         return (
           <>
@@ -387,7 +456,6 @@ const ControlsPanel = ({
             ])}
           </>
         );
-      // ВІДНОВЛЕНО: Налаштування для Link
       case 'link':
         return (
           <>
@@ -653,6 +721,10 @@ const ControlsPanel = ({
             </AccordionSection>
           </>
         )}
+
+        {/* ============================================================== */}
+        {/* ВКЛАДКА MOTION З 100% ФІЛЬТРАЦІЄЮ ПАРАМЕТРІВ */}
+        {/* ============================================================== */}
         {activeTab === 'motion' && (
           <>
             <AccordionSection title="Trigger State" defaultOpen={true}>
@@ -692,47 +764,139 @@ const ControlsPanel = ({
                 ))}
               </div>
             </AccordionSection>
-            <AccordionSection title="Animation Properties" defaultOpen={true}>
+
+            {isSupported('motionToken') && (
+              <AccordionSection title="Preset Tokens" defaultOpen={true}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {Object.keys(MOTION_TOKENS || {}).map((tokenId) => (
+                    <button
+                      key={tokenId}
+                      onClick={() => handleTokenApply(tokenId)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        border: '1px solid #E5E7EB',
+                        background:
+                          currentAnimParams.motionToken === tokenId
+                            ? '#D6F854'
+                            : '#F9FAFB',
+                        color:
+                          currentAnimParams.motionToken === tokenId
+                            ? '#111827'
+                            : '#6B7280',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {MOTION_TOKENS[tokenId].name.split(' ')[0]}
+                    </button>
+                  ))}
+                </div>
+              </AccordionSection>
+            )}
+
+            <AccordionSection title="Core Behavior" defaultOpen={true}>
               <div style={{ marginBottom: '16px' }}>
-                <label style={labelStyle}>Effect Preset</label>
+                <label style={labelStyle}>Primary Effect</label>
                 <select
-                  value={currentAnimParams.presetId}
+                  value={currentPresetVal.split('+')[0]}
                   onChange={(e) =>
-                    onUpdateAnimation(
-                      activeMotionState,
-                      'presetId',
-                      e.target.value
-                    )
+                    handleAnimChange('effectPreset', e.target.value)
                   }
                   style={inputStyle}
                 >
-                  <option value="none">Без ефекту (None)</option>
-                  {animationPresets.map((preset) => (
+                  {getAvailablePresetsForType(params.type).map((preset) => (
                     <option key={preset.id} value={preset.id}>
                       {preset.name}
                     </option>
                   ))}
                 </select>
               </div>
-              {currentAnimParams.presetId !== 'none' && (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '16px',
+
+              <div
+                style={{
+                  marginBottom: '16px',
+                  opacity: hasPreset ? 1 : 0.4,
+                  pointerEvents: hasPreset ? 'auto' : 'none',
+                }}
+              >
+                <label style={labelStyle}>Combine with (Secondary)</label>
+                <select
+                  value={
+                    currentPresetVal.includes('+')
+                      ? currentPresetVal.split('+')[1]
+                      : 'none'
+                  }
+                  onChange={(e) => {
+                    const primary = currentPresetVal.split('+')[0] || 'none';
+                    const secondary = e.target.value;
+                    const combined =
+                      secondary === 'none'
+                        ? primary
+                        : `${primary}+${secondary}`;
+                    handleAnimChange('effectPreset', combined);
                   }}
+                  style={inputStyle}
                 >
-                  <div>
-                    <label style={labelStyle}>Easing Curve</label>
+                  <option value="none">No combination</option>
+                  <option value="fade">Fade</option>
+                  <option value="slide">Slide</option>
+                  <option value="scale">Scale</option>
+                  <option value="blur">Blur</option>
+                  <option value="rotate">Rotate</option>
+                </select>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  opacity: hasPreset ? 1 : 0.4,
+                  pointerEvents: hasPreset ? 'auto' : 'none',
+                }}
+              >
+                {isSupported('duration') && (
+                  <RangeSlider
+                    label="Duration (ms)"
+                    min={50}
+                    max={3000}
+                    step={50}
+                    value={currentAnimParams.duration || 300}
+                    unit=""
+                    onChange={(val) => {
+                      handleAnimChange('duration', val);
+                      handleAnimChange('motionToken', 'custom');
+                    }}
+                  />
+                )}
+                {isSupported('delay') && (
+                  <RangeSlider
+                    label="Delay (ms)"
+                    min={0}
+                    max={2000}
+                    step={50}
+                    value={currentAnimParams.delay || 0}
+                    unit=""
+                    onChange={(val) => handleAnimChange('delay', val)}
+                  />
+                )}
+                {isSupported('easing') && (
+                  <div
+                    style={{
+                      opacity: isPhysicsOn ? 0.4 : 1,
+                      pointerEvents: isPhysicsOn ? 'none' : 'auto',
+                    }}
+                  >
+                    <label style={labelStyle}>Easing (Timing Function)</label>
                     <select
-                      value={currentAnimParams.easing}
-                      onChange={(e) =>
-                        onUpdateAnimation(
-                          activeMotionState,
-                          'easing',
-                          e.target.value
-                        )
-                      }
+                      value={currentAnimParams.easing || 'ease'}
+                      onChange={(e) => {
+                        handleAnimChange('easing', e.target.value);
+                        handleAnimChange('motionToken', 'custom');
+                      }}
                       style={inputStyle}
                     >
                       {easingOptions.map((opt) => (
@@ -742,37 +906,424 @@ const ControlsPanel = ({
                       ))}
                     </select>
                   </div>
-                  <RangeSlider
-                    label="Duration (ms)"
-                    min={50}
-                    max={2000}
-                    step={50}
-                    value={currentAnimParams.duration}
-                    unit=""
-                    onChange={(val) =>
-                      onUpdateAnimation(activeMotionState, 'duration', val)
+                )}
+              </div>
+            </AccordionSection>
+
+            {/* ТЕПЕР PHYSICS ДІЙСНО З'ЯВИТЬСЯ ДЛЯ SCALE І SLIDE */}
+            {isSupported('usePhysics') && (
+              <AccordionSection title="Physics Engine" defaultOpen={false}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    color: '#111827',
+                    marginBottom: '16px',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={currentAnimParams.usePhysics || false}
+                    onChange={(e) =>
+                      handleAnimChange('usePhysics', e.target.checked)
                     }
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      accentColor: '#111827',
+                    }}
                   />
+                  <Zap
+                    size={14}
+                    color="#D6F854"
+                    style={{
+                      background: '#111827',
+                      borderRadius: '4px',
+                      padding: '2px',
+                    }}
+                  />{' '}
+                  Enable Physics
+                </label>
+                <div
+                  style={{
+                    opacity: isPhysicsOn ? 1 : 0.4,
+                    pointerEvents: isPhysicsOn ? 'auto' : 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px',
+                  }}
+                >
+                  <RangeSlider
+                    label="Stiffness (Жорсткість)"
+                    min={10}
+                    max={300}
+                    step={5}
+                    value={currentAnimParams.stiffness || 100}
+                    unit=""
+                    onChange={(val) => handleAnimChange('stiffness', val)}
+                  />
+                  <RangeSlider
+                    label="Damping (Загасання/Тертя)"
+                    min={2}
+                    max={40}
+                    step={1}
+                    value={currentAnimParams.damping || 10}
+                    unit=""
+                    onChange={(val) => handleAnimChange('damping', val)}
+                  />
+                  <RangeSlider
+                    label="Mass (Маса)"
+                    min={0.1}
+                    max={5}
+                    step={0.1}
+                    value={currentAnimParams.mass || 1}
+                    unit=""
+                    onChange={(val) => handleAnimChange('mass', val)}
+                  />
+                </div>
+              </AccordionSection>
+            )}
+
+            {hasPlaybackParams && (
+              <AccordionSection
+                title="Playback & Direction"
+                defaultOpen={false}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px',
+                    opacity: hasPreset ? 1 : 0.4,
+                    pointerEvents: hasPreset ? 'auto' : 'none',
+                  }}
+                >
                   <div
                     style={{
-                      opacity: supportsIntensity ? 1 : 0.4,
-                      pointerEvents: supportsIntensity ? 'auto' : 'none',
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '12px',
                     }}
                   >
+                    {isSupported('iterationCount') && (
+                      <div>
+                        <label style={labelStyle}>Iteration Count</label>
+                        <select
+                          value={currentAnimParams.iterationCount || 1}
+                          onChange={(e) =>
+                            handleAnimChange('iterationCount', e.target.value)
+                          }
+                          style={inputStyle}
+                        >
+                          <option value="1">1 (Once)</option>
+                          <option value="2">2</option>
+                          <option value="3">3</option>
+                          <option value="infinite">Infinite</option>
+                        </select>
+                      </div>
+                    )}
+                    {isSupported('direction') && (
+                      <div>
+                        <label style={labelStyle}>Direction</label>
+                        <select
+                          value={currentAnimParams.direction || 'normal'}
+                          onChange={(e) =>
+                            handleAnimChange('direction', e.target.value)
+                          }
+                          style={inputStyle}
+                        >
+                          <option value="normal">Normal</option>
+                          <option value="reverse">Reverse</option>
+                          <option value="alternate">Alternate</option>
+                          <option value="alternate-reverse">Alt Reverse</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '12px',
+                    }}
+                  >
+                    {isSupported('fillMode') && (
+                      <div>
+                        <label style={labelStyle}>Fill Mode</label>
+                        <select
+                          value={currentAnimParams.fillMode || 'both'}
+                          onChange={(e) =>
+                            handleAnimChange('fillMode', e.target.value)
+                          }
+                          style={inputStyle}
+                        >
+                          <option value="none">None</option>
+                          <option value="forwards">Forwards</option>
+                          <option value="backwards">Backwards</option>
+                          <option value="both">Both</option>
+                        </select>
+                      </div>
+                    )}
+                    {isSupported('motionAxis') && (
+                      <div>
+                        <label style={labelStyle}>Motion Axis</label>
+                        <select
+                          value={currentAnimParams.motionAxis || 'all'}
+                          onChange={(e) =>
+                            handleAnimChange('motionAxis', e.target.value)
+                          }
+                          style={inputStyle}
+                        >
+                          <option value="all">All (X & Y)</option>
+                          <option value="x">X Axis Only</option>
+                          <option value="y">Y Axis Only</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </AccordionSection>
+            )}
+
+            {hasVisualParams && (
+              <AccordionSection title="Transform & Visuals" defaultOpen={false}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px',
+                    opacity: hasPreset ? 1 : 0.4,
+                    pointerEvents: hasPreset ? 'auto' : 'none',
+                  }}
+                >
+                  {isSupported('transformOrigin') && (
+                    <div>
+                      <label style={labelStyle}>Transform Origin</label>
+                      <select
+                        value={currentAnimParams.transformOrigin || 'center'}
+                        onChange={(e) =>
+                          handleAnimChange('transformOrigin', e.target.value)
+                        }
+                        style={inputStyle}
+                      >
+                        <option value="center">Center</option>
+                        <option value="top">Top</option>
+                        <option value="bottom">Bottom</option>
+                        <option value="left">Left</option>
+                        <option value="right">Right</option>
+                        <option value="top left">Top Left</option>
+                        <option value="bottom right">Bottom Right</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {isSupported('intensity') && (
                     <RangeSlider
-                      label="Intensity (%)"
+                      label="Intensity / Deformation (%)"
+                      min={0}
+                      max={200}
+                      step={1}
+                      value={
+                        currentAnimParams.intensity !== undefined
+                          ? currentAnimParams.intensity
+                          : 100
+                      }
+                      unit=""
+                      onChange={(val) => {
+                        handleAnimChange('intensity', val);
+                        handleAnimChange('motionToken', 'custom');
+                      }}
+                    />
+                  )}
+                  {isSupported('zoomIntensity') && (
+                    <RangeSlider
+                      label="Zoom Intensity (%)"
+                      min={0}
+                      max={200}
+                      step={1}
+                      value={
+                        currentAnimParams.zoomIntensity !== undefined
+                          ? currentAnimParams.zoomIntensity
+                          : 50
+                      }
+                      unit=""
+                      onChange={(val) => handleAnimChange('zoomIntensity', val)}
+                    />
+                  )}
+                  {isSupported('blurAmount') && (
+                    <RangeSlider
+                      label="Blur Amount (px)"
+                      min={0}
+                      max={50}
+                      step={1}
+                      value={currentAnimParams.blurAmount || 0}
+                      unit=""
+                      onChange={(val) => {
+                        handleAnimChange('blurAmount', val);
+                        handleAnimChange('motionToken', 'custom');
+                      }}
+                    />
+                  )}
+                  {isSupported('rotationAngle') && (
+                    <RangeSlider
+                      label="Rotation Angle (deg)"
+                      min={-360}
+                      max={360}
+                      step={1}
+                      value={currentAnimParams.rotationAngle || 0}
+                      unit=""
+                      onChange={(val) => handleAnimChange('rotationAngle', val)}
+                    />
+                  )}
+                  {isSupported('floatingAmount') && (
+                    <RangeSlider
+                      label="Floating Distance (px)"
                       min={0}
                       max={100}
                       step={1}
-                      value={currentAnimParams.intensity}
+                      value={currentAnimParams.floatingAmount || 15}
                       unit=""
                       onChange={(val) =>
-                        onUpdateAnimation(activeMotionState, 'intensity', val)
+                        handleAnimChange('floatingAmount', val)
                       }
                     />
-                  </div>
+                  )}
+                  {isSupported('hoverDepth') && (
+                    <RangeSlider
+                      label="Hover Depth (px)"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={currentAnimParams.hoverDepth || 20}
+                      unit=""
+                      onChange={(val) => handleAnimChange('hoverDepth', val)}
+                    />
+                  )}
+                  {isSupported('stagger') && (
+                    <RangeSlider
+                      label="Stagger Children (ms)"
+                      min={0}
+                      max={1000}
+                      step={50}
+                      value={currentAnimParams.stagger || 0}
+                      unit=""
+                      onChange={(val) => {
+                        handleAnimChange('stagger', val);
+                        handleAnimChange('motionToken', 'custom');
+                      }}
+                    />
+                  )}
+
+                  {isSupported('scaleRange') && (
+                    <div>
+                      <label style={labelStyle}>
+                        Scale Range (Start &rarr; End)
+                      </label>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '12px',
+                        }}
+                      >
+                        <input
+                          type="number"
+                          step={0.1}
+                          min={0}
+                          max={5}
+                          value={
+                            currentAnimParams.scaleRange
+                              ? currentAnimParams.scaleRange[0]
+                              : 1
+                          }
+                          onChange={(e) =>
+                            handleAnimChange('scaleRange', [
+                              Number(e.target.value),
+                              currentAnimParams.scaleRange[1],
+                            ])
+                          }
+                          style={inputStyle}
+                        />
+                        <input
+                          type="number"
+                          step={0.1}
+                          min={0}
+                          max={5}
+                          value={
+                            currentAnimParams.scaleRange
+                              ? currentAnimParams.scaleRange[1]
+                              : 1
+                          }
+                          onChange={(e) =>
+                            handleAnimChange('scaleRange', [
+                              currentAnimParams.scaleRange[0],
+                              Number(e.target.value),
+                            ])
+                          }
+                          style={inputStyle}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </AccordionSection>
+            )}
+
+            <AccordionSection title="Accessibility" defaultOpen={false}>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  color: '#111827',
+                  background: currentAnimParams.reduceMotion
+                    ? '#FEF3C7'
+                    : '#F9FAFB',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: currentAnimParams.reduceMotion
+                    ? '1px solid #F59E0B'
+                    : '1px solid #E5E7EB',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={currentAnimParams.reduceMotion || false}
+                  onChange={(e) =>
+                    handleAnimChange('reduceMotion', e.target.checked)
+                  }
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    accentColor: '#D97706',
+                  }}
+                />
+                <Accessibility
+                  size={16}
+                  color={currentAnimParams.reduceMotion ? '#D97706' : '#6B7280'}
+                />
+                Reduced Motion (Safe Mode)
+              </label>
+              <p
+                style={{
+                  fontSize: '11px',
+                  color: '#6B7280',
+                  marginTop: '8px',
+                  lineHeight: 1.4,
+                }}
+              >
+                Автоматично зрізає агресивні відскоки пружин, зменшує відстань
+                зсуву та вимикає нескінченні циклічні анімації для комфорту
+                вестибулярного апарату.
+              </p>
             </AccordionSection>
           </>
         )}

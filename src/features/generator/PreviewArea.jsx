@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { animationPresets } from '../../data/presets';
+import React, { useState, useEffect } from 'react';
 import {
   MousePointer2,
   Pointer,
@@ -9,6 +8,8 @@ import {
   Grid,
   RotateCcw,
 } from 'lucide-react';
+import { generateAnimationCSS } from '../../utils/animationEngine';
+import { renderSplitText } from '../../utils/typographyMotion';
 
 const HintCursor = ({ type, isVisible }) => {
   if (!isVisible) return null;
@@ -44,25 +45,73 @@ const HintCursor = ({ type, isVisible }) => {
 };
 
 const AnimatedItem = ({ params, activeState, localReplayKey }) => {
-  const [isActive, setIsActive] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isClicked, setIsClicked] = useState(false);
+  const [clickKey, setClickKey] = useState(0);
 
   if (!params || !params.styles || !params.specificSettings) return null;
 
   const s = params.specificSettings;
   const styles = params.styles;
-  const stateConfig =
-    params.animations[activeState === 'static' ? 'load' : activeState];
-  const activePreset = animationPresets.find(
-    (p) => p.id === stateConfig?.presetId
-  );
-  const animationString =
-    activePreset && activePreset.id !== 'none'
-      ? `ag_${activePreset.id} ${stateConfig.duration}ms ${stateConfig.easing} both`
-      : 'none';
 
-  const isHovered = activeState === 'hover' && isActive;
-  const isClicked = activeState === 'click' && isActive;
-  const shouldPlayKeyframes = activeState === 'load' || isHovered || isClicked;
+  // 1. Отримуємо конфіги для ВСІХ шарів одночасно
+  const loadConfig = params.animations?.load || {};
+  const hoverConfig = params.animations?.hover || {};
+  const clickConfig = params.animations?.click || {};
+
+  const loadPreset = loadConfig.effectPreset || loadConfig.presetId || 'none';
+  const hoverPreset =
+    hoverConfig.effectPreset || hoverConfig.presetId || 'none';
+  const clickPreset =
+    clickConfig.effectPreset || clickConfig.presetId || 'none';
+
+  // 2. Генеруємо CSS для кожного шару незалежно
+  const loadData = generateAnimationCSS(
+    loadPreset,
+    loadConfig,
+    `${params.id}_load`,
+    'load'
+  );
+  const hoverData = generateAnimationCSS(
+    hoverPreset,
+    hoverConfig,
+    `${params.id}_hover`,
+    'hover'
+  );
+  const clickData = generateAnimationCSS(
+    clickPreset,
+    clickConfig,
+    `${params.id}_click`,
+    'click'
+  );
+
+  useEffect(() => {
+    const styleId = `dynamic-styles-${params.id}`;
+    let styleEl = document.getElementById(styleId);
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+    // Ін'єктуємо всі кейфрейми одночасно
+    styleEl.innerHTML = `
+      ${loadData.keyframes}
+      ${hoverData.keyframes}
+      ${clickData.keyframes}
+    `;
+  }, [loadData.keyframes, hoverData.keyframes, clickData.keyframes, params.id]);
+
+  // 3. Логіка відтворення
+  const shouldPlayHover = isHovered || activeState === 'hover';
+  const shouldPlayClick = isClicked || activeState === 'click';
+
+  const handleMouseDown = () => {
+    setIsClicked(false);
+    setTimeout(() => {
+      setClickKey((prev) => prev + 1);
+      setIsClicked(true);
+    }, 10);
+  };
 
   let Tag = params.tag || 'div';
   if (params.type === 'text') Tag = s.tag || 'p';
@@ -70,6 +119,7 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
 
   const isVoidElement = Tag === 'input' || Tag === 'img' || Tag === 'textarea';
 
+  // Базові стилі самого елемента (статичні)
   const elementStyles = {
     width: styles.width !== 'auto' ? `${styles.width}px` : 'auto',
     height: styles.height !== 'auto' ? `${styles.height}px` : 'auto',
@@ -86,25 +136,16 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
         : 'none',
     padding: styles.padding || 0,
     boxSizing: 'border-box',
-    outline: 'none',
-    margin: 0,
     fontFamily: s.fontFamily || 'inherit',
-    boxShadow:
-      isHovered && s.hoverShadow
-        ? s.hoverShadow
-        : isHovered
-          ? '0 10px 15px -3px rgba(0,0,0,0.1)'
-          : 'none',
-    animation: shouldPlayKeyframes ? animationString : 'none',
-    '--animation-intensity': stateConfig?.intensity || 1,
+    boxShadow: isHovered
+      ? s.hoverShadow || '0 10px 15px -3px rgba(0,0,0,0.1)'
+      : 'none',
     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-    transform: isClicked
-      ? `scale(${s.activeScale || 0.95})`
-      : isHovered
-        ? `scale(${s.hoverScale || 1.02})`
-        : 'scale(1)',
+    // Статичний масштаб для сумісності
+    transform: `${isClicked ? `scale(${s.activeScale || 0.95})` : isHovered ? `scale(${s.hoverScale || 1.02})` : 'scale(1)'}`,
   };
 
+  // Додаткові стилі за типом елемента (Flexbox, типи кнопок тощо)
   if (params.type === 'block') {
     elementStyles.display = 'flex';
     elementStyles.flexDirection = 'column';
@@ -113,7 +154,6 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
     elementStyles.gap = `${s.gap || 0}px`;
     elementStyles.overflow = s.overflow || 'visible';
   }
-
   if (params.type === 'button') {
     elementStyles.display = 'flex';
     elementStyles.alignItems = 'center';
@@ -121,112 +161,18 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
     elementStyles.fontSize = `${s.fontSize || 14}px`;
     elementStyles.fontWeight = s.fontWeight || 600;
     elementStyles.cursor = 'pointer';
-    elementStyles.whiteSpace = 'pre-wrap';
-    elementStyles.textAlign = 'center';
-    if (isHovered && s.hoverBackground)
-      elementStyles.backgroundColor = s.hoverBackground;
-    if (isHovered && s.hoverColor) elementStyles.color = s.hoverColor;
-  }
-
-  if (params.type === 'input') {
-    elementStyles.fontSize = `${s.fontSize || 14}px`;
-    elementStyles.fontWeight = s.fontWeight || 400;
-    elementStyles.padding = styles.padding || '0 16px';
-    if (s.disabled) elementStyles.filter = 'opacity(0.5)';
-    if (isHovered || isClicked) {
-      elementStyles.borderColor = s.focusBorderColor;
-      elementStyles.boxShadow =
-        s.focusShadow || `0 0 0 3px ${s.focusBorderColor}33`;
-    }
-  }
-
-  if (params.type === 'textarea') {
-    elementStyles.fontSize = `${s.fontSize || 14}px`;
-    elementStyles.padding = '12px 16px';
-    elementStyles.resize = s.resize || 'both';
-    if (s.disabled) elementStyles.opacity = 0.5;
-    if (isHovered || isClicked) {
-      elementStyles.borderColor = s.focusBorderColor;
-      elementStyles.boxShadow =
-        s.focusShadow || `0 0 0 3px ${s.focusBorderColor}33`;
-    }
-  }
-
-  if (params.type === 'text') {
-    elementStyles.fontSize = `${s.fontSize || 24}px`;
-    elementStyles.fontWeight = s.fontWeight || 800;
-    elementStyles.textAlign = s.textAlign || 'center';
-    elementStyles.lineHeight = s.lineHeight || 1.5;
-    elementStyles.whiteSpace = 'pre-wrap';
-  }
-
-  if (params.type === 'image') {
-    elementStyles.objectFit = s.objectFit || 'cover';
-    elementStyles.display = 'block';
-    elementStyles.padding = 0;
-  }
-
-  if (params.type === 'link') {
-    elementStyles.fontSize = `${s.fontSize || 14}px`;
-    elementStyles.fontWeight = s.fontWeight || 500;
-    elementStyles.display = 'inline-flex';
-    elementStyles.cursor = 'pointer';
-    if (isHovered && s.hoverColor) elementStyles.color = s.hoverColor;
-    elementStyles.textDecoration =
-      s.underline === 'always'
-        ? 'underline'
-        : s.underline === 'hover' && isHovered
-          ? 'underline'
-          : 'none';
-  }
-
-  if (params.type === 'checkbox' || params.type === 'radio') {
-    elementStyles.display = 'flex';
-    elementStyles.alignItems = 'center';
-    elementStyles.gap = '12px';
-    elementStyles.cursor = 'pointer';
-    elementStyles.backgroundColor = 'transparent';
-    elementStyles.border = 'none';
-    elementStyles.width = 'auto';
-    elementStyles.height = 'auto';
-  }
-
-  const elementProps = {
-    onMouseEnter: () => setIsActive(true),
-    onMouseLeave: () => setIsActive(false),
-    onMouseDown: () => setIsActive(true),
-    onMouseUp: () => setIsActive(false),
-    style: elementStyles,
-    className: 'animadiv-element',
-  };
-
-  if (params.type === 'input') {
-    elementProps.type = s.inputType || 'text';
-    elementProps.placeholder = s.placeholder || '';
-    elementProps.readOnly = true;
-  }
-
-  if (params.type === 'textarea') {
-    elementProps.placeholder = s.placeholder || '';
-    elementProps.rows = s.rows || 4;
-    elementProps.readOnly = true;
-  }
-
-  if (params.type === 'image') {
-    elementProps.src = s.src;
-    elementProps.alt = s.alt || 'image';
-    elementProps.draggable = false;
-  }
-
-  if (params.type === 'link') {
-    elementProps.href = s.href || '#';
-    elementProps.onClick = (e) => e.preventDefault();
   }
 
   const renderContent = () => {
-    if (params.type === 'button') return s.text;
-    if (params.type === 'text') return s.content;
-    if (params.type === 'link') return s.text;
+    const p =
+      clickPreset !== 'none'
+        ? clickPreset
+        : hoverPreset !== 'none'
+          ? hoverPreset
+          : loadPreset;
+    if (params.type === 'button') return renderSplitText(s.text, p);
+    if (params.type === 'text') return renderSplitText(s.content, p);
+    if (params.type === 'link') return renderSplitText(s.text, p);
     if (params.type === 'block')
       return (
         <div
@@ -240,9 +186,9 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
           Inner Content
         </div>
       );
-
-    if (params.type === 'checkbox') {
+    if (params.type === 'checkbox' || params.type === 'radio') {
       const iconSize = s.size || 24;
+      const isCheck = params.type === 'checkbox';
       return (
         <>
           <div
@@ -252,27 +198,30 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
               flexShrink: 0,
               backgroundColor: s.checked ? styles.backgroundColor : '#fff',
               border: `2px solid ${styles.backgroundColor}`,
-              borderRadius: '6px',
+              borderRadius: isCheck ? '6px' : '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              transition: 'all 0.2s',
             }}
           >
-            {s.checked && (
-              <Check
-                size={iconSize * 0.7}
-                color={s.checkColor || '#fff'}
-                strokeWidth={3}
-              />
-            )}
+            {s.checked &&
+              (isCheck ? (
+                <Check size={iconSize * 0.7} color={s.checkColor || '#fff'} />
+              ) : (
+                <div
+                  style={{
+                    width: '50%',
+                    height: '50%',
+                    background: s.color || '#4F46E5',
+                    borderRadius: '50%',
+                  }}
+                />
+              ))}
           </div>
           <span
             style={{
               fontSize: `${s.fontSize || 14}px`,
               fontWeight: s.fontWeight || 500,
-              color: styles.color,
-              fontFamily: s.fontFamily,
             }}
           >
             {s.label}
@@ -280,50 +229,6 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
         </>
       );
     }
-
-    if (params.type === 'radio') {
-      const iconSize = s.size || 24;
-      return (
-        <>
-          <div
-            style={{
-              width: `${iconSize}px`,
-              height: `${iconSize}px`,
-              flexShrink: 0,
-              backgroundColor: '#fff',
-              border: `2px solid ${s.color || '#4F46E5'}`,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s',
-            }}
-          >
-            {s.checked && (
-              <div
-                style={{
-                  width: '50%',
-                  height: '50%',
-                  backgroundColor: s.color || '#4F46E5',
-                  borderRadius: '50%',
-                }}
-              />
-            )}
-          </div>
-          <span
-            style={{
-              fontSize: `${s.fontSize || 14}px`,
-              fontWeight: s.fontWeight || 500,
-              color: styles.color,
-              fontFamily: s.fontFamily,
-            }}
-          >
-            {s.label}
-          </span>
-        </>
-      );
-    }
-
     return null;
   };
 
@@ -341,17 +246,59 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
       <HintCursor
         type={activeState}
         isVisible={
-          !isActive && (activeState === 'hover' || activeState === 'click')
+          !isHovered &&
+          !isClicked &&
+          (activeState === 'hover' || activeState === 'click')
         }
       />
 
-      {isVoidElement ? (
-        <Tag key={`${activeState}-${localReplayKey}`} {...elementProps} />
-      ) : (
-        <Tag key={`${activeState}-${localReplayKey}`} {...elementProps}>
-          {renderContent()}
-        </Tag>
-      )}
+      {/* ШАР 1: LOAD */}
+      <div
+        key={`load-${localReplayKey}`}
+        style={{
+          animation: loadPreset !== 'none' ? loadData.animationStr : 'none',
+          transformOrigin: loadConfig.transformOrigin || 'center',
+          display: 'inline-flex',
+        }}
+      >
+        {/* ШАР 2: HOVER */}
+        <div
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => {
+            setIsHovered(false);
+            setIsClicked(false);
+          }}
+          style={{
+            animation:
+              shouldPlayHover && hoverPreset !== 'none'
+                ? hoverData.animationStr
+                : 'none',
+            transformOrigin: hoverConfig.transformOrigin || 'center',
+            display: 'inline-flex',
+          }}
+        >
+          {/* ШАР 3: CLICK */}
+          <div
+            key={`click-${clickKey}`}
+            onMouseDown={handleMouseDown}
+            onMouseUp={() => setIsClicked(false)}
+            style={{
+              animation:
+                shouldPlayClick && clickPreset !== 'none'
+                  ? clickData.animationStr
+                  : 'none',
+              transformOrigin: clickConfig.transformOrigin || 'center',
+              display: 'inline-flex',
+            }}
+          >
+            {isVoidElement ? (
+              <Tag {...params.elementProps} style={elementStyles} />
+            ) : (
+              <Tag style={elementStyles}>{renderContent()}</Tag>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -359,7 +306,12 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
 const PreviewArea = ({ params, refreshKey }) => {
   const [activeState, setActiveState] = useState('load');
   const [isGridView, setIsGridView] = useState(false);
-  const [localReplays, setLocalReplays] = useState({ load: 0 });
+  const [localReplays, setLocalReplays] = useState({
+    load: 0,
+    hover: 0,
+    click: 0,
+    static: 0,
+  });
 
   if (!params || !params.styles)
     return (
@@ -379,13 +331,6 @@ const PreviewArea = ({ params, refreshKey }) => {
     { id: 'click', label: 'Click' },
     { id: 'load', label: 'Load' },
   ];
-
-  const handleLocalReplay = (stateId) => {
-    setLocalReplays((prev) => ({
-      ...prev,
-      [stateId]: (prev[stateId] || 0) + 1,
-    }));
-  };
 
   return (
     <div
@@ -423,8 +368,6 @@ const PreviewArea = ({ params, refreshKey }) => {
           >
             <LayoutTemplate size={18} color="#111827" /> Canvas
           </h4>
-
-          {/* ВИПРАВЛЕНО: Кнопки станів повернено для режиму "Один стан" */}
           {!isGridView && (
             <div
               style={{
@@ -434,31 +377,28 @@ const PreviewArea = ({ params, refreshKey }) => {
                 paddingLeft: '16px',
               }}
             >
-              {states.map((state) => (
+              {states.map((s) => (
                 <button
-                  key={state.id}
-                  onClick={() => setActiveState(state.id)}
+                  key={s.id}
+                  onClick={() => setActiveState(s.id)}
                   style={{
                     padding: '6px 12px',
                     borderRadius: '8px',
                     border: 'none',
                     background:
-                      activeState === state.id ? '#111827' : 'transparent',
-                    color: activeState === state.id ? '#D6F854' : '#6B7280',
+                      activeState === s.id ? '#111827' : 'transparent',
+                    color: activeState === s.id ? '#D6F854' : '#6B7280',
                     fontSize: '12px',
                     fontWeight: '700',
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
                   }}
                 >
-                  {state.label}
+                  {s.label}
                 </button>
               ))}
             </div>
           )}
         </div>
-
-        {/* ВИПРАВЛЕНО: Тепер активна кнопка чорна з лимонним текстом! */}
         <div
           style={{
             display: 'flex',
@@ -478,16 +418,10 @@ const PreviewArea = ({ params, refreshKey }) => {
               fontSize: '12px',
               fontWeight: '800',
               cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s',
-              boxShadow: !isGridView
-                ? '0 4px 6px -1px rgba(0,0,0,0.1)'
-                : 'none',
             }}
           >
-            <Square size={14} /> Один стан
+            {' '}
+            Один стан{' '}
           </button>
           <button
             onClick={() => setIsGridView(true)}
@@ -500,14 +434,10 @@ const PreviewArea = ({ params, refreshKey }) => {
               fontSize: '12px',
               fontWeight: '800',
               cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s',
-              boxShadow: isGridView ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
             }}
           >
-            <Grid size={14} /> Вітрина
+            {' '}
+            Вітрина{' '}
           </button>
         </div>
       </div>
@@ -520,8 +450,6 @@ const PreviewArea = ({ params, refreshKey }) => {
           border: '1px solid #E5E7EB',
           position: 'relative',
           overflow: 'hidden',
-          backgroundImage: 'radial-gradient(#D1D5DB 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
           display: isGridView ? 'grid' : 'flex',
           gridTemplateColumns: isGridView ? '1fr 1fr' : 'none',
           gridTemplateRows: isGridView ? '1fr 1fr' : 'none',
@@ -530,9 +458,9 @@ const PreviewArea = ({ params, refreshKey }) => {
         }}
       >
         {isGridView ? (
-          states.map((state) => (
+          states.map((s) => (
             <div
-              key={state.id}
+              key={s.id}
               style={{
                 width: '100%',
                 height: '100%',
@@ -540,77 +468,46 @@ const PreviewArea = ({ params, refreshKey }) => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 position: 'relative',
-                borderRight:
-                  state.id === 'static' || state.id === 'click'
-                    ? '1px dashed #D1D5DB'
-                    : 'none',
-                borderBottom:
-                  state.id === 'static' || state.id === 'hover'
-                    ? '1px dashed #D1D5DB'
-                    : 'none',
+                border: '0.5px dashed #D1D5DB',
               }}
             >
               <div
                 style={{
                   position: 'absolute',
-                  top: '16px',
-                  left: '16px',
-                  background: '#ffffff',
-                  padding: '6px 12px',
-                  borderRadius: '8px',
+                  top: '12px',
+                  left: '12px',
+                  background: '#fff',
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  fontSize: '10px',
+                  fontWeight: '900',
                   border: '1px solid #E5E7EB',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px',
-                  zIndex: 5,
                 }}
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '12px',
-                    fontWeight: '800',
-                    color: '#111827',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                  }}
-                >
-                  {state.label}
-                </div>
+                {s.label}
               </div>
-
-              {state.id === 'load' && (
-                <button
-                  onClick={() => handleLocalReplay(state.id)}
-                  style={{
-                    position: 'absolute',
-                    top: '16px',
-                    right: '16px',
-                    zIndex: 10,
-                    background: '#111827',
-                    color: '#D6F854',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '8px 12px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '11px',
-                    fontWeight: '800',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  <RotateCcw size={12} /> Play
-                </button>
-              )}
-
+              <button
+                onClick={() =>
+                  setLocalReplays((p) => ({ ...p, [s.id]: p[s.id] + 1 }))
+                }
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  background: '#111827',
+                  color: '#D6F854',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '4px',
+                }}
+              >
+                {' '}
+                <RotateCcw size={14} />{' '}
+              </button>
               <AnimatedItem
                 params={params}
-                activeState={state.id}
-                localReplayKey={localReplays[state.id] || 0}
+                activeState={s.id}
+                localReplayKey={localReplays[s.id]}
               />
             </div>
           ))
@@ -619,7 +516,7 @@ const PreviewArea = ({ params, refreshKey }) => {
             key={refreshKey}
             params={params}
             activeState={activeState}
-            localReplayKey={0}
+            localReplayKey={localReplays[activeState]}
           />
         )}
       </div>

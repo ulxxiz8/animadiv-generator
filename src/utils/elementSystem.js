@@ -218,10 +218,45 @@ export const ELEMENT_DEFINITIONS = {
 };
 
 // ==========================================
-// 2. ФУНКЦІЯ СТВОРЕННЯ ЕЛЕМЕНТА (Factory)
+// 2. АРХІТЕКТУРА MOTION SYSTEM (Isolated Extension)
+// ==========================================
+export const DEFAULT_ANIMATION_CONFIG = {
+  effectPreset: 'none',
+  duration: 300, // ms
+  delay: 0, // ms
+  easing: 'ease', // linear, ease-in, cubic-bezier, etc.
+  iterationCount: 1, // number or 'infinite'
+  direction: 'normal', // normal, reverse, alternate, alternate-reverse
+  intensity: 100, // % (глобальний модифікатор сили ефекту)
+  transformOrigin: 'center', // center, top left, bottom right, etc.
+  fillMode: 'both', // none, forwards, backwards, both
+  motionAxis: 'all', // x, y, z, all (обмеження осей для slide/scale)
+  blurAmount: 0, // px
+  scaleRange: [1, 1], // [startScale, endScale]
+  rotationAngle: 0, // degrees
+  stagger: 0, // ms (для children reveal)
+  zoomIntensity: 50, // Для zoomReveal та kenBurns
+  tiltAngle: 15, // Для tiltHover
+  hoverDepth: 20, // Для parallax
+  parallaxDirection: 'diagonal',
+  floatingAmount: 10, // Для floatingImage в px
+  glowColor: 'rgba(79, 70, 229, 0.4)', // Дефолтний фіолетовий
+  rippleColor: 'rgba(255, 255, 255, 0.4)', // Напівпрозорий білий
+  errorColor: 'rgba(239, 68, 68, 0.8)',
+  effects: [],
+  usePhysics: false, // Опціональний перемикач
+  stiffness: 100, // Жорсткість пружини (швидкість/енергія)
+  damping: 10, // Загасання (як швидко зупиняється)
+  mass: 1,
+  motionToken: 'custom',
+  reduceMotion: false,
+};
+
+// ==========================================
+// 3. ФУНКЦІЯ СТВОРЕННЯ ЕЛЕМЕНТА (Factory)
 // ==========================================
 /**
- * Створює новий об'єкт елемента з унікальним ID та базовими налаштуваннями
+ * Створює новий об'єкт елемента з базовими налаштуваннями та новою структурою анімацій.
  * @param {string} type - Тип елемента (button, input, card тощо)
  * @returns {Object} Повний конфіг елемента
  */
@@ -234,26 +269,27 @@ export const createElement = (type) => {
   }
 
   return {
-    id: `el_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Унікальний ID
+    id: `el_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     type: type,
     tag: definition.tag,
-    styles: { ...definition.defaultStyles }, // Глибока копія стилів
+    styles: { ...definition.defaultStyles },
     content: definition.content,
-    specificSettings: { ...definition.specificSettings }, // Глибока копія специфічних налаштувань
+    specificSettings: { ...definition.specificSettings },
+
+    // НОВА СТРУКТУРА ДАНИХ (Isolated extension)
+    // Глибоке копіювання, щоб уникнути мутацій базового об'єкта
+    animations: {
+      load: { ...DEFAULT_ANIMATION_CONFIG },
+      hover: { ...DEFAULT_ANIMATION_CONFIG },
+      click: { ...DEFAULT_ANIMATION_CONFIG },
+    },
   };
 };
 
 // ==========================================
-// 3. ФУНКЦІЇ ОНОВЛЕННЯ (State Updaters)
+// 4. ФУНКЦІЇ ОНОВЛЕННЯ (State Updaters)
 // ==========================================
 
-/**
- * Оновлює базові CSS стилі елемента
- * @param {Object} elementState - Поточний стан елемента
- * @param {string} styleKey - Ключ стилю (width, backgroundColor тощо)
- * @param {any} value - Нове значення
- * @returns {Object} Новий стан елемента
- */
 export const updateElementStyle = (elementState, styleKey, value) => {
   return {
     ...elementState,
@@ -264,15 +300,7 @@ export const updateElementStyle = (elementState, styleKey, value) => {
   };
 };
 
-/**
- * Оновлює специфічні налаштування елемента
- * @param {Object} elementState - Поточний стан елемента
- * @param {string} settingKey - Ключ специфічного налаштування
- * @param {any} value - Нове значення
- * @returns {Object} Новий стан елемента
- */
 export const updateSpecificSetting = (elementState, settingKey, value) => {
-  // Синхронізуємо текст, щоб він одразу оновлював базовий 'content'
   let newContent = elementState.content;
   if (settingKey === 'text' || settingKey === 'content') {
     newContent = value;
@@ -288,9 +316,6 @@ export const updateSpecificSetting = (elementState, settingKey, value) => {
   };
 };
 
-/**
- * Пакетне оновлення (Multiple updates at once)
- */
 export const updateElementBatch = (
   elementState,
   newStyles = {},
@@ -302,6 +327,27 @@ export const updateElementBatch = (
     specificSettings: {
       ...elementState.specificSettings,
       ...newSpecificSettings,
+    },
+  };
+};
+
+/**
+ * Новий утилітарний метод для оновлення параметрів анімації
+ */
+export const updateAnimationParam = (
+  elementState,
+  triggerState,
+  paramKey,
+  value
+) => {
+  return {
+    ...elementState,
+    animations: {
+      ...elementState.animations,
+      [triggerState]: {
+        ...elementState.animations[triggerState],
+        [paramKey]: value,
+      },
     },
   };
 };
