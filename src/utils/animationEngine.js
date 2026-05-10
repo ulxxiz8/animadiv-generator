@@ -8,9 +8,22 @@ import { generatePhysicsCSS } from './physicsMotion';
 import { applyAccessibilityFilters } from './accessibilityMotion';
 
 /**
+ * Детермінований хеш. Видає однаковий ID для однакових налаштувань.
+ * Це гарантує, що браузер не буде перемальовувати DOM без потреби.
+ */
+export const getConfigHash = (config) => {
+  const str = JSON.stringify(config || {});
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
+};
+
+/**
  * Створює CSS-правила та рядок анімації на основі конфігурації.
  */
-// ✅ ДОДАНО: 4-й параметр triggerState (за замовчуванням 'load')
 export const generateAnimationCSS = (
   presetId,
   rawConfig,
@@ -27,9 +40,6 @@ export const generateAnimationCSS = (
       ? applyAccessibilityFilters(rawConfig)
       : rawConfig;
 
-  // ✅ Визначаємо, чи це інтеракція (щоб адаптувати базові ефекти)
-  const isInteraction = triggerState === 'hover' || triggerState === 'click';
-
   // 0. Physics Layer (Розумний перехоплювач)
   if (config.usePhysics) {
     // Фізика працює ТІЛЬКИ для scale та slide. Для інших — просто ігноруємо прапорець.
@@ -44,12 +54,13 @@ export const generateAnimationCSS = (
   }
 
   // 0. Combination
-  if (config.effects?.length > 0 || presetId.includes('+')) {
+  if (config.effects?.length > 0 || (presetId && presetId.includes('+'))) {
     const effectsArray =
       config.effects?.length > 0
         ? config.effects
         : presetId.split('+').map((eff) => ({ type: eff.trim() }));
-    return generateCombinedCSS(effectsArray, config, uniqueId);
+
+    return generateCombinedCSS(effectsArray, config, uniqueId, triggerState);
   }
 
   // 1. Typography
@@ -128,31 +139,33 @@ export const generateAnimationCSS = (
     easing = 'ease',
     intensity = 100,
     direction = 'normal',
-    iterationCount = 1, // ✅ Підключено з аудиту
-    fillMode, // ✅ Підключено з аудиту
-    scaleRange = [1, 1], // ✅ Підключено з аудиту
-    motionAxis = 'all', // ✅ Підключено з аудиту
+    iterationCount = 1,
+    fillMode,
+    scaleRange = [1, 1],
+    motionAxis = 'all',
   } = config;
 
-  // Додано triggerState в ім'я для уникнення конфліктів CSS
-  const animName = `ad_anim_${presetId}_${triggerState}_${uniqueId}`;
+  // ✅ СТАБІЛЬНИЙ ХЕШ (замість Math.random)
+  const hash = getConfigHash(config);
+  const animName = `ad_anim_${presetId}_${triggerState}_${uniqueId}_${hash}`;
   let frames = '';
 
+  // ✅ Чітке розділення hover та click у базових пресетах
   switch (presetId) {
     case 'fade': {
-      if (isInteraction) {
-        // Hover/Click Fade: зміна прозорості від 1 до меншого значення
+      if (triggerState === 'hover') {
         const endOpacity = Math.max(0.2, 1 - intensity / 100);
         frames = `0% { opacity: 1; } 100% { opacity: ${endOpacity}; }`;
+      } else if (triggerState === 'click') {
+        frames = `0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; }`;
       } else {
-        // Load Fade: класична поява
         const startOpacity = Math.max(0, 1 - intensity / 100);
         frames = `0% { opacity: ${startOpacity}; } 100% { opacity: 1; }`;
       }
       break;
     }
     case 'slide': {
-      let translateVal = `translateY(${intensity / 5}px)`; // Менший зсув для інтеракцій
+      let translateVal = `translateY(${intensity / 5}px)`;
       if (direction === 'left')
         translateVal = `translateX(-${intensity / 5}px)`;
       if (direction === 'right')
@@ -160,35 +173,36 @@ export const generateAnimationCSS = (
       if (direction === 'top' || direction === 'reverse')
         translateVal = `translateY(-${intensity / 5}px)`;
 
-      if (isInteraction) {
-        // Hover/Click Slide: зсув з початкової точки
+      if (triggerState === 'hover') {
         frames = `0% { transform: translate(0, 0); } 100% { transform: ${translateVal}; }`;
+      } else if (triggerState === 'click') {
+        // Клік робить швидкий зсув і повертається
+        const clickVal = translateVal.replace('/ 5', '/ 8');
+        frames = `0% { transform: translate(0, 0); } 50% { transform: ${clickVal}; } 100% { transform: translate(0, 0); }`;
       } else {
-        // Load Slide: поява з-за меж
-        const loadTranslate = translateVal.replace('/ 5', ''); // Повертаємо великий зсув для load
+        const loadTranslate = translateVal.replace('/ 5', '');
         frames = `0% { transform: ${loadTranslate}; opacity: 0; } 100% { transform: translate(0, 0); opacity: 1; }`;
       }
       break;
     }
     case 'scale': {
-      // ✅ Підключення scaleRange та motionAxis
       const sStart =
         scaleRange[0] !== 1 ? scaleRange[0] : Math.max(0, 1 - intensity / 100);
-      const sEnd =
-        scaleRange[1] !== 1
-          ? scaleRange[1]
-          : isInteraction
-            ? 1 + intensity / 500
-            : 1;
+      const sEnd = scaleRange[1] !== 1 ? scaleRange[1] : 1 + intensity / 500;
 
       let scaleFn = 'scale';
       if (motionAxis === 'x') scaleFn = 'scaleX';
       if (motionAxis === 'y') scaleFn = 'scaleY';
 
-      if (isInteraction) {
+      if (triggerState === 'hover') {
         frames = `0% { transform: ${scaleFn}(1); } 100% { transform: ${scaleFn}(${sEnd}); }`;
+      } else if (triggerState === 'click') {
+        // Клік стискає елемент всередину і відпускає
+        const clickEnd = Math.max(0.5, 1 - intensity / 500);
+        frames = `0% { transform: ${scaleFn}(1); } 50% { transform: ${scaleFn}(${clickEnd}); } 100% { transform: ${scaleFn}(1); }`;
       } else {
-        frames = `0% { transform: ${scaleFn}(${sStart}); opacity: 0; } 100% { transform: ${scaleFn}(${sEnd}); opacity: 1; }`;
+        const loadEnd = scaleRange[1] !== 1 ? scaleRange[1] : 1;
+        frames = `0% { transform: ${scaleFn}(${sStart}); opacity: 0; } 100% { transform: ${scaleFn}(${loadEnd}); opacity: 1; }`;
       }
       break;
     }
@@ -196,16 +210,15 @@ export const generateAnimationCSS = (
       return { keyframes: '', animationStr: 'none' };
   }
 
-  // ✅ Підключення кастомного fillMode та iterationCount
+  // Hover має утримувати стан (forwards), а Click і Load - завершуватись (both)
   const finalFillMode =
     fillMode && fillMode !== 'both'
       ? fillMode
-      : isInteraction
+      : triggerState === 'hover'
         ? 'forwards'
         : 'both';
   const finalIter = iterationCount === 'infinite' ? 'infinite' : iterationCount;
 
-  // Захист від того, що 'direction' в slide використовується для сторін (left, top), що не є валідним CSS animation-direction
   const cssDirection = [
     'normal',
     'reverse',

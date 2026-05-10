@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   MousePointer2,
   Pointer,
@@ -54,64 +54,67 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
   const s = params.specificSettings;
   const styles = params.styles;
 
-  // 1. Отримуємо конфіги для ВСІХ шарів одночасно
-  const loadConfig = params.animations?.load || {};
-  const hoverConfig = params.animations?.hover || {};
-  const clickConfig = params.animations?.click || {};
+  // Отримуємо конфіг для поточного стану
+  const targetState = activeState === 'static' ? 'load' : activeState;
+  const config = params.animations?.[targetState] || {};
+  const preset = config.effectPreset || config.presetId || 'none';
 
-  const loadPreset = loadConfig.effectPreset || loadConfig.presetId || 'none';
-  const hoverPreset =
-    hoverConfig.effectPreset || hoverConfig.presetId || 'none';
-  const clickPreset =
-    clickConfig.effectPreset || clickConfig.presetId || 'none';
+  // ✅ ОПТИМІЗАЦІЯ 1: Мемоізація. CSS перераховується тільки при зміні конфігу
+  const { keyframes, animationStr } = useMemo(() => {
+    return activeState === 'static'
+      ? { keyframes: '', animationStr: 'none' }
+      : generateAnimationCSS(
+          preset,
+          config,
+          `${params.id}_${activeState}`,
+          targetState
+        );
+  }, [preset, JSON.stringify(config), activeState, params.id, targetState]);
 
-  // 2. Генеруємо CSS для кожного шару незалежно
-  const loadData = generateAnimationCSS(
-    loadPreset,
-    loadConfig,
-    `${params.id}_load`,
-    'load'
-  );
-  const hoverData = generateAnimationCSS(
-    hoverPreset,
-    hoverConfig,
-    `${params.id}_hover`,
-    'hover'
-  );
-  const clickData = generateAnimationCSS(
-    clickPreset,
-    clickConfig,
-    `${params.id}_click`,
-    'click'
-  );
-
+  // ✅ ОПТИМІЗАЦІЯ 2: Чисті ін'єкції в DOM (без дублікатів і блимань)
   useEffect(() => {
-    const styleId = `dynamic-styles-${params.id}`;
+    if (!keyframes) return;
+    const styleId = `dynamic-styles-${params.id}-${activeState}`;
     let styleEl = document.getElementById(styleId);
+
     if (!styleEl) {
       styleEl = document.createElement('style');
       styleEl.id = styleId;
       document.head.appendChild(styleEl);
     }
-    // Ін'єктуємо всі кейфрейми одночасно
-    styleEl.innerHTML = `
-      ${loadData.keyframes}
-      ${hoverData.keyframes}
-      ${clickData.keyframes}
-    `;
-  }, [loadData.keyframes, hoverData.keyframes, clickData.keyframes, params.id]);
 
-  // 3. Логіка відтворення
-  const shouldPlayHover = isHovered || activeState === 'hover';
-  const shouldPlayClick = isClicked || activeState === 'click';
+    // Оновлюємо DOM тільки якщо CSS реально змінився
+    if (styleEl.innerHTML !== keyframes) {
+      styleEl.innerHTML = keyframes;
+    }
 
+    // Чистка: коли елемент зникає, видаляємо його стилі
+    return () => {
+      if (styleEl && styleEl.parentNode) {
+        styleEl.parentNode.removeChild(styleEl);
+      }
+    };
+  }, [keyframes, params.id, activeState]);
+  // Логіка відтворення
+  let activeAnimation = 'none';
+  if (activeState === 'load') activeAnimation = animationStr;
+  else if (activeState === 'hover' && isHovered) activeAnimation = animationStr;
+  else if (activeState === 'click' && isClicked) activeAnimation = animationStr;
+
+  const handleMouseEnter = () => activeState === 'hover' && setIsHovered(true);
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    setIsClicked(false);
+  };
   const handleMouseDown = () => {
+    if (activeState !== 'click') return;
     setIsClicked(false);
     setTimeout(() => {
       setClickKey((prev) => prev + 1);
       setIsClicked(true);
     }, 10);
   };
+  const handleMouseUp = () => setIsClicked(false);
 
   let Tag = params.tag || 'div';
   if (params.type === 'text') Tag = s.tag || 'p';
@@ -119,7 +122,7 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
 
   const isVoidElement = Tag === 'input' || Tag === 'img' || Tag === 'textarea';
 
-  // Базові стилі самого елемента (статичні)
+  // ВІДНОВЛЕНО: Твої оригінальні стилі елемента
   const elementStyles = {
     width: styles.width !== 'auto' ? `${styles.width}px` : 'auto',
     height: styles.height !== 'auto' ? `${styles.height}px` : 'auto',
@@ -136,16 +139,27 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
         : 'none',
     padding: styles.padding || 0,
     boxSizing: 'border-box',
+    outline: 'none',
+    margin: 0,
     fontFamily: s.fontFamily || 'inherit',
-    boxShadow: isHovered
-      ? s.hoverShadow || '0 10px 15px -3px rgba(0,0,0,0.1)'
-      : 'none',
+    boxShadow:
+      isHovered && s.hoverShadow
+        ? s.hoverShadow
+        : isHovered
+          ? '0 10px 15px -3px rgba(0,0,0,0.1)'
+          : 'none',
     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-    // Статичний масштаб для сумісності
+    transformOrigin: config.transformOrigin || 'center',
+    animation: activeAnimation,
     transform: `${isClicked ? `scale(${s.activeScale || 0.95})` : isHovered ? `scale(${s.hoverScale || 1.02})` : 'scale(1)'}`,
+    cursor:
+      ['button', 'link', 'checkbox', 'radio'].includes(params.type) &&
+      (activeState === 'hover' || activeState === 'click')
+        ? 'pointer'
+        : 'default',
   };
 
-  // Додаткові стилі за типом елемента (Flexbox, типи кнопок тощо)
+  // ВІДНОВЛЕНО: Твоя логіка для специфічних типів
   if (params.type === 'block') {
     elementStyles.display = 'flex';
     elementStyles.flexDirection = 'column';
@@ -154,25 +168,120 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
     elementStyles.gap = `${s.gap || 0}px`;
     elementStyles.overflow = s.overflow || 'visible';
   }
+
   if (params.type === 'button') {
     elementStyles.display = 'flex';
     elementStyles.alignItems = 'center';
     elementStyles.justifyContent = 'center';
     elementStyles.fontSize = `${s.fontSize || 14}px`;
     elementStyles.fontWeight = s.fontWeight || 600;
-    elementStyles.cursor = 'pointer';
+    elementStyles.whiteSpace = 'pre-wrap';
+    elementStyles.textAlign = 'center';
+    if (isHovered && s.hoverBackground)
+      elementStyles.backgroundColor = s.hoverBackground;
+    if (isHovered && s.hoverColor) elementStyles.color = s.hoverColor;
   }
 
+  if (params.type === 'input') {
+    elementStyles.fontSize = `${s.fontSize || 14}px`;
+    elementStyles.fontWeight = s.fontWeight || 400;
+    elementStyles.padding = styles.padding || '0 16px';
+    if (s.disabled) elementStyles.filter = 'opacity(0.5)';
+    if (isHovered || isClicked) {
+      elementStyles.borderColor = s.focusBorderColor;
+      elementStyles.boxShadow =
+        s.focusShadow || `0 0 0 3px ${s.focusBorderColor}33`;
+    }
+  }
+
+  if (params.type === 'textarea') {
+    elementStyles.fontSize = `${s.fontSize || 14}px`;
+    elementStyles.padding = '12px 16px';
+    elementStyles.resize = s.resize || 'both';
+    if (s.disabled) elementStyles.opacity = 0.5;
+    if (isHovered || isClicked) {
+      elementStyles.borderColor = s.focusBorderColor;
+      elementStyles.boxShadow =
+        s.focusShadow || `0 0 0 3px ${s.focusBorderColor}33`;
+    }
+  }
+
+  if (params.type === 'text') {
+    elementStyles.fontSize = `${s.fontSize || 24}px`;
+    elementStyles.fontWeight = s.fontWeight || 800;
+    elementStyles.textAlign = s.textAlign || 'center';
+    elementStyles.lineHeight = s.lineHeight || 1.5;
+    elementStyles.whiteSpace = 'pre-wrap';
+  }
+
+  if (params.type === 'image') {
+    elementStyles.objectFit = s.objectFit || 'cover';
+    elementStyles.display = 'block';
+    elementStyles.padding = 0;
+  }
+
+  if (params.type === 'link') {
+    elementStyles.fontSize = `${s.fontSize || 14}px`;
+    elementStyles.fontWeight = s.fontWeight || 500;
+    elementStyles.display = 'inline-flex';
+    if (isHovered && s.hoverColor) elementStyles.color = s.hoverColor;
+    elementStyles.textDecoration =
+      s.underline === 'always'
+        ? 'underline'
+        : s.underline === 'hover' && isHovered
+          ? 'underline'
+          : 'none';
+  }
+
+  if (params.type === 'checkbox' || params.type === 'radio') {
+    elementStyles.display = 'flex';
+    elementStyles.alignItems = 'center';
+    elementStyles.gap = '12px';
+    elementStyles.backgroundColor = 'transparent';
+    elementStyles.border = 'none';
+    elementStyles.width = 'auto';
+    elementStyles.height = 'auto';
+  }
+
+  // ВІДНОВЛЕНО: Твої пропси (placeholder, src тощо)
+  const elementProps = {
+    id: `${params.id}_${activeState}`,
+    onMouseEnter: handleMouseEnter,
+    onMouseLeave: handleMouseLeave,
+    onMouseDown: handleMouseDown,
+    onMouseUp: handleMouseUp,
+    style: elementStyles,
+    className: 'animadiv-element',
+  };
+
+  if (params.type === 'input') {
+    elementProps.type = s.inputType || 'text';
+    elementProps.placeholder = s.placeholder || '';
+    elementProps.readOnly = true;
+  }
+
+  if (params.type === 'textarea') {
+    elementProps.placeholder = s.placeholder || '';
+    elementProps.rows = s.rows || 4;
+    elementProps.readOnly = true;
+  }
+
+  if (params.type === 'image') {
+    elementProps.src = s.src;
+    elementProps.alt = s.alt || 'image';
+    elementProps.draggable = false;
+  }
+
+  if (params.type === 'link') {
+    elementProps.href = s.href || '#';
+    elementProps.onClick = (e) => e.preventDefault();
+  }
+
+  // ВІДНОВЛЕНО: Твій внутрішній контент (чекбокси, текст)
   const renderContent = () => {
-    const p =
-      clickPreset !== 'none'
-        ? clickPreset
-        : hoverPreset !== 'none'
-          ? hoverPreset
-          : loadPreset;
-    if (params.type === 'button') return renderSplitText(s.text, p);
-    if (params.type === 'text') return renderSplitText(s.content, p);
-    if (params.type === 'link') return renderSplitText(s.text, p);
+    if (params.type === 'button') return renderSplitText(s.text, preset);
+    if (params.type === 'text') return renderSplitText(s.content, preset);
+    if (params.type === 'link') return renderSplitText(s.text, preset);
     if (params.type === 'block')
       return (
         <div
@@ -186,9 +295,8 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
           Inner Content
         </div>
       );
-    if (params.type === 'checkbox' || params.type === 'radio') {
+    if (params.type === 'checkbox') {
       const iconSize = s.size || 24;
-      const isCheck = params.type === 'checkbox';
       return (
         <>
           <div
@@ -198,30 +306,69 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
               flexShrink: 0,
               backgroundColor: s.checked ? styles.backgroundColor : '#fff',
               border: `2px solid ${styles.backgroundColor}`,
-              borderRadius: isCheck ? '6px' : '50%',
+              borderRadius: '6px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              transition: 'all 0.2s',
             }}
           >
-            {s.checked &&
-              (isCheck ? (
-                <Check size={iconSize * 0.7} color={s.checkColor || '#fff'} />
-              ) : (
-                <div
-                  style={{
-                    width: '50%',
-                    height: '50%',
-                    background: s.color || '#4F46E5',
-                    borderRadius: '50%',
-                  }}
-                />
-              ))}
+            {s.checked && (
+              <Check
+                size={iconSize * 0.7}
+                color={s.checkColor || '#fff'}
+                strokeWidth={3}
+              />
+            )}
           </div>
           <span
             style={{
               fontSize: `${s.fontSize || 14}px`,
               fontWeight: s.fontWeight || 500,
+              color: styles.color,
+              fontFamily: s.fontFamily,
+            }}
+          >
+            {s.label}
+          </span>
+        </>
+      );
+    }
+    if (params.type === 'radio') {
+      const iconSize = s.size || 24;
+      return (
+        <>
+          <div
+            style={{
+              width: `${iconSize}px`,
+              height: `${iconSize}px`,
+              flexShrink: 0,
+              backgroundColor: '#fff',
+              border: `2px solid ${s.color || '#4F46E5'}`,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+            }}
+          >
+            {s.checked && (
+              <div
+                style={{
+                  width: '50%',
+                  height: '50%',
+                  backgroundColor: s.color || '#4F46E5',
+                  borderRadius: '50%',
+                }}
+              />
+            )}
+          </div>
+          <span
+            style={{
+              fontSize: `${s.fontSize || 14}px`,
+              fontWeight: s.fontWeight || 500,
+              color: styles.color,
+              fontFamily: s.fontFamily,
             }}
           >
             {s.label}
@@ -252,53 +399,13 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
         }
       />
 
-      {/* ШАР 1: LOAD */}
-      <div
-        key={`load-${localReplayKey}`}
-        style={{
-          animation: loadPreset !== 'none' ? loadData.animationStr : 'none',
-          transformOrigin: loadConfig.transformOrigin || 'center',
-          display: 'inline-flex',
-        }}
-      >
-        {/* ШАР 2: HOVER */}
-        <div
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => {
-            setIsHovered(false);
-            setIsClicked(false);
-          }}
-          style={{
-            animation:
-              shouldPlayHover && hoverPreset !== 'none'
-                ? hoverData.animationStr
-                : 'none',
-            transformOrigin: hoverConfig.transformOrigin || 'center',
-            display: 'inline-flex',
-          }}
-        >
-          {/* ШАР 3: CLICK */}
-          <div
-            key={`click-${clickKey}`}
-            onMouseDown={handleMouseDown}
-            onMouseUp={() => setIsClicked(false)}
-            style={{
-              animation:
-                shouldPlayClick && clickPreset !== 'none'
-                  ? clickData.animationStr
-                  : 'none',
-              transformOrigin: clickConfig.transformOrigin || 'center',
-              display: 'inline-flex',
-            }}
-          >
-            {isVoidElement ? (
-              <Tag {...params.elementProps} style={elementStyles} />
-            ) : (
-              <Tag style={elementStyles}>{renderContent()}</Tag>
-            )}
-          </div>
-        </div>
-      </div>
+      {isVoidElement ? (
+        <Tag key={`key-${localReplayKey}-${clickKey}`} {...elementProps} />
+      ) : (
+        <Tag key={`key-${localReplayKey}-${clickKey}`} {...elementProps}>
+          {renderContent()}
+        </Tag>
+      )}
     </div>
   );
 };
@@ -482,28 +589,40 @@ const PreviewArea = ({ params, refreshKey }) => {
                   fontSize: '10px',
                   fontWeight: '900',
                   border: '1px solid #E5E7EB',
+                  zIndex: 5,
                 }}
               >
                 {s.label}
               </div>
-              <button
-                onClick={() =>
-                  setLocalReplays((p) => ({ ...p, [s.id]: p[s.id] + 1 }))
-                }
-                style={{
-                  position: 'absolute',
-                  top: '12px',
-                  right: '12px',
-                  background: '#111827',
-                  color: '#D6F854',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '4px',
-                }}
-              >
-                {' '}
-                <RotateCcw size={14} />{' '}
-              </button>
+
+              {s.id === 'load' && (
+                <button
+                  onClick={() =>
+                    setLocalReplays((p) => ({ ...p, [s.id]: p[s.id] + 1 }))
+                  }
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    right: '12px',
+                    background: '#111827',
+                    color: '#D6F854',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '6px 10px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '10px',
+                    fontWeight: '800',
+                    textTransform: 'uppercase',
+                    zIndex: 20,
+                  }}
+                >
+                  <RotateCcw size={12} /> Play
+                </button>
+              )}
+
               <AnimatedItem
                 params={params}
                 activeState={s.id}
@@ -512,12 +631,45 @@ const PreviewArea = ({ params, refreshKey }) => {
             </div>
           ))
         ) : (
-          <AnimatedItem
-            key={refreshKey}
-            params={params}
-            activeState={activeState}
-            localReplayKey={localReplays[activeState]}
-          />
+          <>
+            {activeState === 'load' && (
+              <button
+                onClick={() =>
+                  setLocalReplays((p) => ({
+                    ...p,
+                    [activeState]: p[activeState] + 1,
+                  }))
+                }
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  background: '#111827',
+                  color: '#D6F854',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  textTransform: 'uppercase',
+                  zIndex: 20,
+                }}
+              >
+                <RotateCcw size={14} /> Play
+              </button>
+            )}
+
+            <AnimatedItem
+              key={refreshKey}
+              params={params}
+              activeState={activeState}
+              localReplayKey={localReplays[activeState]}
+            />
+          </>
         )}
       </div>
     </div>

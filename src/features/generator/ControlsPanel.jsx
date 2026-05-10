@@ -798,6 +798,7 @@ const ControlsPanel = ({
             )}
 
             <AccordionSection title="Core Behavior" defaultOpen={true}>
+              {/* === ПЕРШИЙ БЛОК: Головний ефект (Завжди активний) === */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={labelStyle}>Primary Effect</label>
                 <select
@@ -815,39 +816,44 @@ const ControlsPanel = ({
                 </select>
               </div>
 
-              <div
-                style={{
-                  marginBottom: '16px',
-                  opacity: hasPreset ? 1 : 0.4,
-                  pointerEvents: hasPreset ? 'auto' : 'none',
-                }}
-              >
-                <label style={labelStyle}>Combine with (Secondary)</label>
-                <select
-                  value={
-                    currentPresetVal.includes('+')
-                      ? currentPresetVal.split('+')[1]
-                      : 'none'
-                  }
-                  onChange={(e) => {
-                    const primary = currentPresetVal.split('+')[0] || 'none';
-                    const secondary = e.target.value;
-                    const combined =
-                      secondary === 'none'
-                        ? primary
-                        : `${primary}+${secondary}`;
-                    handleAnimChange('effectPreset', combined);
+              {/* === ДРУГИЙ БЛОК: Комбінації (Тільки для базових ефектів) === */}
+              {['none', 'fade', 'slide', 'scale'].includes(
+                currentPresetVal.split('+')[0]
+              ) && (
+                <div
+                  style={{
+                    marginBottom: '16px',
+                    opacity: hasPreset ? 1 : 0.4,
+                    pointerEvents: hasPreset ? 'auto' : 'none',
                   }}
-                  style={inputStyle}
                 >
-                  <option value="none">No combination</option>
-                  <option value="fade">Fade</option>
-                  <option value="slide">Slide</option>
-                  <option value="scale">Scale</option>
-                  <option value="blur">Blur</option>
-                  <option value="rotate">Rotate</option>
-                </select>
-              </div>
+                  <label style={labelStyle}>Combine with (Secondary)</label>
+                  <select
+                    value={
+                      currentPresetVal.includes('+')
+                        ? currentPresetVal.split('+')[1]
+                        : 'none'
+                    }
+                    onChange={(e) => {
+                      const primary = currentPresetVal.split('+')[0] || 'none';
+                      const secondary = e.target.value;
+                      const combined =
+                        secondary === 'none'
+                          ? primary
+                          : `${primary}+${secondary}`;
+                      handleAnimChange('effectPreset', combined);
+                    }}
+                    style={inputStyle}
+                  >
+                    <option value="none">No combination</option>
+                    <option value="fade">Fade</option>
+                    <option value="slide">Slide</option>
+                    <option value="scale">Scale</option>
+                    <option value="blur">Blur</option>
+                    <option value="rotate">Rotate</option>
+                  </select>
+                </div>
+              )}
 
               <div
                 style={{

@@ -1,162 +1,232 @@
 import React from 'react';
 
-// ==========================================
-// 1. TEXT SPLITTING SYSTEM (Без зовнішніх бібліотек)
-// ==========================================
-export const renderSplitText = (text, presetId) => {
-  if (!text) return null;
-
-  // Визначаємо тип розбиття на основі пресету
-  const needsLetters = ['fadeByLetter', 'typewriter'].includes(presetId);
-  const needsWords = ['fadeByWord', 'blurReveal', 'slideUpReveal'].includes(
-    presetId
-  );
-  const needsLines = ['fadeByLine'].includes(presetId);
-
-  // Якщо ефект не потребує розбиття (напр. underlineDraw), повертаємо сирий текст
-  if (!needsLetters && !needsWords && !needsLines) {
-    return text;
+// Розумний хеш для кешування CSS, щоб уникнути дублікатів та ререндерів
+const getHash = (config) => {
+  const str = JSON.stringify(config || {});
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
   }
-
-  if (needsLetters) {
-    return text.split('').map((char, i) => (
-      <span
-        key={i}
-        className="ad-char"
-        style={{
-          '--char-index': i,
-          display: 'inline-block',
-          whiteSpace: char === ' ' ? 'pre' : 'normal',
-        }}
-      >
-        {char}
-      </span>
-    ));
-  }
-
-  if (needsWords) {
-    return text.split(' ').map((word, i) => (
-      <span
-        key={i}
-        className="ad-word"
-        style={{
-          '--word-index': i,
-          display: 'inline-block',
-          marginRight: '0.25em',
-        }}
-      >
-        {word}
-      </span>
-    ));
-  }
-
-  if (needsLines) {
-    return text.split('\n').map((line, i) => (
-      <span
-        key={i}
-        className="ad-line"
-        style={{ '--line-index': i, display: 'block' }}
-      >
-        {line}
-      </span>
-    ));
-  }
+  return Math.abs(hash).toString(36);
 };
 
-// ==========================================
-// 2. TYPOGRAPHY CSS GENERATOR
-// ==========================================
-export const generateTypographyCSS = (presetId, config, uniqueId) => {
+export const generateTypographyCSS = (
+  presetId,
+  config,
+  uniqueId,
+  triggerState = 'load'
+) => {
   const {
-    duration = 500,
+    duration = 800,
     delay = 0,
-    easing = 'ease',
-    stagger = 50,
-    blurAmount = 10,
+    easing = 'ease-out',
+    intensity = 100,
   } = config;
-  const containerSelector = `#${uniqueId}`;
+  const hash = getHash(config);
+  const animName = `ad_typo_${presetId}_${hash}`;
 
-  let keyframes = '';
-  let animationStr = 'none';
+  let frames = '';
+  let targetSelector = '';
+  let delayCalc = '';
+  let isOpacityReveal = false;
 
+  // 1. Оптимізована генерація Keyframes
   switch (presetId) {
     case 'fadeByLetter':
+      frames = `0% { opacity: 0; transform: translateY(${intensity / 5}px); } 100% { opacity: 1; transform: translateY(0); }`;
+      targetSelector = '.anim-char';
+      delayCalc = `calc(var(--char-index) * ${Math.max(10, 50 - intensity / 2)}ms)`;
+      isOpacityReveal = true;
+      break;
+    case 'typewriter':
+      frames = `0% { opacity: 0; } 100% { opacity: 1; }`;
+      targetSelector = '.anim-char';
+      delayCalc = `calc(var(--char-index) * ${Math.max(10, 80 - intensity / 2)}ms)`;
+      isOpacityReveal = true;
+      break;
     case 'fadeByWord':
-    case 'fadeByLine': {
-      const type =
-        presetId === 'fadeByLetter'
-          ? 'char'
-          : presetId === 'fadeByWord'
-            ? 'word'
-            : 'line';
-      keyframes = `
-        @keyframes ad_text_fade { 0% { opacity: 0; } 100% { opacity: 1; } }
-        ${containerSelector} .ad-${type} {
-          opacity: 0;
-          animation: ad_text_fade ${duration}ms ${easing} forwards;
-          animation-delay: calc(${delay}ms + (var(--${type}-index) * ${stagger}ms));
-        }
-      `;
+      frames = `0% { opacity: 0; transform: translateY(${intensity / 5}px); } 100% { opacity: 1; transform: translateY(0); }`;
+      targetSelector = '.anim-inner';
+      delayCalc = `calc(var(--word-index) * ${Math.max(20, 100 - intensity)}ms)`;
+      isOpacityReveal = true;
       break;
-    }
-    case 'typewriter': {
-      keyframes = `
-        @keyframes ad_type { 0% { opacity: 0; } 100% { opacity: 1; } }
-        @keyframes ad_blink { 50% { border-color: transparent; } }
-        ${containerSelector} {
-          border-right: 2px solid currentColor;
-          animation: ad_blink 0.75s step-end infinite;
-          padding-right: 4px;
-        }
-        ${containerSelector} .ad-char {
-          opacity: 0;
-          animation: ad_type 0.1s step-end forwards;
-          animation-delay: calc(${delay}ms + (var(--char-index) * ${stagger}ms));
-        }
-      `;
+    case 'blurReveal':
+      frames = `0% { opacity: 0; filter: blur(${intensity / 10}px); transform: scale(0.9); } 100% { opacity: 1; filter: blur(0px); transform: scale(1); }`;
+      targetSelector = '.anim-inner';
+      delayCalc = `calc(var(--word-index) * ${Math.max(20, 100 - intensity)}ms)`;
+      isOpacityReveal = true;
       break;
-    }
-    case 'blurReveal': {
-      keyframes = `
-        @keyframes ad_blur { 0% { opacity: 0; filter: blur(${blurAmount}px); } 100% { opacity: 1; filter: blur(0px); } }
-        ${containerSelector} .ad-word {
-          opacity: 0;
-          animation: ad_blur ${duration}ms ${easing} forwards;
-          animation-delay: calc(${delay}ms + (var(--word-index) * ${stagger}ms));
-        }
-      `;
+    case 'slideUpReveal':
+      frames = `0% { transform: translateY(100%); } 100% { transform: translateY(0); }`;
+      targetSelector = '.anim-inner';
+      delayCalc = `calc(var(--line-index) * 100ms)`;
       break;
-    }
-    case 'slideUpReveal': {
-      keyframes = `
-        @keyframes ad_slide_up { 0% { opacity: 0; transform: translateY(100%); } 100% { opacity: 1; transform: translateY(0); } }
-        ${containerSelector} { overflow: hidden; display: inline-block; }
-        ${containerSelector} .ad-word {
-          opacity: 0;
-          transform: translateY(100%);
-          animation: ad_slide_up ${duration}ms ${easing} forwards;
-          animation-delay: calc(${delay}ms + (var(--word-index) * ${stagger}ms));
-        }
-      `;
+    case 'fadeByLine':
+      frames = `0% { opacity: 0; transform: translateY(${intensity / 5}px); } 100% { opacity: 1; transform: translateY(0); }`;
+      targetSelector = '.anim-inner';
+      delayCalc = `calc(var(--line-index) * 150ms)`;
+      isOpacityReveal = true;
       break;
-    }
-    case 'underlineDraw': {
-      keyframes = `
-        @keyframes ad_underline { 0% { width: 0; } 100% { width: 100%; } }
-        ${containerSelector} { position: relative; display: inline-block; }
-        ${containerSelector}::after {
-          content: ''; position: absolute; bottom: -2px; left: 0; height: 2px;
-          background-color: currentColor; width: 0;
-          animation: ad_underline ${duration}ms ${easing} ${delay}ms forwards;
-        }
-      `;
+    case 'underlineDraw':
+      frames = `0% { background-size: 0% 2px; } 100% { background-size: 100% 2px; }`;
+      targetSelector = '.anim-inner';
+      delayCalc = `calc(var(--word-index) * 50ms)`;
       break;
-    }
     default:
-      break;
+      return { keyframes: '', animationStr: 'none' };
   }
 
-  // Для текстових пресетів ми анімуємо дочірні елементи або псевдоелементи через глобальні стилі,
-  // тому animationStr самого контейнера дорівнює 'none'
-  return { keyframes, animationStr };
+  // 2. Ізоляція тригерів (щоб hover працював тільки при наведенні)
+  let parentSelector = `#${uniqueId}`;
+  if (triggerState === 'hover') parentSelector = `#${uniqueId}:hover`;
+  if (triggerState === 'click') parentSelector = `#${uniqueId}:active`;
+
+  // Захист від блимання (flash) при завантаженні
+  let baseOpacityRule = '';
+  if (triggerState === 'load' && isOpacityReveal) {
+    baseOpacityRule = 'opacity: 0;';
+  }
+
+  // Специфічне правило для ліній, щоб не ламало layout
+  let underlineRule = '';
+  if (presetId === 'underlineDraw') {
+    underlineRule = `
+      background-image: linear-gradient(currentColor, currentColor);
+      background-repeat: no-repeat;
+      background-position: bottom left;
+      background-size: 0% 2px;
+    `;
+  }
+
+  // 3. Збірка фінального CSS з використанням CSS-змінних
+  const keyframesCSS = `
+    @keyframes ${animName} { ${frames} }
+    
+    #${uniqueId} .anim-word, #${uniqueId} .anim-line {
+       overflow: ${presetId === 'slideUpReveal' ? 'hidden' : 'visible'};
+    }
+
+    #${uniqueId} ${targetSelector} {
+       ${baseOpacityRule}
+       ${underlineRule}
+    }
+    
+    ${parentSelector} ${targetSelector} {
+       animation: ${animName} ${duration}ms ${easing} forwards;
+       animation-delay: calc(${delay}ms + ${delayCalc});
+    }
+  `;
+
+  // Повертаємо 'none' для батьківського блоку, оскільки ми анімуємо його дітей (спани)
+  return { keyframes: keyframesCSS, animationStr: 'none' };
+};
+
+export const renderSplitText = (text, preset) => {
+  if (!text) return null;
+
+  // 1. Safeguards: Захист від лагів при масивному тексті
+  const SAFE_LETTER_LIMIT = 80;
+  let mode = 'none';
+
+  if (['fadeByLine', 'slideUpReveal'].includes(preset)) mode = 'line';
+  else if (['fadeByWord', 'blurReveal', 'underlineDraw'].includes(preset))
+    mode = 'word';
+  else if (['fadeByLetter', 'typewriter'].includes(preset)) {
+    // Fallback: якщо тексту багато, розбиваємо по словах, а не літерах
+    mode = text.length > SAFE_LETTER_LIMIT ? 'word' : 'letter';
+  }
+
+  if (mode === 'none') return <>{text}</>;
+
+  // 2. Безпечний рендер ліній
+  if (mode === 'line') {
+    const lines = text.split('\n');
+    return lines.map((line, i) => (
+      <span
+        key={i}
+        className="anim-line"
+        style={{ display: 'block', '--line-index': i }}
+      >
+        <span className="anim-inner" style={{ display: 'block' }}>
+          {line || '\u00A0'}
+        </span>
+      </span>
+    ));
+  }
+
+  // 3. Безпечний рендер слів (із збереженням пробілів)
+  if (mode === 'word') {
+    // Розбиваємо, але залишаємо пробіли окремими елементами
+    const words = text.split(/(\s+)/);
+    let wordCount = 0;
+
+    return words.map((word, i) => {
+      if (word.trim() === '') {
+        return (
+          <span key={i} style={{ whiteSpace: 'pre' }}>
+            {word}
+          </span>
+        );
+      }
+      const currentIndex = wordCount++;
+      return (
+        <span
+          key={i}
+          className="anim-word"
+          style={{ display: 'inline-block', verticalAlign: 'bottom' }}
+        >
+          <span
+            className="anim-inner"
+            style={{ display: 'inline-block', '--word-index': currentIndex }}
+          >
+            {word}
+          </span>
+        </span>
+      );
+    });
+  }
+
+  // 4. Безпечний рендер літер
+  if (mode === 'letter') {
+    const words = text.split(/(\s+)/);
+    let charCount = 0;
+
+    return words.map((word, i) => {
+      if (word.trim() === '') {
+        return (
+          <span key={i} style={{ whiteSpace: 'pre' }}>
+            {word}
+          </span>
+        );
+      }
+      return (
+        <span
+          key={i}
+          className="anim-word"
+          style={{
+            display: 'inline-block',
+            whiteSpace: 'nowrap',
+            verticalAlign: 'bottom',
+          }}
+        >
+          {word.split('').map((char, j) => {
+            const currentIndex = charCount++;
+            return (
+              <span
+                key={j}
+                className="anim-char"
+                style={{
+                  display: 'inline-block',
+                  '--char-index': currentIndex,
+                }}
+              >
+                {char}
+              </span>
+            );
+          })}
+        </span>
+      );
+    });
+  }
 };
