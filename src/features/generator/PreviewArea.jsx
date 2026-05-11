@@ -60,9 +60,9 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
   const preset = config.effectPreset || config.presetId || 'none';
 
   // ✅ ОПТИМІЗАЦІЯ 1: Мемоізація. CSS перераховується тільки при зміні конфігу
-  const { keyframes, animationStr } = useMemo(() => {
+  const { keyframes, animationStr, transitionStyles } = useMemo(() => {
     return activeState === 'static'
-      ? { keyframes: '', animationStr: 'none' }
+      ? { keyframes: '', animationStr: 'none', transitionStyles: null }
       : generateAnimationCSS(
           preset,
           config,
@@ -97,10 +97,16 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
   }, [keyframes, params.id, activeState]);
   // Логіка відтворення
   let activeAnimation = 'none';
-  if (activeState === 'load') activeAnimation = animationStr;
-  else if (activeState === 'hover' && isHovered) activeAnimation = animationStr;
-  else if (activeState === 'click' && isClicked) activeAnimation = animationStr;
+  let dynamicHoverStyles = {}; // Створюємо об'єкт для нових стилів
 
+  if (activeState === 'load') {
+    activeAnimation = animationStr;
+  } else if (activeState === 'hover' && isHovered) {
+    if (transitionStyles) dynamicHoverStyles = transitionStyles;
+    else activeAnimation = animationStr;
+  } else if (activeState === 'click' && isClicked) {
+    activeAnimation = animationStr;
+  }
   const handleMouseEnter = () => activeState === 'hover' && setIsHovered(true);
   const handleMouseLeave = () => {
     setIsHovered(false);
@@ -151,12 +157,13 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
     transformOrigin: config.transformOrigin || 'center',
     animation: activeAnimation,
-    transform: `${isClicked ? `scale(${s.activeScale || 0.95})` : isHovered ? `scale(${s.hoverScale || 1.02})` : 'scale(1)'}`,
+    transform: isClicked ? `scale(${s.activeScale || 0.95})` : 'scale(1)',
     cursor:
       ['button', 'link', 'checkbox', 'radio'].includes(params.type) &&
       (activeState === 'hover' || activeState === 'click')
         ? 'pointer'
         : 'default',
+    ...dynamicHoverStyles,
   };
 
   // ВІДНОВЛЕНО: Твоя логіка для специфічних типів

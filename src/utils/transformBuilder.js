@@ -54,17 +54,46 @@ export const buildCSSFrame = (state) => {
 
   return css.trim();
 };
+
 /**
  * Motion Pipeline Compiler
- * Бере normalized motion object і перетворює його на готовий CSS через buildCSSFrame.
+ * Бере normalized motion object і перетворює його на готовий CSS (keyframes або transitions).
  */
 export const compileNormalizedMotion = (motionObj, animName, triggerState) => {
   const { start, mid, end, timing } = motionObj;
   const { duration, easing, delay, fillMode, iterationCount, direction } =
     timing;
 
+  // ✅ НОВА ЛОГІКА: Transition-Based Hover
+  if (triggerState === 'hover') {
+    // Беремо лише фінальний стан (куди елемент має прийти при наведенні)
+    const endCSS = buildCSSFrame(end);
+    const transitionStr =
+      `all ${duration}ms ${easing} ${delay > 0 ? delay + 'ms' : ''}`.trim();
+
+    // Парсимо CSS-рядок у React-об'єкт, щоб система Preview могла легко його "впорснути" в інлайн-стилі
+    const transitionStyles = { transition: transitionStr };
+    endCSS.split(';').forEach((rule) => {
+      const [key, value] = rule.split(':');
+      if (key && value) {
+        // Перетворюємо kebab-case (напр. box-shadow) у camelCase (boxShadow)
+        const camelKey = key
+          .trim()
+          .replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+        transitionStyles[camelKey] = value.trim();
+      }
+    });
+
+    return {
+      keyframes: '', // Вимикаємо keyframes для hover
+      animationStr: 'none',
+      transitionCSS: `${endCSS}; transition: ${transitionStr};`, // Готовий рядок для експорту в .css файли
+      transitionStyles, // Готовий об'єкт для PreviewArea (React inline styles)
+    };
+  }
+
+  // ✅ ЗБЕРЕЖЕНА ЛОГІКА: Keyframes для Load та Click
   let frames = '';
-  // Якщо є mid (для кліку), будуємо 3 кадри, інакше 2.
   if (triggerState === 'click' && mid) {
     frames = `
       0% { ${buildCSSFrame(start)} }
