@@ -43,22 +43,47 @@ const HintCursor = ({ type, isVisible }) => {
     </div>
   );
 };
+// ✅ НОВЕ: Ізольована система ін'єкції стилів (Style Injection Engine)
+const useDynamicStyle = (id, activeState, keyframes) => {
+  useEffect(() => {
+    if (!keyframes) return;
+    const styleId = `dynamic-styles-${id}-${activeState}`;
+    let styleEl = document.getElementById(styleId);
+
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+
+    // Оновлюємо тільки якщо є реальні зміни
+    if (styleEl.innerHTML !== keyframes) {
+      styleEl.innerHTML = keyframes;
+    }
+
+    // Clean-up фаза
+    return () => {
+      if (styleEl && styleEl.parentNode) {
+        styleEl.parentNode.removeChild(styleEl);
+      }
+    };
+  }, [keyframes, id, activeState]);
+};
 
 const AnimatedItem = ({ params, activeState, localReplayKey }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [clickPhase, setClickPhase] = useState('idle'); // 'idle' | 'pressed' | 'animating'
-  const [clickKey, setClickKey] = useState(0);
+  const [clickPhase, setClickPhase] = useState('idle');
+  const elementRef = React.useRef(null); // ✅ НОВЕ: Ref для безпечного керування DOM
+
   if (!params || !params.styles || !params.specificSettings) return null;
 
   const s = params.specificSettings;
   const styles = params.styles;
 
-  // Отримуємо конфіг для поточного стану
   const targetState = activeState === 'static' ? 'load' : activeState;
   const config = params.animations?.[targetState] || {};
   const preset = config.effectPreset || config.presetId || 'none';
 
-  // ✅ ОПТИМІЗАЦІЯ 1: Мемоізація. CSS перераховується тільки при зміні конфігу
   const { keyframes, animationStr, transitionStyles } = useMemo(() => {
     return activeState === 'static'
       ? { keyframes: '', animationStr: 'none', transitionStyles: null }
@@ -70,30 +95,19 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
         );
   }, [preset, JSON.stringify(config), activeState, params.id, targetState]);
 
-  // ✅ ОПТИМІЗАЦІЯ 2: Чисті ін'єкції в DOM (без дублікатів і блимань)
+  // ✅ НОВЕ: Делегуємо ін'єкцію в наш ізольований хук
+  useDynamicStyle(params.id, activeState, keyframes);
+
+  // ✅ НОВЕ: Live-Reload Engine (перезапуск без руйнування DOM)
   useEffect(() => {
-    if (!keyframes) return;
-    const styleId = `dynamic-styles-${params.id}-${activeState}`;
-    let styleEl = document.getElementById(styleId);
-
-    if (!styleEl) {
-      styleEl = document.createElement('style');
-      styleEl.id = styleId;
-      document.head.appendChild(styleEl);
+    if (localReplayKey > 0 && elementRef.current && activeState !== 'hover') {
+      const el = elementRef.current;
+      el.style.animation = 'none'; // Знімаємо анімацію
+      void el.offsetWidth; // Форсуємо браузерний Reflow (перемальовування)
+      el.style.animation = animationStr; // Повертаємо анімацію
     }
+  }, [localReplayKey, animationStr, activeState]);
 
-    // Оновлюємо DOM тільки якщо CSS реально змінився
-    if (styleEl.innerHTML !== keyframes) {
-      styleEl.innerHTML = keyframes;
-    }
-
-    // Чистка: коли елемент зникає, видаляємо його стилі
-    return () => {
-      if (styleEl && styleEl.parentNode) {
-        styleEl.parentNode.removeChild(styleEl);
-      }
-    };
-  }, [keyframes, params.id, activeState]);
   // Логіка відтворення
   // ✅ НОВЕ: Життєвий цикл кліку (Click Lifecycle)
   let activeAnimation = 'none';
@@ -118,7 +132,13 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
 
   const handleMouseDown = () => {
     if (activeState !== 'click') return;
-    setClickKey((prev) => prev + 1); // Миттєвий рестарт (без setTimeout-милиць)
+
+    // ✅ Миттєвий рестарт кліку через Reflow
+    if (elementRef.current) {
+      elementRef.current.style.animation = 'none';
+      void elementRef.current.offsetWidth;
+      elementRef.current.style.animation = animationStr;
+    }
     setClickPhase('pressed');
   };
 
@@ -264,6 +284,7 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
 
   // ВІДНОВЛЕНО: Твої пропси (placeholder, src тощо)
   const elementProps = {
+    ref: elementRef, // ✅ Підключаємо Ref до об'єкта
     id: `${params.id}_${activeState}`,
     onMouseEnter: handleMouseEnter,
     onMouseLeave: handleMouseLeave,
@@ -420,11 +441,9 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
       />
 
       {isVoidElement ? (
-        <Tag key={`key-${localReplayKey}-${clickKey}`} {...elementProps} />
+        <Tag {...elementProps} />
       ) : (
-        <Tag key={`key-${localReplayKey}-${clickKey}`} {...elementProps}>
-          {renderContent()}
-        </Tag>
+        <Tag {...elementProps}> {renderContent()}</Tag>
       )}
     </div>
   );

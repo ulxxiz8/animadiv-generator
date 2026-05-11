@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { RangeSlider, Button, ColorPicker } from '../../components/UIElements';
 import { easingOptions } from '../../data/easingOptions';
-import {
-  getAvailablePresetsForType,
-  PRESET_SUPPORTED_PARAMS,
-} from '../../utils/semanticMapping';
+import { getAvailablePresetsForType } from '../../utils/semanticMapping';
+import { getPresetContract, animationPresets } from '../../data/presets'; // ✅ НОВИЙ ІМПОРТ
 import { MOTION_TOKENS } from '../../utils/motionTokens';
 import {
   Paintbrush,
@@ -114,27 +112,29 @@ const ControlsPanel = ({
   const isPhysicsOn =
     currentAnimParams.usePhysics || currentPresetVal.startsWith('physics');
 
-  // РОЗУМНА ФІЛЬТРАЦІЯ
+  // РОЗУМНА ФІЛЬТРАЦІЯ ЧЕРЕЗ UNIFIED CONTRACT
   const getSupportedControls = () => {
     if (!hasPreset) return [];
     const presets = currentPresetVal.split('+');
     const paramsSet = new Set();
 
-    paramsSet.add('motionToken');
+    paramsSet.add('motionToken'); // Токени підтримуються завжди (якщо пресет не 'none')
 
-    presets.forEach((p) => {
-      let targetP = p;
+    presets.forEach((presetId) => {
+      let targetId = presetId;
+      // Фізика - це окремий рушій, який замінює базові пресети
       if (currentAnimParams.usePhysics) {
-        if (p === 'scale') targetP = 'physicsScale';
-        if (p === 'slide') targetP = 'physicsBounce';
+        if (presetId === 'scale') targetId = 'physicsScale';
+        if (presetId === 'slide') targetId = 'physicsBounce';
       }
-      const sp = PRESET_SUPPORTED_PARAMS[targetP] || [
-        'duration',
-        'delay',
-        'easing',
-        'intensity',
-      ];
-      sp.forEach((param) => paramsSet.add(param));
+
+      // ✅ БЕРЕМО КОНТРАКТ ІЗ БАЗИ ДАНИХ
+      const contract = getPresetContract(targetId);
+
+      // Додаємо всі підтримувані параметри з контракту у загальний список
+      if (contract && contract.supportedParams) {
+        contract.supportedParams.forEach((param) => paramsSet.add(param));
+      }
     });
 
     return Array.from(paramsSet);
