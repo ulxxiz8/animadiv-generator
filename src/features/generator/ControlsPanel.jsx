@@ -141,8 +141,47 @@ const ControlsPanel = ({
   };
 
   const supportedControls = getSupportedControls();
-  const isSupported = (key) => supportedControls.includes(key);
 
+  // 🛑 СУВОРИЙ АУДИТ: Тільки ті параметри, які реально підключені до рушія
+  const WORKING_CONTROLS = [
+    'duration',
+    'delay',
+    'easing',
+    'intensity',
+    'iterationCount',
+    'direction',
+    'fillMode',
+    'motionAxis',
+    'transformOrigin',
+    'scaleRange',
+    'rotationAngle',
+    'blurAmount',
+    'floatingAmount',
+    'hoverDepth',
+    'usePhysics',
+    'stiffness',
+    'damping',
+    'mass',
+    'stagger',
+  ];
+
+  const isSupported = (key) => {
+    // 1. Відсікаємо все, що не імплементовано в рушії (напр. zoomIntensity)
+    if (!WORKING_CONTROLS.includes(key)) return false;
+
+    // 2. Відсікаємо stagger для елементів, які не розбиваються на літери
+    if (
+      key === 'stagger' &&
+      params.type !== 'text' &&
+      params.type !== 'button' &&
+      params.type !== 'link'
+    ) {
+      return false;
+    }
+
+    // 3. Якщо перевірку пройдено - перевіряємо, чи підтримує це поточний пресет
+    return supportedControls.includes(key);
+  };
   const hasPlaybackParams =
     isSupported('iterationCount') ||
     isSupported('direction') ||

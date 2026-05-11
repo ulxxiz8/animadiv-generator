@@ -200,3 +200,20 @@ export const PRESET_SUPPORTED_PARAMS = {
   physicsBounce: ['duration', 'delay', 'intensity', 'direction', 'usePhysics'],
   physicsHover: ['duration', 'delay', 'intensity', 'usePhysics'],
 };
+// ✅ Нові семантичні обмеження для тригерів
+export const TRIGGER_RESTRICTIONS = {
+  image: ['load', 'hover'], // Зображення рідко анімують по кліку (feedback)
+  text: ['load', 'hover'],
+  block: ['load'], // Контейнери зазвичай тільки з'являються
+  button: ['hover', 'click'],
+  checkbox: ['hover', 'click'],
+  radio: ['hover', 'click'],
+  input: ['hover', 'click'],
+};
+
+// Перевірка, чи доступний стейт для типу елемента
+export const isStateAllowedForType = (state, type) => {
+  if (state === 'static') return true;
+  const allowed = TRIGGER_RESTRICTIONS[type] || ['load', 'hover', 'click'];
+  return allowed.includes(state);
+};

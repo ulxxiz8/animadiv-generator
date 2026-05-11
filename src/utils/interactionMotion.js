@@ -1,153 +1,93 @@
-// ==========================================
-// INTERACTION MOTION GENERATOR (Buttons, Checkbox, Radio)
-// ==========================================
-export const generateInteractionCSS = (presetId, config, uniqueId) => {
+/**
+ * ГЕНЕРАТОР CSS (Для складних ефектів з псевдоелементами)
+ */
+export const generateInteractionCSS = (
+  presetId,
+  config,
+  uniqueId,
+  triggerState = 'load'
+) => {
   const {
     duration = 300,
-    delay = 0,
-    easing = 'ease',
     intensity = 100,
-    // Нові параметри (можна додати у конфіг)
-    glowColor = 'rgba(79, 70, 229, 0.6)',
+    glowColor = 'rgba(214, 248, 84, 0.6)',
     rippleColor = 'rgba(255, 255, 255, 0.4)',
   } = config;
 
-  const containerSelector = `#${uniqueId}`;
-  let keyframes = '';
-  let animationStr = 'none';
-  const animName = `ad_interact_${presetId}_${uniqueId}`;
+  const id = `#${uniqueId}`;
+  const anim = `anim_${presetId}_${uniqueId}_${triggerState}`;
+  const active =
+    triggerState === 'hover'
+      ? `${id}.is-hovered`
+      : triggerState === 'click'
+        ? `${id}.is-clicked`
+        : id;
+
+  // 🛡️ БАЗОВИЙ ЗАХИСТ: Щоб нічого не зникало
+  let css = `${id} { opacity: 1 !important; visibility: visible !important; position: relative !important; }`;
 
   switch (presetId) {
-    // --- BUTTON EFFECTS ---
-    case 'pressEffect': {
-      // Squash & Stretch: елемент сплющується по Y і розтягується по X
-      const squashY = Math.max(0.8, 1 - intensity / 500); // Напр., 0.8
-      const stretchX = Math.min(1.2, 1 + intensity / 500); // Напр., 1.2
-      keyframes = `
-        @keyframes ${animName} { 
-          0% { transform: scale(1, 1); } 
-          40% { transform: scale(${stretchX}, ${squashY}); } 
-          100% { transform: scale(1, 1); } 
+    case 'ripple':
+      css += `
+        @keyframes ${anim}_r { 0% { transform: translate(-50%,-50%) scale(0); opacity: 1; } 100% { transform: translate(-50%,-50%) scale(2.5); opacity: 0; } }
+        ${id} { overflow: hidden !important; }
+        ${id}::after { 
+          content: ''; position: absolute; top: 50%; left: 50%; width: 100%; height: 100%; 
+          background: ${rippleColor}; border-radius: 50%; z-index: 0; pointer-events: none;
+          transform: translate(-50%,-50%) scale(0); opacity: 0; 
         }
-      `;
-      animationStr = `${animName} ${duration}ms cubic-bezier(0.4, 0, 0.2, 1) ${delay}ms both`;
-      break;
-    }
-    case 'ripple': {
-      // CSS-only ripple (по центру). Для click-position ripple потрібен JS event listener.
-      keyframes = `
-        @keyframes ${animName}_ripple { 
-          0% { transform: translate(-50%, -50%) scale(0); opacity: 1; } 
-          100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; } 
-        }
-        ${containerSelector} { position: relative; overflow: hidden; }
-        ${containerSelector}::after {
-          content: ''; position: absolute; top: 50%; left: 50%;
-          width: 100%; height: 100%; padding-bottom: 100%;
-          background-color: ${rippleColor}; border-radius: 50%;
-          transform: translate(-50%, -50%) scale(0);
-          animation: ${animName}_ripple ${duration}ms ${easing} ${delay}ms both;
-          pointer-events: none;
-        }
+        ${active}::after { animation: ${anim}_r ${duration}ms ease-out forwards; }
       `;
       break;
-    }
-    case 'glowHover': {
-      keyframes = `
-        @keyframes ${animName} { 
-          0% { box-shadow: 0 0 0px 0px transparent; } 
-          100% { box-shadow: 0 0 ${intensity / 5}px ${intensity / 10}px ${glowColor}; } 
-        }
-      `;
-      animationStr = `${animName} ${duration}ms ${easing} ${delay}ms forwards`;
-      break;
-    }
-    case 'magneticHover': {
-      // Імітація magnetic hover через CSS (легкий зсув)
-      keyframes = `
-        @keyframes ${animName} { 
-          0% { transform: translate(0, 0); } 
-          100% { transform: translate(${intensity / 20}px, -${intensity / 20}px); } 
-        }
-      `;
-      animationStr = `${animName} ${duration}ms ease-out ${delay}ms forwards`;
-      break;
-    }
-    case 'borderDraw': {
-      keyframes = `
-        @keyframes ${animName}_border { 
-          0% { clip-path: inset(0 100% 0 0); } 
-          100% { clip-path: inset(0 0 0 0); } 
-        }
-        ${containerSelector} { position: relative; }
-        ${containerSelector}::before {
-          content: ''; position: absolute; inset: 0;
-          border: 2px solid currentColor; border-radius: inherit;
-          clip-path: inset(0 100% 0 0);
-          animation: ${animName}_border ${duration}ms ${easing} ${delay}ms forwards;
-          pointer-events: none;
-        }
-      `;
-      break;
-    }
 
-    // --- CHECKBOX / RADIO EFFECTS ---
-    case 'bounceCheck': {
-      // Анімуємо дочірню SVG-галочку (або крапку радіо) з ефектом "пружини"
-      keyframes = `
-        @keyframes ${animName}_bounce { 
-          0% { transform: scale(0); } 
-          50% { transform: scale(1.2); } 
-          100% { transform: scale(1); } 
+    case 'borderDraw':
+      css += `
+        @keyframes ${anim}_b { 0% { clip-path: inset(0 100% 0 0); } 100% { clip-path: inset(0 0 0 0); } }
+        ${id}::before { 
+          content: ''; position: absolute; inset: 0; border: 2px solid currentColor; 
+          border-radius: inherit; pointer-events: none; z-index: 10; opacity: 0; 
         }
-        ${containerSelector} svg, ${containerSelector} div > div {
-          animation: ${animName}_bounce ${duration}ms cubic-bezier(0.175, 0.885, 0.32, 1.275) ${delay}ms both;
-        }
+        ${active}::before { opacity: 1; animation: ${anim}_b ${duration}ms ease forwards; }
       `;
       break;
-    }
-    case 'smoothCheck': {
-      keyframes = `
-        @keyframes ${animName}_smooth { 
-          0% { opacity: 0; transform: scale(0.5); } 
-          100% { opacity: 1; transform: scale(1); } 
-        }
-        ${containerSelector} svg, ${containerSelector} div > div {
-          animation: ${animName}_smooth ${duration}ms ease-in-out ${delay}ms both;
-        }
-      `;
-      break;
-    }
-    case 'radioPulse': {
-      keyframes = `
-        @keyframes ${animName}_pulse { 
-          0% { box-shadow: 0 0 0 0 ${glowColor}; } 
-          100% { box-shadow: 0 0 0 ${intensity / 5}px transparent; } 
-        }
-        ${containerSelector} > div {
-          animation: ${animName}_pulse ${duration}ms ease-out ${delay}ms infinite;
-        }
-      `;
-      break;
-    }
-    case 'elasticToggle': {
-      // Контейнер чекбокса "стискається" при кліку
-      const squashAmount = Math.max(0.5, 1 - intensity / 200);
-      keyframes = `
-        @keyframes ${animName}_elastic { 
-          0% { transform: scale(1); } 
-          50% { transform: scale(${squashAmount}); } 
-          100% { transform: scale(1); } 
-        }
-        ${containerSelector} > div:first-child {
-          animation: ${animName}_elastic ${duration}ms cubic-bezier(0.68, -0.55, 0.265, 1.55) ${delay}ms both;
-        }
-      `;
-      break;
-    }
+
     default:
       break;
   }
 
-  return { keyframes, animationStr };
+  return { keyframes: css, animationStr: 'none', transitionStyles: null };
+};
+
+/**
+ * ГЕНЕРАТОР STYLES (Для миттєвих ефектів без ризику зникнення)
+ */
+export const generateInteractionStyles = (presetId, config) => {
+  const {
+    intensity = 100,
+    glowColor = 'rgba(214, 248, 84, 0.6)',
+    duration = 300,
+  } = config;
+
+  const styles = {
+    transition: `transform ${duration}ms cubic-bezier(0.34, 1.56, 0.64, 1), 
+                 box-shadow ${duration}ms ease, 
+                 filter ${duration}ms ease`,
+    transform: 'scale(1) translate(0,0)',
+    opacity: 1,
+    visibility: 'visible',
+  };
+
+  switch (presetId) {
+    case 'glowHover':
+      styles.boxShadow = `0 0 ${intensity / 2}px ${intensity / 4}px ${glowColor}`;
+      break;
+    case 'magneticHover':
+      styles.transform = `translate(${intensity / 10}px, -${intensity / 10}px)`;
+      break;
+    case 'pressEffect':
+      styles.transform = `scale(${1 - intensity / 500})`;
+      break;
+  }
+
+  return { keyframes: '', animationStr: 'none', transitionStyles: styles };
 };

@@ -1,16 +1,49 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from 'react';
 import {
   MousePointer2,
   Pointer,
   LayoutTemplate,
   Check,
-  Square,
-  Grid,
   RotateCcw,
 } from 'lucide-react';
 import { generateAnimationCSS } from '../../utils/animationEngine';
 import { renderSplitText } from '../../utils/typographyMotion';
 
+// ==========================================
+// 1. STABLE STYLE INJECTION
+// ==========================================
+const useDynamicStyle = (id, activeState, keyframes) => {
+  useEffect(() => {
+    if (!keyframes) return;
+    const styleId = `dynamic-styles-${id}-${activeState}`;
+    let styleEl = document.getElementById(styleId);
+
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+
+    if (styleEl.innerHTML !== keyframes) {
+      styleEl.innerHTML = keyframes;
+    }
+
+    return () => {
+      const el = document.getElementById(styleId);
+      if (el) el.remove();
+    };
+  }, [keyframes, id, activeState]);
+};
+
+// ==========================================
+// 2. HINT CURSOR
+// ==========================================
 const HintCursor = ({ type, isVisible }) => {
   if (!isVisible) return null;
   const animationStyle =
@@ -43,37 +76,16 @@ const HintCursor = ({ type, isVisible }) => {
     </div>
   );
 };
-// ✅ НОВЕ: Ізольована система ін'єкції стилів (Style Injection Engine)
-const useDynamicStyle = (id, activeState, keyframes) => {
-  useEffect(() => {
-    if (!keyframes) return;
-    const styleId = `dynamic-styles-${id}-${activeState}`;
-    let styleEl = document.getElementById(styleId);
 
-    if (!styleEl) {
-      styleEl = document.createElement('style');
-      styleEl.id = styleId;
-      document.head.appendChild(styleEl);
-    }
-
-    // Оновлюємо тільки якщо є реальні зміни
-    if (styleEl.innerHTML !== keyframes) {
-      styleEl.innerHTML = keyframes;
-    }
-
-    // Clean-up фаза
-    return () => {
-      if (styleEl && styleEl.parentNode) {
-        styleEl.parentNode.removeChild(styleEl);
-      }
-    };
-  }, [keyframes, id, activeState]);
-};
-
+// ==========================================
+// 3. ANIMATED ITEM COMPONENT
+// ==========================================
 const AnimatedItem = ({ params, activeState, localReplayKey }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [clickPhase, setClickPhase] = useState('idle');
-  const elementRef = React.useRef(null); // ✅ НОВЕ: Ref для безпечного керування DOM
+  const elementRef = useRef(null);
+
+  const isClicked = clickPhase !== 'idle';
 
   if (!params || !params.styles || !params.specificSettings) return null;
 
@@ -95,110 +107,124 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
         );
   }, [preset, JSON.stringify(config), activeState, params.id, targetState]);
 
-  // ✅ НОВЕ: Делегуємо ін'єкцію в наш ізольований хук
   useDynamicStyle(params.id, activeState, keyframes);
 
-  // ✅ НОВЕ: Live-Reload Engine (перезапуск без руйнування DOM)
+  // 🔄 STABLE REPLAY ENGINE
+  const triggerReplay = useCallback(() => {
+    if (!elementRef.current) return;
+    const el = elementRef.current;
+
+    el.style.animation = 'none';
+
+    // Подвійний requestAnimationFrame гарантує, що браузер відрендерить скидання
+    // перед тим, як ми знову призначимо анімацію. Це прибирає глітчі.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (elementRef.current) {
+          elementRef.current.style.animation = animationStr;
+        }
+      });
+    });
+  }, [animationStr]);
+
   useEffect(() => {
-    if (localReplayKey > 0 && elementRef.current && activeState !== 'hover') {
-      const el = elementRef.current;
-      el.style.animation = 'none'; // Знімаємо анімацію
-      void el.offsetWidth; // Форсуємо браузерний Reflow (перемальовування)
-      el.style.animation = animationStr; // Повертаємо анімацію
+    if (localReplayKey > 0 && activeState === 'load') {
+      triggerReplay();
     }
-  }, [localReplayKey, animationStr, activeState]);
+  }, [localReplayKey, activeState, triggerReplay]);
 
-  // Логіка відтворення
-  // ✅ НОВЕ: Життєвий цикл кліку (Click Lifecycle)
-  let activeAnimation = 'none';
-  let dynamicHoverStyles = {};
-
-  if (activeState === 'load') {
-    activeAnimation = animationStr;
-  } else if (activeState === 'hover' && isHovered) {
-    if (transitionStyles) dynamicHoverStyles = transitionStyles;
-    else activeAnimation = animationStr;
-  } else if (activeState === 'click' && clickPhase !== 'idle') {
-    activeAnimation = animationStr;
-  }
-
-  const handleMouseEnter = () => activeState === 'hover' && setIsHovered(true);
+  // 🖱️ STABLE INTERACTION LISTENERS
+  const handleMouseEnter = () => {
+    if (activeState === 'hover') setIsHovered(true);
+  };
 
   const handleMouseLeave = () => {
     setIsHovered(false);
-    // Якщо прибрали мишку під час кліку - безпечно переводимо в анімацію завершення
-    if (clickPhase === 'pressed') setClickPhase('animating');
+    setClickPhase('idle'); // Жорстке скидання стейту при втраті фокусу
   };
 
   const handleMouseDown = () => {
     if (activeState !== 'click') return;
-
-    // ✅ Миттєвий рестарт кліку через Reflow
-    if (elementRef.current) {
-      elementRef.current.style.animation = 'none';
-      void elementRef.current.offsetWidth;
-      elementRef.current.style.animation = animationStr;
-    }
+    if (!transitionStyles) triggerReplay(); // Для ripple, bounce
     setClickPhase('pressed');
   };
 
   const handleMouseUp = () => {
-    if (activeState !== 'click') return;
-    setClickPhase('animating'); // Мишка відпущена, але даємо анімації відіграти до кінця
-  };
-
-  const handleAnimationEnd = (e) => {
-    // Коли браузер каже, що CSS-анімація завершилась - скидаємо стан
-    if (activeState === 'click' && clickPhase !== 'idle') {
-      setClickPhase('idle');
+    if (activeState === 'click' && clickPhase === 'pressed') {
+      setClickPhase('released');
     }
   };
 
+  const handleAnimationEnd = () => {
+    if (activeState === 'click') setClickPhase('idle');
+  };
+
+  // 🎨 PREDICTABLE VISUAL STATE
+  const applyLoadAnimation = () => {
+    if (activeState !== 'load') return {};
+    return { animation: animationStr };
+  };
+
+  const applyHoverState = () => {
+    if (activeState !== 'hover' || !isHovered) return {};
+    if (transitionStyles) return transitionStyles;
+    return { animation: animationStr };
+  };
+
+  const applyClickState = () => {
+    if (activeState !== 'click' || clickPhase === 'idle') return {};
+    if (transitionStyles) {
+      return clickPhase === 'pressed' ? transitionStyles : {};
+    }
+    return { animation: animationStr };
+  };
+
+  const dynamicInteractionStyles = useMemo(() => {
+    const load = applyLoadAnimation();
+    const hover = applyHoverState();
+    const click = applyClickState();
+
+    // Пріоритет: Click > Hover > Load
+    const activeStyles = { ...load, ...hover, ...click };
+
+    // Якщо анімації немає — повертаємо порожній об'єкт, щоб не затирати стилі
+    return Object.keys(activeStyles).length > 0 ? activeStyles : {};
+  }, [isHovered, clickPhase, animationStr, transitionStyles]);
+
+  // 🧱 DOM ELEMENT BUILDER
   let Tag = params.tag || 'div';
   if (params.type === 'text') Tag = s.tag || 'p';
   if (params.type === 'checkbox' || params.type === 'radio') Tag = 'label';
 
   const isVoidElement = Tag === 'input' || Tag === 'img' || Tag === 'textarea';
 
-  // ВІДНОВЛЕНО: Твої оригінальні стилі елемента
   const elementStyles = {
+    // 1. Статичні стилі з бази
+    ...styles,
     width: styles.width !== 'auto' ? `${styles.width}px` : 'auto',
     height: styles.height !== 'auto' ? `${styles.height}px` : 'auto',
-    backgroundColor: styles.backgroundColor,
-    color: styles.color,
-    borderRadius: `${styles.borderRadius || 0}px`,
-    border:
-      styles.borderWidth > 0
-        ? `${styles.borderWidth}px solid ${styles.borderColor || '#E5E7EB'}`
-        : 'none',
-    filter:
-      styles.opacity !== undefined && styles.opacity < 1
-        ? `opacity(${styles.opacity})`
-        : 'none',
-    padding: styles.padding || 0,
-    boxSizing: 'border-box',
-    outline: 'none',
-    margin: 0,
-    fontFamily: s.fontFamily || 'inherit',
-    boxShadow:
-      isHovered && s.hoverShadow
-        ? s.hoverShadow
-        : isHovered
-          ? '0 10px 15px -3px rgba(0,0,0,0.1)'
-          : 'none',
-    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-    transformOrigin: config.transformOrigin || 'center',
-    animation: activeAnimation,
-    transform: 'scale(1)', // Усі трансформації тепер генеруються рушієм Pipeline
-    cursor:
-      ['button', 'link', 'checkbox', 'radio'].includes(params.type) &&
-      (activeState === 'hover' || activeState === 'click')
-        ? 'pointer'
-        : 'default',
-    ...dynamicHoverStyles,
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    // 2. Видимість
+    opacity: 1,
+    visibility: 'visible',
+
+    // 3. АНІМАЦІЯ (Тільки для Load!)
+    // Якщо ми на будь-якому іншому табі (Hover/Click), ставимо 'none'.
+    // Це дозволить CSS-класам (.is-hovered) з interactionMotion.js нарешті спрацювати.
+    animation: activeState === 'load' ? animationStr : 'none',
+
+    // 4. Додаткові правки
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+    cursor: 'pointer',
+    fontSize: `${s.fontSize || 14}px`,
+    fontWeight: s.fontWeight || 600,
   };
 
-  // ВІДНОВЛЕНО: Твоя логіка для специфічних типів
+  // Логіка специфічних типів (Block, Button, Input, Textarea, Text, Image, Link)
   if (params.type === 'block') {
     elementStyles.display = 'flex';
     elementStyles.flexDirection = 'column';
@@ -282,17 +308,17 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
     elementStyles.height = 'auto';
   }
 
-  // ВІДНОВЛЕНО: Твої пропси (placeholder, src тощо)
   const elementProps = {
-    ref: elementRef, // ✅ Підключаємо Ref до об'єкта
+    ref: elementRef,
     id: `${params.id}_${activeState}`,
     onMouseEnter: handleMouseEnter,
     onMouseLeave: handleMouseLeave,
     onMouseDown: handleMouseDown,
     onMouseUp: handleMouseUp,
-    onAnimationEnd: handleAnimationEnd, // ✅ Слухач життєвого циклу
+    onAnimationEnd: handleAnimationEnd,
     style: elementStyles,
-    className: 'animadiv-element',
+    className:
+      `animadiv-element ${isHovered ? 'is-hovered' : ''} ${clickPhase !== 'idle' ? 'is-clicked' : ''}`.trim(),
   };
 
   if (params.type === 'input') {
@@ -318,7 +344,6 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
     elementProps.onClick = (e) => e.preventDefault();
   }
 
-  // ВІДНОВЛЕНО: Твій внутрішній контент (чекбокси, текст)
   const renderContent = () => {
     if (params.type === 'button') return renderSplitText(s.text, preset);
     if (params.type === 'text') return renderSplitText(s.content, preset);
@@ -435,7 +460,7 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
         type={activeState}
         isVisible={
           !isHovered &&
-          clickPhase === 'idle' && // ✅ ВЖИВАЄМО НОВИЙ СТЕЙТ
+          clickPhase === 'idle' &&
           (activeState === 'hover' || activeState === 'click')
         }
       />
@@ -449,6 +474,9 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
   );
 };
 
+// ==========================================
+// 4. MAIN PREVIEW AREA
+// ==========================================
 const PreviewArea = ({ params, refreshKey }) => {
   const [activeState, setActiveState] = useState('load');
   const [isGridView, setIsGridView] = useState(false);

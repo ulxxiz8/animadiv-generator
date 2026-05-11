@@ -1,114 +1,131 @@
 /**
- * Centralized Transform Merge Engine
- * Завжди генерує transform в одному і тому ж порядку: translate -> scale -> rotate -> skew.
- * Це гарантує ідеальну CSS-інтерполяцію при комбінації ефектів.
+ * src/utils/transformBuilder.js
+ * UNIFIED TRANSFORM ENGINE
+ * Збирає розрізнені інструкції у валідний, безконфліктний CSS (Transitions або Keyframes)
  */
-export const buildCSSFrame = (state) => {
-  const {
-    x = 0,
-    y = 0,
-    z = 0,
-    scale = 1,
-    scaleX = null,
-    scaleY = null,
-    rotate = 0,
-    skewX = 0,
-    skewY = 0,
-    opacity = null,
-    blur = 0,
-    brightness = 100,
-  } = state;
 
-  // ВАЖЛИВО: Жодних if (x !== 0). CSS потрібна стабільна матриця!
+const parseVal = (val, unit) =>
+  typeof val === 'number' ? `${val}${unit}` : val;
+
+/**
+ * 1. CENTRAL FRAME BUILDER
+ * Бере об'єкт інструкцій і безпечно мержить їх в один CSS-рядок
+ */
+export const buildCSSFrame = (frameData) => {
+  if (!frameData) return '';
+
   let transformStr = '';
+  let filterStr = '';
+  let styleStr = '';
 
-  // 1. Translate
-  if (z !== 0) {
-    transformStr += `translate3d(${typeof x === 'number' ? x + 'px' : x}, ${typeof y === 'number' ? y + 'px' : y}, ${typeof z === 'number' ? z + 'px' : z}) `;
-  } else {
-    transformStr += `translate(${typeof x === 'number' ? x + 'px' : x}, ${typeof y === 'number' ? y + 'px' : y}) `;
+  // --- MERGE TRANSFORMS ---
+  const { x, y, z, scale, scaleX, scaleY, rotate, skewX, skewY } = frameData;
+
+  // Translate
+  if (x !== undefined || y !== undefined || z !== undefined) {
+    const tx = x !== undefined ? parseVal(x, 'px') : '0px';
+    const ty = y !== undefined ? parseVal(y, 'px') : '0px';
+    const tz = z !== undefined ? parseVal(z, 'px') : '0px';
+    transformStr += `translate3d(${tx}, ${ty}, ${tz}) `;
   }
 
-  // 2. Scale
-  const finalScaleX = scaleX !== null ? scaleX : scale;
-  const finalScaleY = scaleY !== null ? scaleY : scale;
-  if (finalScaleX === finalScaleY) transformStr += `scale(${finalScaleX}) `;
-  else transformStr += `scale(${finalScaleX}, ${finalScaleY}) `;
+  // Scale (підтримка як загального scale, так і по осях)
+  if (scale !== undefined) {
+    transformStr += `scale(${scale}) `;
+  } else if (scaleX !== undefined || scaleY !== undefined) {
+    const sx = scaleX !== undefined ? scaleX : 1;
+    const sy = scaleY !== undefined ? scaleY : 1;
+    transformStr += `scale3d(${sx}, ${sy}, 1) `;
+  }
 
-  // 3. Rotate
-  transformStr += `rotate(${rotate}deg) `;
+  // Rotate
+  if (rotate !== undefined) {
+    transformStr += `rotate(${parseVal(rotate, 'deg')}) `;
+  }
 
-  // 4. Skew
-  transformStr += `skew(${skewX}deg, ${skewY}deg) `;
+  // Skew
+  if (skewX !== undefined || skewY !== undefined) {
+    const skX = skewX !== undefined ? parseVal(skewX, 'deg') : '0deg';
+    const skY = skewY !== undefined ? parseVal(skewY, 'deg') : '0deg';
+    transformStr += `skew(${skX}, ${skY}) `;
+  }
 
-  // 5. Фільтри
-  let filterStr = '';
-  if (blur !== 0) filterStr += `blur(${blur}px) `;
-  if (brightness !== 100) filterStr += `brightness(${brightness}%) `;
+  // --- MERGE FILTERS ---
+  const { blur, brightness, dropShadow } = frameData;
+  if (blur !== undefined) filterStr += `blur(${parseVal(blur, 'px')}) `;
+  if (brightness !== undefined) filterStr += `brightness(${brightness}) `;
+  if (dropShadow !== undefined) filterStr += `drop-shadow(${dropShadow}) `;
 
-  // 6. Фінальний мердж
-  let css = '';
-  if (transformStr.trim()) css += `transform: ${transformStr.trim()}; `;
-  if (filterStr.trim()) css += `filter: ${filterStr.trim()}; `;
-  if (opacity !== null) css += `opacity: ${opacity}; `;
+  // --- COMPILE FINAL STRING ---
+  if (transformStr.trim()) styleStr += `transform: ${transformStr.trim()}; `;
+  if (filterStr.trim()) styleStr += `filter: ${filterStr.trim()}; `;
 
-  return css.trim();
+  if (frameData.opacity !== undefined && frameData.opacity !== null) {
+    styleStr += `opacity: ${frameData.opacity}; `;
+  }
+  if (frameData.boxShadow !== undefined) {
+    styleStr += `box-shadow: ${frameData.boxShadow}; `;
+  }
+
+  return styleStr.trim();
 };
 
 /**
- * Motion Pipeline Compiler
- * Бере normalized motion object і перетворює його на готовий CSS (keyframes або transitions).
+ * 2. RUNTIME COMPILER
+ * Визначає, куди віддати зібраний CSS: у Hover/Click (Transitions) чи Load (Keyframes)
  */
 export const compileNormalizedMotion = (motionObj, animName, triggerState) => {
   const { start, mid, end, timing } = motionObj;
-  const { duration, easing, delay, fillMode, iterationCount, direction } =
-    timing;
+  const {
+    duration = 300,
+    easing = 'ease',
+    delay = 0,
+    fillMode = 'both',
+    iterationCount = 1,
+    direction = 'normal',
+  } = timing || {};
 
-  // ✅ НОВА ЛОГІКА: Transition-Based Hover
-  if (triggerState === 'hover') {
-    // Беремо лише фінальний стан (куди елемент має прийти при наведенні)
-    const endCSS = buildCSSFrame(end);
-    const transitionStr =
-      `all ${duration}ms ${easing} ${delay > 0 ? delay + 'ms' : ''}`.trim();
+  // ==========================================
+  // HOVER & CLICK ENGINE (Transitions)
+  // ==========================================
+  if (triggerState === 'hover' || triggerState === 'click') {
+    // Для кліку використовуємо mid (якщо є, напр. ефект вдавлювання), інакше end
+    const targetFrame = triggerState === 'click' && mid ? mid : end;
+    const rawStyleStr = buildCSSFrame(targetFrame);
 
-    // Парсимо CSS-рядок у React-об'єкт, щоб система Preview могла легко його "впорснути" в інлайн-стилі
-    const transitionStyles = { transition: transitionStr };
-    endCSS.split(';').forEach((rule) => {
-      const [key, value] = rule.split(':');
-      if (key && value) {
-        // Перетворюємо kebab-case (напр. box-shadow) у camelCase (boxShadow)
-        const camelKey = key
-          .trim()
-          .replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-        transitionStyles[camelKey] = value.trim();
-      }
+    // Створюємо React style об'єкт
+    const transitionStyles = {
+      transition: `all ${duration}ms ${easing} ${delay > 0 ? delay + 'ms' : ''}`,
+      willChange: 'transform, filter, opacity',
+    };
+
+    // Парсимо згенерований CSS-рядок у React CamelCase формат
+    rawStyleStr.split(';').forEach((rule) => {
+      if (!rule.trim()) return;
+      const [key, value] = rule.split(':').map((s) => s.trim());
+      if (!key || !value) return;
+
+      const camelKey = key.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+      transitionStyles[camelKey] = value;
     });
 
-    return {
-      keyframes: '', // Вимикаємо keyframes для hover
-      animationStr: 'none',
-      transitionCSS: `${endCSS}; transition: ${transitionStr};`, // Готовий рядок для експорту в .css файли
-      transitionStyles, // Готовий об'єкт для PreviewArea (React inline styles)
-    };
+    return { keyframes: '', animationStr: 'none', transitionStyles };
   }
 
-  // ✅ ЗБЕРЕЖЕНА ЛОГІКА: Keyframes для Load та Click
-  let frames = '';
-  if (triggerState === 'click' && mid) {
-    frames = `
-      0% { ${buildCSSFrame(start)} }
-      50% { ${buildCSSFrame(mid)} }
-      100% { ${buildCSSFrame(end)} }
-    `.trim();
-  } else {
-    frames = `
-      0% { ${buildCSSFrame(start)} }
-      100% { ${buildCSSFrame(end)} }
-    `.trim();
-  }
+  // ==========================================
+  // LOAD ENGINE (Keyframes)
+  // ==========================================
+  let keyframes = `@keyframes ${animName} {\n`;
 
-  const keyframes = `@keyframes ${animName} {\n  ${frames}\n}`;
+  keyframes += `  0% { ${buildCSSFrame(start)} }\n`;
+  if (mid) {
+    keyframes += `  50% { ${buildCSSFrame(mid)} }\n`;
+  }
+  keyframes += `  100% { ${buildCSSFrame(end)} }\n`;
+
+  keyframes += `}`;
+
   const animationStr = `${animName} ${duration}ms ${easing} ${delay}ms ${iterationCount} ${direction} ${fillMode}`;
 
-  return { keyframes, animationStr };
+  return { keyframes, animationStr, transitionStyles: null };
 };
