@@ -808,7 +808,10 @@ const ControlsPanel = ({
                   }
                   style={inputStyle}
                 >
-                  {getAvailablePresetsForType(params.type).map((preset) => (
+                  {getAvailablePresetsForType(
+                    params.type,
+                    activeMotionState
+                  ).map((preset) => (
                     <option key={preset.id} value={preset.id}>
                       {preset.name}
                     </option>

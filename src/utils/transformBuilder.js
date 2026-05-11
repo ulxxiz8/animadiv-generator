@@ -54,3 +54,32 @@ export const buildCSSFrame = (state) => {
 
   return css.trim();
 };
+/**
+ * Motion Pipeline Compiler
+ * Бере normalized motion object і перетворює його на готовий CSS через buildCSSFrame.
+ */
+export const compileNormalizedMotion = (motionObj, animName, triggerState) => {
+  const { start, mid, end, timing } = motionObj;
+  const { duration, easing, delay, fillMode, iterationCount, direction } =
+    timing;
+
+  let frames = '';
+  // Якщо є mid (для кліку), будуємо 3 кадри, інакше 2.
+  if (triggerState === 'click' && mid) {
+    frames = `
+      0% { ${buildCSSFrame(start)} }
+      50% { ${buildCSSFrame(mid)} }
+      100% { ${buildCSSFrame(end)} }
+    `.trim();
+  } else {
+    frames = `
+      0% { ${buildCSSFrame(start)} }
+      100% { ${buildCSSFrame(end)} }
+    `.trim();
+  }
+
+  const keyframes = `@keyframes ${animName} {\n  ${frames}\n}`;
+  const animationStr = `${animName} ${duration}ms ${easing} ${delay}ms ${iterationCount} ${direction} ${fillMode}`;
+
+  return { keyframes, animationStr };
+};

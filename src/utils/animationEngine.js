@@ -6,6 +6,7 @@ import { generateCombinedCSS } from './combinationMotion';
 import { generateDisneyCSS } from './disneyMotion';
 import { generatePhysicsCSS } from './physicsMotion';
 import { applyAccessibilityFilters } from './accessibilityMotion';
+import { compileNormalizedMotion } from './transformBuilder';
 
 /**
  * Детермінований хеш. Видає однаковий ID для однакових налаштувань.
@@ -133,6 +134,8 @@ export const generateAnimationCSS = (
   // ==========================================
   // БАЗОВІ ПРЕСЕТИ З АДАПТАЦІЄЮ ПІД ТРИГЕР
   // ==========================================
+
+  // 🔴 ЦЕЙ БЛОК ПОВИНЕН БУТИ ТУТ (Деструктуризація)
   const {
     duration = 300,
     delay = 0,
@@ -145,91 +148,111 @@ export const generateAnimationCSS = (
     motionAxis = 'all',
   } = config;
 
-  // ✅ СТАБІЛЬНИЙ ХЕШ (замість Math.random)
+  // ✅ Ініціалізація Motion Object
+  let motionObj = {
+    start: { x: 0, y: 0, scale: 1, rotate: 0, opacity: null },
+    mid: null,
+    end: { x: 0, y: 0, scale: 1, rotate: 0, opacity: null },
+    timing: {
+      duration,
+      easing,
+      delay,
+      fillMode:
+        fillMode && fillMode !== 'both'
+          ? fillMode
+          : triggerState === 'hover'
+            ? 'forwards'
+            : 'both',
+      iterationCount:
+        iterationCount === 'infinite' ? 'infinite' : iterationCount,
+      direction: [
+        'normal',
+        'reverse',
+        'alternate',
+        'alternate-reverse',
+      ].includes(direction)
+        ? direction
+        : 'normal',
+    },
+  };
+
   const hash = getConfigHash(config);
   const animName = `ad_anim_${presetId}_${triggerState}_${uniqueId}_${hash}`;
-  let frames = '';
 
-  // ✅ Чітке розділення hover та click у базових пресетах
   switch (presetId) {
     case 'fade': {
       if (triggerState === 'hover') {
-        const endOpacity = Math.max(0.2, 1 - intensity / 100);
-        frames = `0% { opacity: 1; } 100% { opacity: ${endOpacity}; }`;
+        motionObj.end.opacity = Math.max(0.2, 1 - intensity / 100);
       } else if (triggerState === 'click') {
-        frames = `0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; }`;
+        motionObj.mid = { opacity: 0.5 };
       } else {
-        const startOpacity = Math.max(0, 1 - intensity / 100);
-        frames = `0% { opacity: ${startOpacity}; } 100% { opacity: 1; }`;
+        motionObj.start.opacity = Math.max(0, 1 - intensity / 100);
+        motionObj.end.opacity = 1;
       }
       break;
     }
+
     case 'slide': {
-      let translateVal = `translateY(${intensity / 5}px)`;
-      if (direction === 'left')
-        translateVal = `translateX(-${intensity / 5}px)`;
-      if (direction === 'right')
-        translateVal = `translateX(${intensity / 5}px)`;
-      if (direction === 'top' || direction === 'reverse')
-        translateVal = `translateY(-${intensity / 5}px)`;
+      let val =
+        triggerState === 'hover'
+          ? intensity / 5
+          : triggerState === 'click'
+            ? intensity / 8
+            : intensity;
+      let dx = 0,
+        dy = 0;
+
+      if (direction === 'left') dx = -val;
+      else if (direction === 'right') dx = val;
+      else if (direction === 'top' || direction === 'reverse') dy = -val;
+      else dy = val;
 
       if (triggerState === 'hover') {
-        frames = `0% { transform: translate(0, 0); } 100% { transform: ${translateVal}; }`;
+        motionObj.end.x = dx;
+        motionObj.end.y = dy;
       } else if (triggerState === 'click') {
-        // Клік робить швидкий зсув і повертається
-        const clickVal = translateVal.replace('/ 5', '/ 8');
-        frames = `0% { transform: translate(0, 0); } 50% { transform: ${clickVal}; } 100% { transform: translate(0, 0); }`;
+        motionObj.mid = { x: dx, y: dy };
       } else {
-        const loadTranslate = translateVal.replace('/ 5', '');
-        frames = `0% { transform: ${loadTranslate}; opacity: 0; } 100% { transform: translate(0, 0); opacity: 1; }`;
+        motionObj.start.x = dx;
+        motionObj.start.y = dy;
+        motionObj.start.opacity = 0;
+        motionObj.end.opacity = 1;
       }
       break;
     }
+
     case 'scale': {
       const sStart =
         scaleRange[0] !== 1 ? scaleRange[0] : Math.max(0, 1 - intensity / 100);
       const sEnd = scaleRange[1] !== 1 ? scaleRange[1] : 1 + intensity / 500;
 
-      let scaleFn = 'scale';
-      if (motionAxis === 'x') scaleFn = 'scaleX';
-      if (motionAxis === 'y') scaleFn = 'scaleY';
-
       if (triggerState === 'hover') {
-        frames = `0% { transform: ${scaleFn}(1); } 100% { transform: ${scaleFn}(${sEnd}); }`;
+        if (motionAxis !== 'y') motionObj.end.scaleX = sEnd;
+        if (motionAxis !== 'x') motionObj.end.scaleY = sEnd;
       } else if (triggerState === 'click') {
-        // Клік стискає елемент всередину і відпускає
-        const clickEnd = Math.max(0.5, 1 - intensity / 500);
-        frames = `0% { transform: ${scaleFn}(1); } 50% { transform: ${scaleFn}(${clickEnd}); } 100% { transform: ${scaleFn}(1); }`;
+        motionObj.mid = { transforms: {} }; // Ініціалізація для безпеки
+        const clickScale = Math.max(0.5, 1 - intensity / 500);
+        if (motionAxis !== 'y') motionObj.mid.scaleX = clickScale;
+        if (motionAxis !== 'x') motionObj.mid.scaleY = clickScale;
       } else {
-        const loadEnd = scaleRange[1] !== 1 ? scaleRange[1] : 1;
-        frames = `0% { transform: ${scaleFn}(${sStart}); opacity: 0; } 100% { transform: ${scaleFn}(${loadEnd}); opacity: 1; }`;
+        motionObj.start.opacity = 0;
+        motionObj.end.opacity = 1;
+        if (motionAxis !== 'y') {
+          motionObj.start.scaleX = sStart;
+          motionObj.end.scaleX = 1;
+        }
+        if (motionAxis !== 'x') {
+          motionObj.start.scaleY = sStart;
+          motionObj.end.scaleY = 1;
+        }
       }
       break;
     }
+
     default:
       return { keyframes: '', animationStr: 'none' };
   }
 
-  // Hover має утримувати стан (forwards), а Click і Load - завершуватись (both)
-  const finalFillMode =
-    fillMode && fillMode !== 'both'
-      ? fillMode
-      : triggerState === 'hover'
-        ? 'forwards'
-        : 'both';
-  const finalIter = iterationCount === 'infinite' ? 'infinite' : iterationCount;
-
-  const cssDirection = [
-    'normal',
-    'reverse',
-    'alternate',
-    'alternate-reverse',
-  ].includes(direction)
-    ? direction
-    : 'normal';
-
-  const keyframes = `@keyframes ${animName} { ${frames} }`;
-  const animationStr = `${animName} ${duration}ms ${easing} ${delay}ms ${finalIter} ${cssDirection} ${finalFillMode}`;
-
-  return { keyframes, animationStr };
+  // 🏁 ФІНАЛЬНИЙ ПУНКТ: компіляція та вихід з функції
+  return compileNormalizedMotion(motionObj, animName, triggerState);
 };
