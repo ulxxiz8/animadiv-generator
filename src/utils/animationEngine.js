@@ -135,8 +135,8 @@ export const generateAnimationCSS = (
   // БАЗОВІ ПРЕСЕТИ З АДАПТАЦІЄЮ ПІД ТРИГЕР
   // ==========================================
 
-  // 🔴 ЦЕЙ БЛОК ПОВИНЕН БУТИ ТУТ (Деструктуризація)
-  const {
+  /// 🔴 ЗМІНЕНО: const на let, щоб ми могли тюнити час
+  let {
     duration = 300,
     delay = 0,
     easing = 'ease',
@@ -147,6 +147,14 @@ export const generateAnimationCSS = (
     scaleRange = [1, 1],
     motionAxis = 'all',
   } = config;
+
+  // ✅ TACTILE CLICK LIFECYCLE
+  if (triggerState === 'click') {
+    // Примусово затискаємо час у тактильні рамки
+    duration = Math.max(80, Math.min(duration, 180));
+    // Надаємо пружності
+    if (easing === 'ease') easing = 'cubic-bezier(0.4, 0, 0.2, 1)';
+  }
 
   // ✅ Ініціалізація Motion Object
   let motionObj = {

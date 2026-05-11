@@ -46,9 +46,8 @@ const HintCursor = ({ type, isVisible }) => {
 
 const AnimatedItem = ({ params, activeState, localReplayKey }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [isClicked, setIsClicked] = useState(false);
+  const [clickPhase, setClickPhase] = useState('idle'); // 'idle' | 'pressed' | 'animating'
   const [clickKey, setClickKey] = useState(0);
-
   if (!params || !params.styles || !params.specificSettings) return null;
 
   const s = params.specificSettings;
@@ -96,31 +95,44 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
     };
   }, [keyframes, params.id, activeState]);
   // Логіка відтворення
+  // ✅ НОВЕ: Життєвий цикл кліку (Click Lifecycle)
   let activeAnimation = 'none';
-  let dynamicHoverStyles = {}; // Створюємо об'єкт для нових стилів
+  let dynamicHoverStyles = {};
 
   if (activeState === 'load') {
     activeAnimation = animationStr;
   } else if (activeState === 'hover' && isHovered) {
     if (transitionStyles) dynamicHoverStyles = transitionStyles;
     else activeAnimation = animationStr;
-  } else if (activeState === 'click' && isClicked) {
+  } else if (activeState === 'click' && clickPhase !== 'idle') {
     activeAnimation = animationStr;
   }
+
   const handleMouseEnter = () => activeState === 'hover' && setIsHovered(true);
+
   const handleMouseLeave = () => {
     setIsHovered(false);
-    setIsClicked(false);
+    // Якщо прибрали мишку під час кліку - безпечно переводимо в анімацію завершення
+    if (clickPhase === 'pressed') setClickPhase('animating');
   };
+
   const handleMouseDown = () => {
     if (activeState !== 'click') return;
-    setIsClicked(false);
-    setTimeout(() => {
-      setClickKey((prev) => prev + 1);
-      setIsClicked(true);
-    }, 10);
+    setClickKey((prev) => prev + 1); // Миттєвий рестарт (без setTimeout-милиць)
+    setClickPhase('pressed');
   };
-  const handleMouseUp = () => setIsClicked(false);
+
+  const handleMouseUp = () => {
+    if (activeState !== 'click') return;
+    setClickPhase('animating'); // Мишка відпущена, але даємо анімації відіграти до кінця
+  };
+
+  const handleAnimationEnd = (e) => {
+    // Коли браузер каже, що CSS-анімація завершилась - скидаємо стан
+    if (activeState === 'click' && clickPhase !== 'idle') {
+      setClickPhase('idle');
+    }
+  };
 
   let Tag = params.tag || 'div';
   if (params.type === 'text') Tag = s.tag || 'p';
@@ -157,7 +169,7 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
     transformOrigin: config.transformOrigin || 'center',
     animation: activeAnimation,
-    transform: isClicked ? `scale(${s.activeScale || 0.95})` : 'scale(1)',
+    transform: 'scale(1)', // Усі трансформації тепер генеруються рушієм Pipeline
     cursor:
       ['button', 'link', 'checkbox', 'radio'].includes(params.type) &&
       (activeState === 'hover' || activeState === 'click')
@@ -257,6 +269,7 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
     onMouseLeave: handleMouseLeave,
     onMouseDown: handleMouseDown,
     onMouseUp: handleMouseUp,
+    onAnimationEnd: handleAnimationEnd, // ✅ Слухач життєвого циклу
     style: elementStyles,
     className: 'animadiv-element',
   };
@@ -401,7 +414,7 @@ const AnimatedItem = ({ params, activeState, localReplayKey }) => {
         type={activeState}
         isVisible={
           !isHovered &&
-          !isClicked &&
+          clickPhase === 'idle' && // ✅ ВЖИВАЄМО НОВИЙ СТЕЙТ
           (activeState === 'hover' || activeState === 'click')
         }
       />
