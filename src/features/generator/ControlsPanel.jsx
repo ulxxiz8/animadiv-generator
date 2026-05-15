@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { RangeSlider, Button, ColorPicker } from '../../components/UIElements';
 import { easingOptions } from '../../data/easingOptions';
-import { getAvailablePresetsForType } from '../../utils/semanticMapping';
-import { getPresetContract, animationPresets } from '../../data/presets'; // ✅ НОВИЙ ІМПОРТ
+import {
+  getAvailablePresetsForType,
+  isStateAllowedForType,
+  PRESET_SUPPORTED_PARAMS,
+} from '../../utils/semanticMapping';
 import { MOTION_TOKENS } from '../../utils/motionTokens';
 import {
   Paintbrush,
@@ -101,13 +104,31 @@ const ControlsPanel = ({
 }) => {
   const [activeTab, setActiveTab] = useState('design');
   const [activeMotionState, setActiveMotionState] = useState('load');
+  const allowedMotionStates = useMemo(
+    () =>
+      ['load', 'hover', 'click'].filter((state) =>
+        isStateAllowedForType(state, params?.type)
+      ),
+    [params?.type]
+  );
+  const currentMotionState = allowedMotionStates.includes(activeMotionState)
+    ? activeMotionState
+    : allowedMotionStates[0] || 'load';
+
+  useEffect(() => {
+    if (!allowedMotionStates.includes(activeMotionState)) {
+      setActiveMotionState(allowedMotionStates[0] || 'load');
+    }
+  }, [activeMotionState, allowedMotionStates]);
 
   if (!params || !params.styles)
     return <div style={{ padding: 20 }}>Loading...</div>;
 
-  const currentAnimParams = params.animations[activeMotionState] || {};
-  const currentPresetVal =
-    currentAnimParams.effectPreset || currentAnimParams.presetId || 'none';
+  const currentAnimParams = params.animations?.[currentMotionState] || {
+    presetId: 'none',
+  };
+  const scaleRange = currentAnimParams.scaleRange || [1, 1];
+  const currentPresetVal = currentAnimParams.presetId || 'none';
   const hasPreset = currentPresetVal !== 'none';
   const isPhysicsOn =
     currentAnimParams.usePhysics || currentPresetVal.startsWith('physics');
@@ -115,28 +136,22 @@ const ControlsPanel = ({
   // РОЗУМНА ФІЛЬТРАЦІЯ ЧЕРЕЗ UNIFIED CONTRACT
   const getSupportedControls = () => {
     if (!hasPreset) return [];
-    const presets = currentPresetVal.split('+');
     const paramsSet = new Set();
 
     paramsSet.add('motionToken'); // Токени підтримуються завжди (якщо пресет не 'none')
 
-    presets.forEach((presetId) => {
-      let targetId = presetId;
-      // Фізика - це окремий рушій, який замінює базові пресети
-      if (currentAnimParams.usePhysics) {
-        if (presetId === 'scale') targetId = 'physicsScale';
-        if (presetId === 'slide') targetId = 'physicsBounce';
-      }
+    let targetId = currentPresetVal;
+    // Фізика - це окремий рушій, який замінює базові пресети
+    if (currentAnimParams.usePhysics) {
+      if (currentPresetVal === 'scale') targetId = 'physicsScale';
+      if (currentPresetVal === 'slide') targetId = 'physicsBounce';
+    }
 
-      // ✅ БЕРЕМО КОНТРАКТ ІЗ БАЗИ ДАНИХ
-      const contract = getPresetContract(targetId);
+    // ✅ БЕРЕМО КОНТРАКТ ІЗ БАЗИ ДАНИХ
+    const supportedParams = PRESET_SUPPORTED_PARAMS[targetId] || [];
 
-      // Додаємо всі підтримувані параметри з контракту у загальний список
-      if (contract && contract.supportedParams) {
-        contract.supportedParams.forEach((param) => paramsSet.add(param));
-      }
-    });
-
+    // Додаємо всі підтримувані параметри з контракту у загальний список
+    supportedParams.forEach((param) => paramsSet.add(param));
     return Array.from(paramsSet);
   };
 
@@ -158,6 +173,7 @@ const ControlsPanel = ({
     'blurAmount',
     'floatingAmount',
     'hoverDepth',
+    'zoomIntensity',
     'usePhysics',
     'stiffness',
     'damping',
@@ -171,10 +187,8 @@ const ControlsPanel = ({
 
     // 2. Відсікаємо stagger для елементів, які не розбиваються на літери
     if (
-      key === 'stagger' &&
-      params.type !== 'text' &&
-      params.type !== 'button' &&
-      params.type !== 'link'
+      ['iterationCount', 'fillMode'].includes(key) &&
+      currentMotionState !== 'load'
     ) {
       return false;
     }
@@ -219,10 +233,7 @@ const ControlsPanel = ({
   };
 
   const handleAnimChange = (key, value) => {
-    onUpdateAnimation(activeMotionState, key, value);
-    if (key === 'effectPreset') {
-      onUpdateAnimation(activeMotionState, 'presetId', value);
-    }
+    onUpdateAnimation(currentMotionState, key, value);
   };
 
   const handleTokenApply = (tokenId) => {
@@ -777,7 +788,7 @@ const ControlsPanel = ({
                   border: '1px solid #E5E7EB',
                 }}
               >
-                {['load', 'hover', 'click'].map((state) => (
+                {allowedMotionStates.map((state) => (
                   <button
                     key={state}
                     onClick={() => setActiveMotionState(state)}
@@ -787,9 +798,9 @@ const ControlsPanel = ({
                       border: 'none',
                       borderRadius: '8px',
                       background:
-                        activeMotionState === state ? '#111827' : 'transparent',
+                        currentMotionState === state ? '#111827' : 'transparent',
                       color:
-                        activeMotionState === state ? '#D6F854' : '#6B7280',
+                        currentMotionState === state ? '#D6F854' : '#6B7280',
                       fontSize: '13px',
                       fontWeight: '800',
                       cursor: 'pointer',
@@ -841,15 +852,13 @@ const ControlsPanel = ({
               <div style={{ marginBottom: '16px' }}>
                 <label style={labelStyle}>Primary Effect</label>
                 <select
-                  value={currentPresetVal.split('+')[0]}
-                  onChange={(e) =>
-                    handleAnimChange('effectPreset', e.target.value)
-                  }
+                  value={currentPresetVal}
+                  onChange={(e) => handleAnimChange('presetId', e.target.value)}
                   style={inputStyle}
                 >
                   {getAvailablePresetsForType(
                     params.type,
-                    activeMotionState
+                    currentMotionState
                   ).map((preset) => (
                     <option key={preset.id} value={preset.id}>
                       {preset.name}
@@ -857,45 +866,6 @@ const ControlsPanel = ({
                   ))}
                 </select>
               </div>
-
-              {/* === ДРУГИЙ БЛОК: Комбінації (Тільки для базових ефектів) === */}
-              {['none', 'fade', 'slide', 'scale'].includes(
-                currentPresetVal.split('+')[0]
-              ) && (
-                <div
-                  style={{
-                    marginBottom: '16px',
-                    opacity: hasPreset ? 1 : 0.4,
-                    pointerEvents: hasPreset ? 'auto' : 'none',
-                  }}
-                >
-                  <label style={labelStyle}>Combine with (Secondary)</label>
-                  <select
-                    value={
-                      currentPresetVal.includes('+')
-                        ? currentPresetVal.split('+')[1]
-                        : 'none'
-                    }
-                    onChange={(e) => {
-                      const primary = currentPresetVal.split('+')[0] || 'none';
-                      const secondary = e.target.value;
-                      const combined =
-                        secondary === 'none'
-                          ? primary
-                          : `${primary}+${secondary}`;
-                      handleAnimChange('effectPreset', combined);
-                    }}
-                    style={inputStyle}
-                  >
-                    <option value="none">No combination</option>
-                    <option value="fade">Fade</option>
-                    <option value="slide">Slide</option>
-                    <option value="scale">Scale</option>
-                    <option value="blur">Blur</option>
-                    <option value="rotate">Rotate</option>
-                  </select>
-                </div>
-              )}
 
               <div
                 style={{
@@ -1283,15 +1253,11 @@ const ControlsPanel = ({
                           step={0.1}
                           min={0}
                           max={5}
-                          value={
-                            currentAnimParams.scaleRange
-                              ? currentAnimParams.scaleRange[0]
-                              : 1
-                          }
+                          value={scaleRange[0]}
                           onChange={(e) =>
                             handleAnimChange('scaleRange', [
                               Number(e.target.value),
-                              currentAnimParams.scaleRange[1],
+                              scaleRange[1],
                             ])
                           }
                           style={inputStyle}
@@ -1301,14 +1267,10 @@ const ControlsPanel = ({
                           step={0.1}
                           min={0}
                           max={5}
-                          value={
-                            currentAnimParams.scaleRange
-                              ? currentAnimParams.scaleRange[1]
-                              : 1
-                          }
+                          value={scaleRange[1]}
                           onChange={(e) =>
                             handleAnimChange('scaleRange', [
-                              currentAnimParams.scaleRange[0],
+                              scaleRange[0],
                               Number(e.target.value),
                             ])
                           }

@@ -221,7 +221,7 @@ export const ELEMENT_DEFINITIONS = {
 // 2. АРХІТЕКТУРА MOTION SYSTEM (Isolated Extension)
 // ==========================================
 export const DEFAULT_ANIMATION_CONFIG = {
-  effectPreset: 'none',
+  presetId: 'none',
   duration: 300, // ms
   delay: 0, // ms
   easing: 'ease', // linear, ease-in, cubic-bezier, etc.
@@ -345,7 +345,9 @@ export const updateAnimationParam = (
     animations: {
       ...elementState.animations,
       [triggerState]: {
-        ...elementState.animations[triggerState],
+        ...(elementState.animations?.[triggerState] || {
+          ...DEFAULT_ANIMATION_CONFIG,
+        }),
         [paramKey]: value,
       },
     },

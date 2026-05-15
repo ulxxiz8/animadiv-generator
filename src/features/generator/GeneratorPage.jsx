@@ -5,17 +5,40 @@ import CodeOutput from './CodeOutput';
 import { generateFullCSS } from '../../utils/generateCss';
 import {
   createElement,
+  DEFAULT_ANIMATION_CONFIG,
   updateElementStyle,
   updateSpecificSetting,
 } from '../../utils/elementSystem'; // ПІДКЛЮЧАЄМО НАШУ ФАБРИКУ
+
+const normalizeAnimationConfig = (config) => {
+  const { effectPreset, ...nextConfig } = config || {};
+  return {
+    ...DEFAULT_ANIMATION_CONFIG,
+    ...nextConfig,
+    presetId: nextConfig.presetId || effectPreset || 'none',
+  };
+};
+
+const normalizeSavedParams = (savedParams) => ({
+  ...savedParams,
+  animations: {
+    load: normalizeAnimationConfig(savedParams.animations?.load),
+    hover: normalizeAnimationConfig(savedParams.animations?.hover),
+    click: normalizeAnimationConfig(savedParams.animations?.click),
+  },
+});
 
 // Функція ініціалізації стану
 const getInitialState = () => {
   const saved = localStorage.getItem('animadiv-params');
   if (saved) {
-    const parsed = JSON.parse(saved);
-    // Перевіряємо, чи це вже нова архітектура (має бути об'єкт styles)
-    if (parsed.styles && parsed.animations) return parsed;
+    try {
+      const parsed = JSON.parse(saved);
+      // Перевіряємо, чи це вже нова архітектура (має бути об'єкт styles)
+      if (parsed.styles && parsed.animations) return normalizeSavedParams(parsed);
+    } catch {
+      localStorage.removeItem('animadiv-params');
+    }
   }
 
   // Якщо нічого немає або версія стара — генеруємо базову кнопку через фабрику
@@ -55,7 +78,7 @@ const GeneratorPage = () => {
     if (newElement) {
       setParams((prev) => ({
         ...newElement,
-        animations: prev.animations, // Переносимо анімації на новий елемент
+        animations: prev.animations || newElement.animations, // Переносимо анімації на новий елемент
       }));
     }
   };
@@ -77,7 +100,7 @@ const GeneratorPage = () => {
       animations: {
         ...prev.animations,
         [stateName]: {
-          ...prev.animations[stateName],
+          ...normalizeAnimationConfig(prev.animations?.[stateName]),
           [key]: value,
         },
       },
@@ -103,7 +126,7 @@ const GeneratorPage = () => {
 
   useEffect(() => {
     handleReplay();
-  }, [params.animations.load.presetId]);
+  }, [params.animations?.load?.presetId]);
 
   useEffect(() => {
     let styleTag = document.getElementById('dynamic-animation-styles');

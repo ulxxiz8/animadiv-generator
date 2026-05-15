@@ -125,7 +125,7 @@ export const getAvailablePresetsForType = (elementType) => {
 // ==========================================
 // 4. SUPPORTED PARAMETERS (Semantic UI filtering)
 // ==========================================
-const baseParams = [
+const baseMotionParams = [
   'duration',
   'delay',
   'easing',
@@ -133,71 +133,72 @@ const baseParams = [
   'fillMode',
 ];
 
+const timedParams = ['duration', 'delay', 'easing'];
+
 export const PRESET_SUPPORTED_PARAMS = {
   none: [],
 
   // Базові (УВАГА: додано usePhysics)
-  fade: [...baseParams, 'intensity'],
-  slide: [...baseParams, 'intensity', 'direction', 'usePhysics'],
+  fade: [...baseMotionParams, 'intensity'],
+  slide: [...baseMotionParams, 'intensity', 'usePhysics'],
   scale: [
-    ...baseParams,
+    ...baseMotionParams,
     'intensity',
     'scaleRange',
     'motionAxis',
-    'transformOrigin',
     'usePhysics',
   ],
 
   // Typography
-  fadeByLetter: [...baseParams, 'stagger'],
-  fadeByWord: [...baseParams, 'stagger'],
-  fadeByLine: [...baseParams, 'stagger'],
-  typewriter: [...baseParams, 'stagger'],
-  blurReveal: [...baseParams, 'blurAmount', 'stagger'],
-  slideUpReveal: [...baseParams, 'stagger'],
-  underlineDraw: [...baseParams],
+  fadeByLetter: [...timedParams, 'intensity'],
+  fadeByWord: [...timedParams, 'intensity'],
+  fadeByLine: [...timedParams, 'intensity'],
+  typewriter: [...timedParams, 'intensity'],
+  blurReveal: [...timedParams, 'intensity'],
+  slideUpReveal: timedParams,
+  underlineDraw: timedParams,
 
   // Image (УВАГА: додано zoomIntensity та hoverDepth)
-  parallaxHover: [...baseParams, 'hoverDepth', 'direction'],
-  tiltHover: [...baseParams, 'rotationAngle', 'hoverDepth', 'transformOrigin'],
-  kenBurns: [...baseParams, 'zoomIntensity', 'transformOrigin'],
-  zoomReveal: [...baseParams, 'zoomIntensity', 'transformOrigin'],
-  floatingImage: [...baseParams, 'floatingAmount'],
-  hoverBrightness: [...baseParams],
-  hoverBlur: [...baseParams, 'blurAmount'],
+  parallaxHover: [],
+  tiltHover: [],
+  kenBurns: [...timedParams, 'zoomIntensity'],
+  zoomReveal: [...timedParams, 'zoomIntensity'],
+  floatingImage: [...timedParams, 'floatingAmount'],
+  hoverBrightness: [],
+  hoverBlur: [],
 
   // Interactions
-  pressEffect: [...baseParams, 'intensity'],
-  ripple: [...baseParams],
-  glowHover: [...baseParams, 'intensity'],
-  magneticHover: [...baseParams, 'intensity'],
-  borderDraw: [...baseParams],
-  smoothCheck: [...baseParams],
-  bounceCheck: [...baseParams],
-  radioPulse: [...baseParams, 'intensity'],
-  elasticToggle: [...baseParams, 'intensity'],
+  pressEffect: ['duration', 'intensity'],
+  ripple: ['duration'],
+  glowHover: ['duration', 'intensity'],
+  magneticHover: ['duration', 'intensity'],
+  borderDraw: ['duration'],
+  smoothCheck: [],
+  bounceCheck: [],
+  radioPulse: [],
+  elasticToggle: [],
 
   // Layout & Form
-  floatingLabel: [...baseParams],
-  focusGlow: [...baseParams, 'intensity'],
-  borderSlide: [...baseParams],
-  placeholderFade: [...baseParams],
-  errorShake: [...baseParams],
-  staggerReveal: [...baseParams, 'stagger'],
-  expandCollapse: [...baseParams, 'transformOrigin'],
-  floatingSection: [...baseParams, 'floatingAmount'],
-  scrollReveal: [...baseParams],
+  floatingLabel: timedParams,
+  focusGlow: timedParams,
+  borderSlide: timedParams,
+  placeholderFade: timedParams,
+  errorShake: ['delay'],
+  staggerReveal: [...timedParams, 'stagger'],
+  expandCollapse: ['duration', 'delay'],
+  floatingSection: ['duration', 'delay', 'floatingAmount'],
+  scrollReveal: ['duration', 'delay'],
 
   // Disney
-  squashStretch: [...baseParams, 'intensity'],
-  anticipateReveal: [...baseParams, 'intensity'],
-  arcReveal: [...baseParams, 'intensity'],
-  secondaryAction: [...baseParams, 'intensity'],
-  followThrough: [...baseParams, 'stagger'],
+  squashStretch: ['duration', 'delay', 'intensity'],
+  anticipateReveal: ['duration', 'delay', 'intensity'],
+  arcReveal: ['duration', 'delay', 'intensity'],
+  secondaryAction: ['duration', 'delay', 'intensity'],
+  followThrough: ['duration', 'delay', 'stagger'],
 
   // Physics (УВАГА: додано usePhysics, щоб панель не зникала сама в себе)
-  physicsScale: ['duration', 'delay', 'intensity', 'scaleRange', 'usePhysics'],
-  physicsBounce: ['duration', 'delay', 'intensity', 'direction', 'usePhysics'],
+  physicsScale: ['duration', 'delay', 'intensity', 'usePhysics'],
+  physicsBounce: ['duration', 'delay', 'intensity', 'usePhysics'],
   physicsHover: ['duration', 'delay', 'intensity', 'usePhysics'],
 };
 // ✅ Нові семантичні обмеження для тригерів
