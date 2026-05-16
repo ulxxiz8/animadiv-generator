@@ -1,56 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Card from '../components/Card';
 import { Link } from 'react-router-dom';
 
+const SAVED_KEY = 'animadiv-saved-items';
+
+const readSavedItems = () => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SAVED_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
 const MySets = () => {
   const [activeTab, setActiveTab] = useState('saved');
-  const [savedItems, setSavedItems] = useState([]);
-
-  // 1. Завантажуємо дані з localStorage при завантаженні сторінки
-  useEffect(() => {
-    const data = JSON.parse(localStorage.getItem('animadiv_saved') || '[]');
-    setSavedItems(data);
-  }, []);
-
-  // 2. Функція для оновлення списку після видалення картки
-  // Ми будемо викликати її, коли користувач натискає кнопку на картці
-  const refreshItems = () => {
-    const data = JSON.parse(localStorage.getItem('animadiv_saved') || '[]');
-    setSavedItems(data);
-  };
+  const [savedItems, setSavedItems] = useState(readSavedItems);
 
   return (
     <div
       style={{
-        maxWidth: '1200px',
+        maxWidth: 1200,
         margin: '0 auto',
         padding: '40px 20px',
-        paddingBottom: '100px',
+        paddingBottom: 100,
       }}
     >
-      <div style={{ marginBottom: '40px' }}>
+      <div style={{ marginBottom: 40 }}>
         <h1
           style={{
-            fontSize: '32px',
-            fontWeight: '900',
+            fontSize: 32,
+            fontWeight: 900,
             color: '#111827',
-            marginBottom: '8px',
+            marginBottom: 8,
           }}
         >
-          Мої набори
+          My Sets
         </h1>
-        <p style={{ color: '#6B7280', fontSize: '16px' }}>
-          Тут зберігаються ваші обрані анімації та готові пресети.
+        <p style={{ color: '#6B7280', fontSize: 16 }}>
+          Saved library elements that can be reopened in the generator.
         </p>
       </div>
 
-      {/* ВКЛАДКИ */}
       <div
         style={{
           display: 'flex',
-          gap: '32px',
+          gap: 32,
           borderBottom: '1px solid #E5E7EB',
-          marginBottom: '40px',
+          marginBottom: 40,
         }}
       >
         <button
@@ -61,14 +58,14 @@ const MySets = () => {
             border: 'none',
             borderBottom:
               activeTab === 'saved'
-                ? '2px solid #4F46E5'
+                ? '2px solid #111827'
                 : '2px solid transparent',
-            color: activeTab === 'saved' ? '#4F46E5' : '#6B7280',
-            fontWeight: activeTab === 'saved' ? '600' : '500',
+            color: activeTab === 'saved' ? '#111827' : '#6B7280',
+            fontWeight: activeTab === 'saved' ? 800 : 600,
             cursor: 'pointer',
           }}
         >
-          Збережені пресети ({savedItems.length})
+          Saved presets ({savedItems.length})
         </button>
         <button
           onClick={() => setActiveTab('collections')}
@@ -78,45 +75,40 @@ const MySets = () => {
             border: 'none',
             borderBottom:
               activeTab === 'collections'
-                ? '2px solid #4F46E5'
+                ? '2px solid #111827'
                 : '2px solid transparent',
-            color: activeTab === 'collections' ? '#4F46E5' : '#6B7280',
-            fontWeight: activeTab === 'collections' ? '600' : '500',
+            color: activeTab === 'collections' ? '#111827' : '#6B7280',
+            fontWeight: activeTab === 'collections' ? 800 : 600,
             cursor: 'pointer',
           }}
         >
-          Мої колекції (UI Kits)
+          Collections
         </button>
       </div>
 
-      {/* ЛОГІКА ВІДОБРАЖЕННЯ: АБО КАРТКИ, АБО EMPTY STATE */}
       {activeTab === 'saved' &&
         (savedItems.length > 0 ? (
           <div
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: '24px',
+              gap: 24,
             }}
           >
-            {savedItems.map((anim, index) => (
-              <div key={index} onClick={refreshItems}>
-                <Card
-                  name={anim.name}
-                  category={anim.category}
-                  preview={anim.preview}
-                  animationName={anim.animationName}
-                  mode="mysets"
-                />
-              </div>
+            {savedItems.map((item) => (
+              <Card
+                key={item.id}
+                item={item}
+                mode="mysets"
+                onSavedChange={setSavedItems}
+              />
             ))}
           </div>
         ) : (
-          /* EMPTY STATE (якщо масив порожній) */
           <div
             style={{
               background: '#fff',
-              borderRadius: '24px',
+              borderRadius: 24,
               border: '1px dashed #D1D5DB',
               padding: '80px 20px',
               textAlign: 'center',
@@ -125,39 +117,38 @@ const MySets = () => {
               alignItems: 'center',
             }}
           >
-            <div style={{ fontSize: '64px', marginBottom: '24px' }}>🔖</div>
             <h2
               style={{
-                fontSize: '24px',
-                fontWeight: '700',
-                marginBottom: '12px',
+                fontSize: 24,
+                fontWeight: 800,
+                marginBottom: 12,
+                color: '#111827',
               }}
             >
-              Тут поки порожньо
+              Nothing saved yet
             </h2>
-            <p style={{ color: '#6B7280', marginBottom: '32px' }}>
-              Збережіть щось цікаве з бібліотеки.
+            <p style={{ color: '#6B7280', marginBottom: 32 }}>
+              Save a library element to keep it here.
             </p>
             <Link
               to="/library"
               style={{
                 padding: '12px 24px',
-                background: '#4F46E5',
-                color: '#fff',
+                background: '#111827',
+                color: '#D6F854',
                 textDecoration: 'none',
-                borderRadius: '10px',
-                fontWeight: '600',
+                borderRadius: 10,
+                fontWeight: 800,
               }}
             >
-              Перейти до Бібліотеки
+              Open Library
             </Link>
           </div>
         ))}
 
-      {/* Заглушка для вкладки колекцій */}
       {activeTab === 'collections' && (
-        <div style={{ textAlign: 'center', padding: '80px', color: '#9CA3AF' }}>
-          Функціонал створення колекцій з'явиться незабаром.
+        <div style={{ textAlign: 'center', padding: 80, color: '#9CA3AF' }}>
+          Collections are not available yet.
         </div>
       )}
     </div>

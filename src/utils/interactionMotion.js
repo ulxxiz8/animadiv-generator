@@ -43,10 +43,7 @@ export const generateInteractionCSS = (
   uniqueId,
   triggerState = 'load'
 ) => {
-  const {
-    duration = 300,
-    rippleColor = 'rgba(255, 255, 255, 0.4)',
-  } = config;
+  const { duration = 300, rippleColor = 'rgba(255, 255, 255, 0.4)' } = config;
 
   const id = `#${uniqueId}`;
   const anim = `anim_${presetId}_${uniqueId}_${triggerState}`;
@@ -96,10 +93,7 @@ export const generateInteractionCSS = (
  * ГЕНЕРАТОР STYLES (Для миттєвих ефектів без ризику зникнення)
  */
 export const generateInteractionStyles = (presetId, config) => {
-  const {
-    intensity = 60,
-    duration = 300,
-  } = config;
+  const { intensity = 60, duration = 300 } = config;
 
   const styles = {
     transition: `transform ${duration}ms cubic-bezier(0.34, 1.56, 0.64, 1), 
@@ -112,16 +106,31 @@ export const generateInteractionStyles = (presetId, config) => {
 
   switch (presetId) {
     case 'glowHover':
-      styles.boxShadow = `0 0 ${Math.max(8, intensity / 3)}px ${Math.max(
-        1,
-        intensity / 18
+      styles.boxShadow = `0 0 ${Math.max(6, intensity / 5)}px ${Math.max(
+        0,
+        intensity / 30
       )}px ${resolveGlowColor(config)}`;
       break;
     case 'magneticHover':
-      styles.transform = `translate(${intensity / 10}px, -${intensity / 10}px)`;
+      styles.transform = `translate(${intensity / 12}px, -${intensity / 12}px)`;
       break;
     case 'pressEffect':
-      styles.transform = `scale(${1 - intensity / 500})`;
+      styles.transform = `scale(${Math.max(0.86, 1 - intensity / 600)})`;
+      break;
+    case 'smoothCheck':
+      styles.transform = 'scale(1.04)';
+      break;
+    case 'bounceCheck':
+      styles.transition = `transform ${duration}ms cubic-bezier(0.34, 1.56, 0.64, 1)`;
+      styles.transform = 'scale(1.14)';
+      break;
+    case 'radioPulse':
+      styles.transform = 'scale(1.08)';
+      styles.boxShadow = `0 0 0 6px ${resolveGlowColor(config)}`;
+      break;
+    case 'elasticToggle':
+      styles.transition = `transform ${duration}ms cubic-bezier(0.68, -0.55, 0.27, 1.55), box-shadow ${duration}ms ease`;
+      styles.transform = 'scale(0.92)';
       break;
   }
 

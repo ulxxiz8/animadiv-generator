@@ -303,7 +303,7 @@ const getBaseElementStyles = (params, state) => {
   return base;
 };
 
-const renderContent = (params, textPreset) => {
+const renderContent = (params, textPreset, previewChecked) => {
   const s = params.specificSettings || {};
   const styles = params.styles || {};
 
@@ -336,7 +336,7 @@ const renderContent = (params, textPreset) => {
             width: `${iconSize}px`,
             height: `${iconSize}px`,
             flexShrink: 0,
-            backgroundColor: s.checked ? s.color || '#111827' : '#fff',
+            backgroundColor: previewChecked ? s.color || '#111827' : '#fff',
             border: `2px solid ${s.color || '#111827'}`,
             borderRadius: '6px',
             display: 'flex',
@@ -345,7 +345,7 @@ const renderContent = (params, textPreset) => {
             transition: 'background-color 180ms ease, border-color 180ms ease',
           }}
         >
-          {s.checked && (
+          {previewChecked && (
             <Check
               size={iconSize * 0.7}
               color={s.checkColor || '#fff'}
@@ -386,7 +386,7 @@ const renderContent = (params, textPreset) => {
             transition: 'background-color 180ms ease, border-color 180ms ease',
           }}
         >
-          {s.checked && (
+          {previewChecked && (
             <div
               style={{
                 width: '50%',
@@ -418,6 +418,9 @@ const PreviewElement = ({ params, state, replayKey }) => {
   const [hovered, setHovered] = useState(false);
   const [clicked, setClicked] = useState(false);
   const [clickKey, setClickKey] = useState(0);
+  const [previewChecked, setPreviewChecked] = useState(
+    Boolean(params.specificSettings?.checked)
+  );
 
   const motion = useMemo(() => getMotion(params, state), [params, state]);
 
@@ -430,7 +433,8 @@ const PreviewElement = ({ params, state, replayKey }) => {
     setHovered(false);
     setClicked(false);
     setClickKey(0);
-  }, [state, motion.presetId]);
+    setPreviewChecked(Boolean(params.specificSettings?.checked));
+  }, [state, motion.presetId, params.type, params.specificSettings?.checked]);
 
   const Tag = getTag(params);
   const s = params.specificSettings || {};
@@ -485,12 +489,6 @@ const PreviewElement = ({ params, state, replayKey }) => {
       if (s.hoverColor) elementStyles.color = s.hoverColor;
       if (s.underline === 'hover') elementStyles.textDecoration = 'underline';
     }
-
-    if (hovered && (params.type === 'input' || params.type === 'textarea')) {
-      elementStyles.borderColor = s.focusBorderColor || '#4F46E5';
-      elementStyles.boxShadow =
-        s.focusShadow || `0 0 0 3px ${s.focusBorderColor || '#4F46E5'}33`;
-    }
   }
 
   if (state === 'click') {
@@ -524,9 +522,27 @@ const PreviewElement = ({ params, state, replayKey }) => {
   if (state === 'click') {
     elementProps.onMouseDown = () => {
       setClicked(false);
+
+      if (params.type === 'checkbox') {
+        setPreviewChecked((value) => !value);
+      }
+
+      if (params.type === 'radio') {
+        setPreviewChecked(true);
+      }
+
       requestAnimationFrame(() => {
         setClickKey((value) => value + 1);
         setClicked(true);
+
+        const duration = Number(motion.config?.duration) || 180;
+        const delay = Number(motion.config?.delay) || 0;
+        window.setTimeout(
+          () => {
+            setClicked(false);
+          },
+          duration + delay + 80
+        );
       });
     };
   }
@@ -578,7 +594,9 @@ const PreviewElement = ({ params, state, replayKey }) => {
       {isVoidElement ? (
         <Tag {...elementProps} />
       ) : (
-        <Tag {...elementProps}>{renderContent(params, textPreset)}</Tag>
+        <Tag {...elementProps}>
+          {renderContent(params, textPreset, previewChecked)}
+        </Tag>
       )}
     </div>
   );

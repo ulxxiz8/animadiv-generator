@@ -1,160 +1,131 @@
-import React, { useState } from 'react';
-import Card from '../components/Card'; // Імпортуємо нашу нову картку
+import React, { useMemo, useState } from 'react';
+import Card from '../components/Card';
+import { libraryItems } from '../data/libraryItems';
 
 const Library = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [category, setCategory] = useState('');
+  const [type, setType] = useState('');
 
-  // Додаємо поле animationName до мокових даних
-  const mockAnimations = [
-    {
-      id: 1,
-      name: 'Fade In',
-      category: 'Entrance',
-      preview: '✨',
-      animationName: 'anim-fadeIn',
-    },
-    {
-      id: 2,
-      name: 'Slide Up',
-      category: 'Entrance',
-      preview: '⬆️',
-      animationName: 'anim-slideUp',
-    },
-    {
-      id: 3,
-      name: 'Bounce',
-      category: 'Emphasis',
-      preview: '🏀',
-      animationName: 'anim-bounce',
-    },
-    {
-      id: 4,
-      name: 'Rotate',
-      category: 'Emphasis',
-      preview: '🔄',
-      animationName: 'anim-rotate',
-    },
-    {
-      id: 5,
-      name: 'Pulse',
-      category: 'Emphasis',
-      preview: '💓',
-      animationName: 'anim-pulse',
-    },
-    {
-      id: 6,
-      name: 'Shake',
-      category: 'Emphasis',
-      preview: '👋',
-      animationName: 'anim-shake',
-    },
-  ];
+  const categories = useMemo(
+    () => [...new Set(libraryItems.map((item) => item.category))],
+    []
+  );
+  const types = useMemo(() => [...new Set(libraryItems.map((item) => item.type))], []);
+
+  const filteredItems = libraryItems.filter((item) => {
+    const matchesSearch = item.name
+      .toLowerCase()
+      .includes(searchTerm.trim().toLowerCase());
+    const matchesCategory = !category || item.category === category;
+    const matchesType = !type || item.type === type;
+    return matchesSearch && matchesCategory && matchesType;
+  });
 
   return (
     <div
       style={{
-        maxWidth: '1200px',
+        maxWidth: 1200,
         margin: '0 auto',
         padding: '40px 20px',
-        paddingBottom: '100px',
+        paddingBottom: 100,
       }}
     >
-      {/* ГЛОБАЛЬНІ СТИЛІ АНІМАЦІЙ ДЛЯ БІБЛІОТЕКИ */}
-      <style>{`
-        @keyframes anim-fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
-        @keyframes anim-slideUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-        @keyframes anim-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
-        @keyframes anim-rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes anim-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
-        @keyframes anim-shake { 
-          0%, 100% { transform: translateX(0); } 
-          25% { transform: translateX(-10px) rotate(-5deg); } 
-          75% { transform: translateX(10px) rotate(5deg); } 
-        }
-      `}</style>
-
-      <div style={{ marginBottom: '32px' }}>
+      <div style={{ marginBottom: 32 }}>
         <h1
           style={{
-            fontSize: '32px',
-            fontWeight: '900',
+            fontSize: 32,
+            fontWeight: 900,
             color: '#111827',
-            marginBottom: '8px',
+            marginBottom: 8,
           }}
         >
-          Бібліотека анімацій
+          Library
         </h1>
-        <p style={{ color: '#6B7280', fontSize: '16px' }}>
-          Наведіть курсор на картку, щоб побачити анімацію.
+        <p style={{ color: '#6B7280', fontSize: 16 }}>
+          Ready-to-use animated elements built from the same params the generator edits.
         </p>
       </div>
 
       <div
         style={{
           display: 'flex',
-          gap: '16px',
-          marginBottom: '40px',
+          gap: 16,
+          marginBottom: 40,
           background: '#fff',
-          padding: '20px',
-          borderRadius: '16px',
+          padding: 20,
+          borderRadius: 16,
           border: '1px solid #E5E7EB',
           alignItems: 'center',
           flexWrap: 'wrap',
           boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
         }}
       >
-        <div style={{ flex: 1, minWidth: '280px' }}>
+        <div style={{ flex: 1, minWidth: 260 }}>
           <input
             type="text"
-            placeholder="Пошук за назвою..."
+            placeholder="Search by name..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(event) => setSearchTerm(event.target.value)}
             style={{
               width: '100%',
               padding: '12px 16px',
-              borderRadius: '10px',
+              borderRadius: 10,
               border: '1px solid #D1D5DB',
-              fontSize: '14px',
+              fontSize: 14,
               outline: 'none',
               boxSizing: 'border-box',
             }}
           />
         </div>
         <select
+          value={category}
+          onChange={(event) => setCategory(event.target.value)}
           style={{
             padding: '12px 16px',
-            borderRadius: '10px',
+            borderRadius: 10,
             border: '1px solid #D1D5DB',
-            fontSize: '14px',
+            fontSize: 14,
             background: '#fff',
             outline: 'none',
           }}
         >
-          <option value="">Усі стилі</option>
-          <option value="entrance">Поява</option>
+          <option value="">All categories</option>
+          {categories.map((itemCategory) => (
+            <option key={itemCategory} value={itemCategory}>
+              {itemCategory}
+            </option>
+          ))}
         </select>
         <select
+          value={type}
+          onChange={(event) => setType(event.target.value)}
           style={{
             padding: '12px 16px',
-            borderRadius: '10px',
+            borderRadius: 10,
             border: '1px solid #D1D5DB',
-            fontSize: '14px',
+            fontSize: 14,
             background: '#fff',
             outline: 'none',
+            textTransform: 'capitalize',
           }}
         >
-          <option value="">Тип елемента</option>
-          <option value="icon">Іконки</option>
+          <option value="">All types</option>
+          {types.map((itemType) => (
+            <option key={itemType} value={itemType}>
+              {itemType}
+            </option>
+          ))}
         </select>
         <div
           style={{
-            fontSize: '14px',
-            fontWeight: '600',
-            color: '#4F46E5',
+            fontSize: 14,
+            fontWeight: 700,
+            color: '#111827',
             marginLeft: 'auto',
           }}
         >
-          {mockAnimations.length} результатів
+          {filteredItems.length} results
         </div>
       </div>
 
@@ -162,18 +133,11 @@ const Library = () => {
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '24px',
+          gap: 24,
         }}
       >
-        {/* Рендеримо наш новий компонент Card */}
-        {mockAnimations.map((anim) => (
-          <Card
-            key={anim.id}
-            name={anim.name}
-            category={anim.category}
-            preview={anim.preview}
-            animationName={anim.animationName}
-          />
+        {filteredItems.map((item) => (
+          <Card key={item.id} item={item} />
         ))}
       </div>
     </div>

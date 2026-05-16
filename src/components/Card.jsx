@@ -1,163 +1,338 @@
-import React, { useState, useEffect } from 'react';
-import { Copy, Bookmark, Trash2, CheckCircle } from 'lucide-react'; // Підключили іконки
+import React, { useMemo, useState } from 'react';
+import { Bookmark, CheckCircle, ExternalLink, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { generateAnimationCSS } from '../utils/animationEngine';
+import { renderSplitText } from '../utils/typographyMotion';
 
-const Card = ({ name, category, preview, animationName, mode = 'library' }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+const PARAMS_KEY = 'animadiv-params';
+const SAVED_KEY = 'animadiv-saved-items';
 
-  useEffect(() => {
-    const savedItems = JSON.parse(
-      localStorage.getItem('animadiv_saved') || '[]'
-    );
-    setIsSaved(savedItems.some((item) => item.name === name));
-  }, [name]);
+const px = (value) => {
+  if (value === undefined || value === null) return undefined;
+  if (value === 'auto') return 'auto';
+  return typeof value === 'number' ? `${value}px` : value;
+};
+
+const readSavedItems = () => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SAVED_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const colorToRgba = (color = '#111827', opacity = 0.16) => {
+  if (String(color).startsWith('rgba(')) return color;
+  if (String(color).startsWith('rgb(')) {
+    return String(color).replace('rgb(', 'rgba(').replace(')', `, ${opacity})`);
+  }
+
+  const hex = String(color).replace('#', '');
+  if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(hex)) {
+    return `rgba(17, 24, 39, ${opacity})`;
+  }
+
+  const normalized =
+    hex.length === 3
+      ? hex
+          .split('')
+          .map((char) => char + char)
+          .join('')
+      : hex;
+  const value = parseInt(normalized, 16);
+  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${
+    value & 255
+  }, ${opacity})`;
+};
+
+const getShadowStyle = (settings = {}) => {
+  if (!settings.shadowEnabled) return undefined;
+
+  return `0 ${settings.shadowOffsetY ?? 6}px ${settings.shadowBlur ?? 18}px ${colorToRgba(
+    settings.shadowColor,
+    settings.shadowOpacity ?? 0.16
+  )}`;
+};
+
+const getPreviewStyle = (item) => {
+  const styles = item.styles || {};
+  const settings = item.specificSettings || {};
+  const base = {
+    ...styles,
+    width: px(styles.width),
+    height: px(styles.height),
+    minHeight: px(styles.minHeight),
+    padding: px(styles.padding),
+    borderRadius: px(styles.borderRadius),
+    boxSizing: 'border-box',
+    border:
+      styles.borderWidth > 0
+        ? `${styles.borderWidth}px solid ${styles.borderColor || '#E5E7EB'}`
+        : 'none',
+    boxShadow: getShadowStyle(settings),
+    opacity: styles.opacity ?? 1,
+  };
+
+  if (item.type === 'button') {
+    return {
+      ...base,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontFamily: settings.fontFamily,
+      fontSize: px(settings.fontSize),
+      fontWeight: settings.fontWeight,
+      whiteSpace: 'pre-wrap',
+    };
+  }
+
+  if (item.type === 'text') {
+    return {
+      ...base,
+      fontFamily: settings.fontFamily,
+      fontSize: px(settings.fontSize),
+      fontWeight: settings.fontWeight,
+      lineHeight: settings.lineHeight,
+      letterSpacing: px(settings.letterSpacing),
+      textAlign: settings.textAlign,
+      textTransform: settings.textTransform,
+      whiteSpace: 'pre-wrap',
+    };
+  }
+
+  if (item.type === 'image') {
+    return {
+      ...base,
+      display: 'block',
+      objectFit: settings.objectFit || 'cover',
+      objectPosition: settings.objectPosition || 'center',
+      padding: 0,
+    };
+  }
+
+  if (item.type === 'input') {
+    return {
+      ...base,
+      display: 'block',
+      fontFamily: settings.fontFamily,
+      fontSize: px(settings.fontSize),
+      fontWeight: settings.fontWeight,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      outline: 'none',
+    };
+  }
+
+  if (item.type === 'textarea') {
+    return {
+      ...base,
+      fontFamily: settings.fontFamily,
+      fontSize: px(settings.fontSize),
+      fontWeight: settings.fontWeight,
+      resize: settings.resize || 'vertical',
+      outline: 'none',
+    };
+  }
+
+  if (item.type === 'block') {
+    return {
+      ...base,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: settings.alignX || 'center',
+      justifyContent: settings.alignY || 'center',
+      gap: px(settings.gap || 0),
+      overflow: settings.overflow || 'visible',
+    };
+  }
+
+  return base;
+};
+
+const Preview = ({ item }) => {
+  const load = useMemo(() => item.animations?.load || {}, [item.animations]);
+  const motion = useMemo(
+    () => generateAnimationCSS(load.presetId, load, `library_${item.id}`, 'load'),
+    [item.id, load]
+  );
+  const style = {
+    ...getPreviewStyle(item),
+    animation: motion.animationStr || 'none',
+  };
+  const settings = item.specificSettings || {};
+
+  return (
+    <div
+      style={{
+        height: 190,
+        background: '#F9FAFB',
+        borderBottom: '1px solid #E5E7EB',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        padding: 20,
+      }}
+    >
+      {motion.keyframes && <style>{motion.keyframes}</style>}
+      {item.type === 'image' ? (
+        <img src={settings.src} alt={settings.alt || item.name} style={style} />
+      ) : item.type === 'input' ? (
+        <input
+          type={settings.inputType || 'text'}
+          placeholder={settings.placeholder || ''}
+          readOnly
+          style={style}
+        />
+      ) : item.type === 'textarea' ? (
+        <textarea
+          rows={settings.rows || 4}
+          placeholder={settings.placeholder || ''}
+          readOnly
+          style={style}
+        />
+      ) : item.type === 'block' ? (
+        <div style={style}>
+          <span
+            style={{
+              width: 42,
+              height: 8,
+              borderRadius: 999,
+              background: '#111827',
+              opacity: 0.18,
+            }}
+          />
+          <span
+            style={{
+              width: 84,
+              height: 8,
+              borderRadius: 999,
+              background: '#111827',
+              opacity: 0.1,
+            }}
+          />
+        </div>
+      ) : (
+        React.createElement(
+          item.type === 'text' ? settings.tag || 'p' : item.tag || 'div',
+          { style },
+          renderSplitText(item.content || settings.text || settings.content, load.presetId)
+        )
+      )}
+    </div>
+  );
+};
+
+const Card = ({ item, mode = 'library', onSavedChange }) => {
+  const navigate = useNavigate();
+  const [isSaved, setIsSaved] = useState(() =>
+    readSavedItems().some((saved) => saved.id === item.id)
+  );
+
+  const useInGenerator = () => {
+    localStorage.setItem(PARAMS_KEY, JSON.stringify(item));
+    navigate('/generator');
+  };
 
   const toggleSave = () => {
-    let savedItems = JSON.parse(localStorage.getItem('animadiv_saved') || '[]');
-    if (isSaved) {
-      savedItems = savedItems.filter((item) => item.name !== name);
-      setIsSaved(false);
-    } else {
-      savedItems.push({ name, category, preview, animationName });
-      setIsSaved(true);
-    }
-    localStorage.setItem('animadiv_saved', JSON.stringify(savedItems));
+    const savedItems = readSavedItems();
+    const exists = savedItems.some((saved) => saved.id === item.id);
+    const nextItems =
+      mode === 'mysets' || exists
+        ? savedItems.filter((saved) => saved.id !== item.id)
+        : [...savedItems, item];
+
+    localStorage.setItem(SAVED_KEY, JSON.stringify(nextItems));
+    setIsSaved(!exists && mode !== 'mysets');
+    onSavedChange?.(nextItems);
   };
 
   return (
     <div
       style={{
         background: '#fff',
-        borderRadius: '16px',
+        borderRadius: 16,
         border: '1px solid #E5E7EB',
         overflow: 'hidden',
-        transition: 'all 0.3s ease',
-        cursor: 'pointer',
-      }}
-      onMouseEnter={(e) => {
-        setIsHovered(true);
-        e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.boxShadow =
-          '0 12px 24px -8px rgba(17, 24, 39, 0.1)';
-        e.currentTarget.style.borderColor = '#D1D5DB';
-      }}
-      onMouseLeave={(e) => {
-        setIsHovered(false);
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'none';
-        e.currentTarget.style.borderColor = '#E5E7EB';
+        transition: 'transform 0.25s ease, box-shadow 0.25s ease',
       }}
     >
-      <div
-        style={{
-          height: '180px',
-          background: '#F9FAFB',
-          borderBottom: '1px solid #E5E7EB',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '64px',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            animation: isHovered
-              ? `${animationName} 1.5s ease-in-out infinite`
-              : 'none',
-            transformOrigin: 'center',
-            color: '#4F46E5',
-          }}
-        >
-          {preview}
-        </div>
-      </div>
+      <Preview item={item} />
 
-      <div style={{ padding: '20px' }}>
-        <div style={{ marginBottom: '20px' }}>
+      <div style={{ padding: 20 }}>
+        <div style={{ marginBottom: 18 }}>
           <h3
             style={{
-              fontSize: '18px',
-              fontWeight: '700',
+              fontSize: 18,
+              fontWeight: 800,
               color: '#111827',
-              margin: '0 0 6px 0',
-              letterSpacing: '-0.01em',
+              margin: '0 0 8px 0',
             }}
           >
-            {name}
+            {item.name}
           </h3>
           <span
             style={{
-              fontSize: '12px',
+              fontSize: 12,
               color: '#6B7280',
               background: '#F3F4F6',
               padding: '4px 8px',
-              borderRadius: '6px',
-              fontWeight: '500',
+              borderRadius: 6,
+              fontWeight: 700,
+              textTransform: 'capitalize',
             }}
           >
-            {category}
+            {item.category} / {item.type}
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {/* Кнопка COPY */}
+        <div style={{ display: 'flex', gap: 8 }}>
           <button
+            onClick={useInGenerator}
             style={{
               flex: 1,
-              padding: '10px',
-              background: '#F3F4F6',
-              color: '#374151',
+              padding: 10,
+              background: '#111827',
+              color: '#D6F854',
               border: 'none',
-              borderRadius: '8px',
-              fontWeight: '600',
-              fontSize: '13px',
+              borderRadius: 8,
+              fontWeight: 800,
+              fontSize: 13,
               cursor: 'pointer',
-              transition: 'all 0.2s',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.background = '#E5E7EB';
-              e.target.style.color = '#111827';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = '#F3F4F6';
-              e.target.style.color = '#374151';
+              gap: 6,
             }}
           >
-            <Copy size={14} /> Copy
+            <ExternalLink size={14} /> Use
           </button>
 
-          {/* Кнопка SAVE/DELETE */}
           <button
             onClick={toggleSave}
             style={{
               flex: 1,
-              padding: '10px',
+              padding: 10,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
+              gap: 6,
               background:
-                mode === 'mysets' ? '#FEE2E2' : isSaved ? '#D1FAE5' : '#111827',
+                mode === 'mysets' ? '#FEE2E2' : isSaved ? '#D1FAE5' : '#F3F4F6',
               color:
-                mode === 'mysets' ? '#EF4444' : isSaved ? '#10B981' : '#fff',
+                mode === 'mysets' ? '#B91C1C' : isSaved ? '#047857' : '#374151',
               border: 'none',
-              borderRadius: '8px',
-              fontWeight: '600',
-              fontSize: '13px',
+              borderRadius: 8,
+              fontWeight: 800,
+              fontSize: 13,
               cursor: 'pointer',
-              transition: 'all 0.2s ease',
             }}
-            onMouseEnter={(e) => (e.target.style.opacity = '0.8')}
-            onMouseLeave={(e) => (e.target.style.opacity = '1')}
           >
             {mode === 'mysets' ? (
               <>
-                <Trash2 size={14} /> Delete
+                <Trash2 size={14} /> Remove
               </>
             ) : isSaved ? (
               <>

@@ -175,7 +175,17 @@ export const generateAnimationCSS = (
 
   if (interactionPresets.includes(presetId)) {
     // 💡 Використовуємо Styles для простих, CSS для складних
-    if (['glowHover', 'magneticHover', 'pressEffect'].includes(presetId)) {
+    if (
+      [
+        'glowHover',
+        'magneticHover',
+        'pressEffect',
+        'smoothCheck',
+        'bounceCheck',
+        'radioPulse',
+        'elasticToggle',
+      ].includes(presetId)
+    ) {
       if (triggerState === 'hover' || triggerState === 'click') {
         return generateInteractionStyles(presetId, config);
       }
@@ -204,7 +214,7 @@ export const generateAnimationCSS = (
             ? Math.max(0, (config.blurAmount ?? config.intensity ?? 10) * 10)
             : presetId === 'typewriter' && config.stagger !== undefined
               ? Math.max(0, Math.min(140, 160 - Number(config.stagger) * 2))
-            : config.intensity,
+              : config.intensity,
       },
       uniqueId,
       triggerState

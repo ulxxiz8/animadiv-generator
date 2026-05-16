@@ -35,7 +35,8 @@ const getInitialState = () => {
     try {
       const parsed = JSON.parse(saved);
       // Перевіряємо, чи це вже нова архітектура (має бути об'єкт styles)
-      if (parsed.styles && parsed.animations) return normalizeSavedParams(parsed);
+      if (parsed.styles && parsed.animations)
+        return normalizeSavedParams(parsed);
     } catch {
       localStorage.removeItem('animadiv-params');
     }
@@ -127,19 +128,6 @@ const GeneratorPage = () => {
   useEffect(() => {
     handleReplay();
   }, [params.animations?.load?.presetId]);
-
-  useEffect(() => {
-    let styleTag = document.getElementById('dynamic-animation-styles');
-    if (!styleTag) {
-      styleTag = document.createElement('style');
-      styleTag.id = 'dynamic-animation-styles';
-      document.head.appendChild(styleTag);
-    }
-    styleTag.innerHTML = fullCss;
-    return () => {
-      if (styleTag) styleTag.innerHTML = '';
-    };
-  }, [fullCss]);
 
   return (
     <main className="main-container">

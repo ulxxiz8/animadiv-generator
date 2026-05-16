@@ -101,7 +101,13 @@ export const ELEMENT_PRESET_MAP = {
     click: ['errorShake'],
   },
   block: {
-    load: ['fade', 'slide', 'staggerReveal', 'expandCollapse', 'floatingSection'],
+    load: [
+      'fade',
+      'slide',
+      'staggerReveal',
+      'expandCollapse',
+      'floatingSection',
+    ],
     hover: [],
     click: [],
   },
@@ -128,6 +134,10 @@ const IMPLEMENTED_PRESETS = new Set([
   'ripple',
   'glowHover',
   'magneticHover',
+  'smoothCheck',
+  'bounceCheck',
+  'radioPulse',
+  'elasticToggle',
   'focusGlow',
   'borderSlide',
   'placeholderFade',
@@ -143,7 +153,10 @@ export const getAvailablePresetsForType = (
 ) => {
   const byState = ELEMENT_PRESET_MAP[elementType] || {};
   const ids = byState[triggerState] || [];
-  const visibleIds = ['none', ...ids.filter((id) => IMPLEMENTED_PRESETS.has(id))];
+  const visibleIds = [
+    'none',
+    ...ids.filter((id) => IMPLEMENTED_PRESETS.has(id)),
+  ];
 
   return visibleIds.map((id) => ({
     id,
