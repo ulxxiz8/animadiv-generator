@@ -1,21 +1,21 @@
-// ==========================================
-// 1. СЛОВНИК НАЗВ ПРЕСЕТІВ (Для UI)
-// ==========================================
 export const PRESET_NAMES = {
-  none: 'Без ефекту (None)',
-  fade: 'Fade (Поява)',
-  slide: 'Slide (Зсув)',
-  scale: 'Scale (Масштаб)',
+  none: 'No Effect',
+  fade: 'Fade',
+  slide: 'Slide',
+  scale: 'Scale',
   fadeByLetter: 'Fade by Letter',
   fadeByWord: 'Fade by Word',
   typewriter: 'Typewriter',
   blurReveal: 'Blur Reveal',
+  slideUpReveal: 'Slide Up Reveal',
   underlineDraw: 'Underline Draw',
   parallaxHover: 'Parallax Hover',
   tiltHover: 'Tilt Hover',
   kenBurns: 'Ken Burns Effect',
   zoomReveal: 'Zoom Reveal',
   floatingImage: 'Floating Image',
+  hoverBrightness: 'Hover Brightness',
+  hoverBlur: 'Hover Blur',
   pressEffect: 'Press Effect',
   ripple: 'Ripple',
   glowHover: 'Glow Hover',
@@ -41,133 +41,141 @@ export const PRESET_NAMES = {
   followThrough: 'Follow Through Elements',
 };
 
-// ==========================================
-// 2. СЕМАНТИЧНА МАТРИЦЯ (Правила доступу)
-// ==========================================
 export const ELEMENT_PRESET_MAP = {
-  global: [
-    'none',
-    'fade',
-    'slide',
-    'scale',
-    'squashStretch',
-    'anticipateReveal',
-    'arcReveal',
-  ],
-  text: [
-    'fadeByLetter',
-    'fadeByWord',
-    'typewriter',
-    'blurReveal',
-    'underlineDraw',
-  ],
-  link: [
-    'fadeByLetter',
-    'fadeByWord',
-    'typewriter',
-    'blurReveal',
-    'underlineDraw',
-  ],
-  image: [
-    'parallaxHover',
-    'tiltHover',
-    'kenBurns',
-    'zoomReveal',
-    'floatingImage',
-  ],
-  checkbox: ['smoothCheck', 'bounceCheck', 'radioPulse', 'elasticToggle'],
-  radio: ['smoothCheck', 'bounceCheck', 'radioPulse', 'elasticToggle'],
-  input: [
-    'floatingLabel',
-    'focusGlow',
-    'borderSlide',
-    'placeholderFade',
-    'errorShake',
-  ],
-  textarea: [
-    'floatingLabel',
-    'focusGlow',
-    'borderSlide',
-    'placeholderFade',
-    'errorShake',
-  ],
-  block: [
-    'staggerReveal',
-    'expandCollapse',
-    'floatingSection',
-    'scrollReveal',
-    'followThrough',
-    'secondaryAction',
-  ],
-  button: [
-    'pressEffect',
-    'ripple',
-    'glowHover',
-    'magneticHover',
-    'borderDraw',
-    'secondaryAction',
-  ],
+  text: {
+    load: [
+      'fade',
+      'slide',
+      'scale',
+      'fadeByLetter',
+      'fadeByWord',
+      'blurReveal',
+      'typewriter',
+      'slideUpReveal',
+    ],
+    hover: ['underlineDraw', 'fadeByWord'],
+    click: [],
+  },
+  link: {
+    load: [
+      'fade',
+      'slide',
+      'scale',
+      'fadeByLetter',
+      'fadeByWord',
+      'blurReveal',
+      'typewriter',
+      'slideUpReveal',
+    ],
+    hover: ['underlineDraw', 'fadeByWord'],
+    click: [],
+  },
+  image: {
+    load: ['fade', 'slide', 'scale', 'zoomReveal', 'kenBurns', 'floatingImage'],
+    hover: ['parallaxHover', 'tiltHover', 'hoverBrightness', 'hoverBlur'],
+    click: [],
+  },
+  button: {
+    load: ['fade', 'slide', 'scale'],
+    hover: ['glowHover', 'magneticHover'],
+    click: ['pressEffect', 'ripple'],
+  },
+  checkbox: {
+    load: ['fade', 'scale'],
+    hover: ['glowHover'],
+    click: ['smoothCheck', 'bounceCheck', 'radioPulse', 'elasticToggle'],
+  },
+  radio: {
+    load: ['fade', 'scale'],
+    hover: ['glowHover'],
+    click: ['smoothCheck', 'bounceCheck', 'radioPulse', 'elasticToggle'],
+  },
+  input: {
+    load: ['fade', 'slide'],
+    hover: ['focusGlow', 'borderSlide', 'placeholderFade'],
+    click: ['errorShake'],
+  },
+  textarea: {
+    load: ['fade', 'slide'],
+    hover: ['focusGlow', 'borderSlide', 'placeholderFade'],
+    click: ['errorShake'],
+  },
+  block: {
+    load: ['fade', 'slide', 'staggerReveal', 'expandCollapse', 'floatingSection'],
+    hover: [],
+    click: [],
+  },
 };
 
-// ==========================================
-// 3. ФІЛЬТРАЦІЯ
-// ==========================================
-export const getAvailablePresetsForType = (elementType) => {
-  const globals = ELEMENT_PRESET_MAP.global;
-  const specifics = ELEMENT_PRESET_MAP[elementType] || [];
-  const combinedIds = [...new Set([...globals, ...specifics])];
-  return combinedIds.map((id) => ({
-    id: id,
+const IMPLEMENTED_PRESETS = new Set([
+  'fade',
+  'slide',
+  'scale',
+  'fadeByLetter',
+  'fadeByWord',
+  'typewriter',
+  'blurReveal',
+  'slideUpReveal',
+  'underlineDraw',
+  'parallaxHover',
+  'tiltHover',
+  'kenBurns',
+  'zoomReveal',
+  'floatingImage',
+  'hoverBrightness',
+  'hoverBlur',
+  'pressEffect',
+  'ripple',
+  'glowHover',
+  'magneticHover',
+  'focusGlow',
+  'borderSlide',
+  'placeholderFade',
+  'errorShake',
+  'staggerReveal',
+  'expandCollapse',
+  'floatingSection',
+]);
+
+export const getAvailablePresetsForType = (
+  elementType,
+  triggerState = 'load'
+) => {
+  const byState = ELEMENT_PRESET_MAP[elementType] || {};
+  const ids = byState[triggerState] || [];
+  const visibleIds = ['none', ...ids.filter((id) => IMPLEMENTED_PRESETS.has(id))];
+
+  return visibleIds.map((id) => ({
+    id,
     name: PRESET_NAMES[id] || id,
   }));
 };
-
-// ==========================================
-// 4. SUPPORTED PARAMETERS (Semantic UI filtering)
-// ==========================================
-const baseMotionParams = [
-  'duration',
-  'delay',
-  'easing',
-  'iterationCount',
-  'fillMode',
-];
 
 const timedParams = ['duration', 'delay', 'easing'];
 
 export const PRESET_SUPPORTED_PARAMS = {
   none: [],
 
-  // Базові (УВАГА: додано usePhysics)
-  fade: [...baseMotionParams, 'intensity'],
-  slide: [...baseMotionParams, 'intensity', 'usePhysics'],
-  scale: [
-    ...baseMotionParams,
-    'intensity',
-    'scaleRange',
-    'motionAxis',
-    'usePhysics',
-  ],
+  fade: [...timedParams, 'intensity'],
+  slide: [...timedParams, 'direction', 'intensity'],
+  scale: [...timedParams, 'scaleRange', 'transformOrigin', 'intensity'],
 
-  // Typography
   fadeByLetter: [...timedParams, 'intensity'],
   fadeByWord: [...timedParams, 'intensity'],
   fadeByLine: [...timedParams, 'intensity'],
-  typewriter: [...timedParams, 'intensity'],
-  blurReveal: [...timedParams, 'intensity'],
+  typewriter: ['duration', 'stagger'],
+  blurReveal: ['duration', 'blurAmount', 'stagger'],
   slideUpReveal: timedParams,
   underlineDraw: timedParams,
 
-  // Image (УВАГА: додано zoomIntensity та hoverDepth)
-  parallaxHover: [],
-  tiltHover: [],
+  parallaxHover: ['duration', 'easing', 'hoverDepth'],
+  tiltHover: ['rotationAngle', 'hoverDepth', 'transformOrigin'],
   kenBurns: [...timedParams, 'zoomIntensity'],
   zoomReveal: [...timedParams, 'zoomIntensity'],
   floatingImage: [...timedParams, 'floatingAmount'],
-  hoverBrightness: [],
-  hoverBlur: [],
+  hoverBrightness: ['duration', 'easing', 'intensity'],
+  hoverBlur: ['duration', 'easing', 'blurAmount'],
 
-  // Interactions
   pressEffect: ['duration', 'intensity'],
   ripple: ['duration'],
   glowHover: ['duration', 'intensity'],
@@ -178,41 +186,28 @@ export const PRESET_SUPPORTED_PARAMS = {
   radioPulse: [],
   elasticToggle: [],
 
-  // Layout & Form
-  floatingLabel: timedParams,
   focusGlow: timedParams,
   borderSlide: timedParams,
   placeholderFade: timedParams,
-  errorShake: ['delay'],
+  errorShake: ['duration', 'delay'],
   staggerReveal: [...timedParams, 'stagger'],
   expandCollapse: ['duration', 'delay'],
-  floatingSection: ['duration', 'delay', 'floatingAmount'],
-  scrollReveal: ['duration', 'delay'],
+  floatingSection: ['duration', 'delay', 'easing', 'floatingAmount'],
 
-  // Disney
   squashStretch: ['duration', 'delay', 'intensity'],
   anticipateReveal: ['duration', 'delay', 'intensity'],
   arcReveal: ['duration', 'delay', 'intensity'],
   secondaryAction: ['duration', 'delay', 'intensity'],
   followThrough: ['duration', 'delay', 'stagger'],
-
-  // Physics (УВАГА: додано usePhysics, щоб панель не зникала сама в себе)
-  physicsScale: ['duration', 'delay', 'intensity', 'usePhysics'],
-  physicsBounce: ['duration', 'delay', 'intensity', 'usePhysics'],
-  physicsHover: ['duration', 'delay', 'intensity', 'usePhysics'],
-};
-// ✅ Нові семантичні обмеження для тригерів
-export const TRIGGER_RESTRICTIONS = {
-  image: ['load', 'hover'], // Зображення рідко анімують по кліку (feedback)
-  text: ['load', 'hover'],
-  block: ['load'], // Контейнери зазвичай тільки з'являються
-  button: ['hover', 'click'],
-  checkbox: ['hover', 'click'],
-  radio: ['hover', 'click'],
-  input: ['hover', 'click'],
 };
 
-// Перевірка, чи доступний стейт для типу елемента
+export const TRIGGER_RESTRICTIONS = Object.fromEntries(
+  Object.entries(ELEMENT_PRESET_MAP).map(([type, states]) => [
+    type,
+    Object.keys(states),
+  ])
+);
+
 export const isStateAllowedForType = (state, type) => {
   if (state === 'static') return true;
   const allowed = TRIGGER_RESTRICTIONS[type] || ['load', 'hover', 'click'];

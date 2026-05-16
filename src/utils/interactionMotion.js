@@ -1,3 +1,39 @@
+const colorToRgba = (color = '#111827', opacity = 0.24) => {
+  if (String(color).startsWith('rgba(')) return color;
+  if (String(color).startsWith('rgb(')) {
+    return String(color).replace('rgb(', 'rgba(').replace(')', `, ${opacity})`);
+  }
+
+  const hex = String(color).replace('#', '');
+  if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(hex)) {
+    return `rgba(17, 24, 39, ${opacity})`;
+  }
+
+  const normalized =
+    hex.length === 3
+      ? hex
+          .split('')
+          .map((char) => char + char)
+          .join('')
+      : hex;
+  const value = parseInt(normalized, 16);
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+const resolveGlowColor = (config = {}) =>
+  colorToRgba(
+    config.shadowColor ||
+      config.accentColor ||
+      config.backgroundColor ||
+      config.color ||
+      config.borderColor ||
+      '#111827',
+    Math.min(config.shadowOpacity ?? 0.24, 0.35)
+  );
+
 /**
  * ГЕНЕРАТОР CSS (Для складних ефектів з псевдоелементами)
  */
@@ -9,8 +45,6 @@ export const generateInteractionCSS = (
 ) => {
   const {
     duration = 300,
-    intensity = 100,
-    glowColor = 'rgba(214, 248, 84, 0.6)',
     rippleColor = 'rgba(255, 255, 255, 0.4)',
   } = config;
 
@@ -63,8 +97,7 @@ export const generateInteractionCSS = (
  */
 export const generateInteractionStyles = (presetId, config) => {
   const {
-    intensity = 100,
-    glowColor = 'rgba(214, 248, 84, 0.6)',
+    intensity = 60,
     duration = 300,
   } = config;
 
@@ -79,7 +112,10 @@ export const generateInteractionStyles = (presetId, config) => {
 
   switch (presetId) {
     case 'glowHover':
-      styles.boxShadow = `0 0 ${intensity / 2}px ${intensity / 4}px ${glowColor}`;
+      styles.boxShadow = `0 0 ${Math.max(8, intensity / 3)}px ${Math.max(
+        1,
+        intensity / 18
+      )}px ${resolveGlowColor(config)}`;
       break;
     case 'magneticHover':
       styles.transform = `translate(${intensity / 10}px, -${intensity / 10}px)`;

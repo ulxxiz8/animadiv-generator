@@ -3,10 +3,12 @@ import { generateAnimationCSS } from './animationEngine';
 const PX_FIELDS = new Set([
   'width',
   'height',
+  'minHeight',
   'borderRadius',
   'borderWidth',
   'fontSize',
   'gap',
+  'letterSpacing',
 ]);
 
 const toKebabCase = (value) =>
@@ -16,6 +18,40 @@ const formatStyleValue = (key, value) => {
   if (value === undefined || value === null || value === '') return null;
   if (typeof value === 'number' && PX_FIELDS.has(key)) return `${value}px`;
   return String(value);
+};
+
+const colorToRgba = (color = '#111827', opacity = 0.16) => {
+  if (String(color).startsWith('rgba(')) return color;
+  if (String(color).startsWith('rgb(')) {
+    return String(color).replace('rgb(', 'rgba(').replace(')', `, ${opacity})`);
+  }
+
+  const hex = String(color).replace('#', '');
+  if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(hex)) {
+    return `rgba(17, 24, 39, ${opacity})`;
+  }
+
+  const normalized =
+    hex.length === 3
+      ? hex
+          .split('')
+          .map((char) => char + char)
+          .join('')
+      : hex;
+  const value = parseInt(normalized, 16);
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+const getShadowStyle = (settings = {}) => {
+  if (!settings.shadowEnabled) return null;
+
+  return `0 ${settings.shadowOffsetY ?? 6}px ${settings.shadowBlur ?? 18}px ${colorToRgba(
+    settings.shadowColor,
+    settings.shadowOpacity ?? 0.16
+  )}`;
 };
 
 const styleObjectToCss = (styles = {}, indent = '  ') =>
@@ -42,6 +78,26 @@ const getAnimationConfig = (animations = {}, state) => ({
   ...(animations[state] || {}),
 });
 
+const getMotionConfig = (params = {}, state) => {
+  const settings = params.specificSettings || {};
+  const styles = params.styles || {};
+
+  return {
+    ...getAnimationConfig(params.animations || {}, state),
+    shadowColor: settings.shadowColor,
+    shadowOpacity: settings.shadowOpacity,
+    accentColor:
+      settings.color ||
+      settings.checkColor ||
+      styles.backgroundColor ||
+      styles.color ||
+      styles.borderColor,
+    backgroundColor: styles.backgroundColor,
+    color: styles.color,
+    borderColor: styles.borderColor,
+  };
+};
+
 const normalizeExportSelectors = (css) =>
   String(css || '')
     .replaceAll('#animadiv-element', '.animadiv-element')
@@ -55,6 +111,7 @@ const getBaseStyles = (params = {}) => {
     ...styles,
     width: styles.width !== 'auto' ? styles.width : 'auto',
     height: styles.height !== 'auto' ? styles.height : 'auto',
+    minHeight: styles.minHeight,
     position: 'relative',
     display: 'flex',
     alignItems: 'center',
@@ -66,6 +123,9 @@ const getBaseStyles = (params = {}) => {
     fontSize: settings.fontSize || 14,
     fontWeight: settings.fontWeight || 600,
   };
+
+  const shadow = getShadowStyle(settings);
+  if (shadow) baseStyles.boxShadow = shadow;
 
   if (params.type === 'block') {
     baseStyles.flexDirection = 'column';
@@ -83,33 +143,62 @@ const getBaseStyles = (params = {}) => {
   if (params.type === 'input') {
     baseStyles.fontWeight = settings.fontWeight || 400;
     baseStyles.padding = styles.padding || '0 16px';
+    baseStyles.display = 'block';
+    baseStyles.whiteSpace = 'nowrap';
+    baseStyles.overflow = 'hidden';
+    baseStyles.textOverflow = 'ellipsis';
     if (settings.disabled) baseStyles.filter = 'opacity(0.5)';
   }
 
   if (params.type === 'textarea') {
-    baseStyles.padding = '12px 16px';
-    baseStyles.resize = settings.resize || 'both';
+    const rows = Math.max(Number(settings.rows) || 4, 1);
+    const hasManualHeight =
+      styles.height !== undefined &&
+      styles.height !== null &&
+      styles.height !== '' &&
+      styles.height !== 'auto' &&
+      styles.height !== 100;
+
+    baseStyles.fontWeight = settings.fontWeight || 400;
+    baseStyles.padding = styles.padding || '12px 16px';
+    baseStyles.resize = settings.resize || 'vertical';
+    baseStyles.fontFamily = settings.fontFamily || 'inherit';
+
+    if (!hasManualHeight) {
+      delete baseStyles.height;
+      baseStyles.minHeight = styles.minHeight || rows * 24 + 24;
+    }
+
     if (settings.disabled) baseStyles.opacity = 0.5;
   }
 
   if (params.type === 'text') {
     baseStyles.fontSize = settings.fontSize || 24;
     baseStyles.fontWeight = settings.fontWeight || 800;
+    baseStyles.fontFamily = settings.fontFamily || 'inherit';
     baseStyles.textAlign = settings.textAlign || 'center';
     baseStyles.lineHeight = settings.lineHeight || 1.5;
+    baseStyles.letterSpacing = settings.letterSpacing || 0;
+    baseStyles.textTransform = settings.textTransform || 'none';
     baseStyles.whiteSpace = 'pre-wrap';
+    baseStyles.backgroundColor = 'transparent';
+    baseStyles.border = 'none';
   }
 
   if (params.type === 'image') {
     baseStyles.objectFit = settings.objectFit || 'cover';
+    baseStyles.objectPosition = settings.objectPosition || 'center';
     baseStyles.display = 'block';
     baseStyles.padding = 0;
   }
 
   if (params.type === 'link') {
     baseStyles.fontWeight = settings.fontWeight || 500;
+    baseStyles.fontFamily = settings.fontFamily || 'inherit';
     baseStyles.display = 'inline-flex';
     baseStyles.textDecoration = settings.underline === 'always' ? 'underline' : 'none';
+    baseStyles.backgroundColor = 'transparent';
+    baseStyles.border = 'none';
   }
 
   if (params.type === 'checkbox' || params.type === 'radio') {
@@ -136,7 +225,7 @@ const getSemanticChildRules = (params = {}) => {
       height: settings.size || 24,
       accentColor:
         params.type === 'checkbox'
-          ? styles.backgroundColor || '#111827'
+          ? settings.color || '#111827'
           : settings.color || '#4F46E5',
     }),
     createRule('.animadiv-element span', {
@@ -206,10 +295,9 @@ const getSection = (title, blocks) => {
 };
 
 export const generateFullCSS = (params = {}) => {
-  const animations = params.animations || {};
-  const loadConfig = getAnimationConfig(animations, 'load');
-  const hoverConfig = getAnimationConfig(animations, 'hover');
-  const clickConfig = getAnimationConfig(animations, 'click');
+  const loadConfig = getMotionConfig(params, 'load');
+  const hoverConfig = getMotionConfig(params, 'hover');
+  const clickConfig = getMotionConfig(params, 'click');
 
   const loadData = generateAnimationCSS(
     loadConfig.presetId,

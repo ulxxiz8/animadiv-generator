@@ -48,10 +48,23 @@ const fontFamilies = [
   { label: 'JetBrains Mono', value: 'JetBrains Mono' },
 ];
 
+const panelBlockStyle = {
+  maxWidth: '100%',
+  minWidth: 0,
+  boxSizing: 'border-box',
+};
+
+const twoColumnGridStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+  gap: '12px',
+  ...panelBlockStyle,
+};
+
 const AccordionSection = ({ title, children, defaultOpen = true }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <div style={{ borderBottom: '1px solid #E5E7EB' }}>
+    <div style={{ borderBottom: '1px solid #E5E7EB', ...panelBlockStyle }}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
@@ -68,6 +81,9 @@ const AccordionSection = ({ title, children, defaultOpen = true }) => {
           fontSize: '12px',
           textTransform: 'uppercase',
           letterSpacing: '0.05em',
+          ...panelBlockStyle,
+          overflowWrap: 'anywhere',
+          wordBreak: 'break-word',
         }}
       >
         {title}
@@ -84,6 +100,7 @@ const AccordionSection = ({ title, children, defaultOpen = true }) => {
             display: 'flex',
             flexDirection: 'column',
             gap: '16px',
+            ...panelBlockStyle,
           }}
         >
           {children}
@@ -115,30 +132,46 @@ const ControlsPanel = ({
     ? activeMotionState
     : allowedMotionStates[0] || 'load';
 
-  useEffect(() => {
-    if (!allowedMotionStates.includes(activeMotionState)) {
-      setActiveMotionState(allowedMotionStates[0] || 'load');
-    }
-  }, [activeMotionState, allowedMotionStates]);
-
-  if (!params || !params.styles)
-    return <div style={{ padding: 20 }}>Loading...</div>;
-
-  const currentAnimParams = params.animations?.[currentMotionState] || {
+  const currentAnimParams = params?.animations?.[currentMotionState] || {
     presetId: 'none',
   };
+  const availablePresets = useMemo(
+    () => getAvailablePresetsForType(params?.type, currentMotionState),
+    [params?.type, currentMotionState]
+  );
+  const availablePresetIds = useMemo(
+    () => new Set(availablePresets.map((preset) => preset.id)),
+    [availablePresets]
+  );
   const scaleRange = currentAnimParams.scaleRange || [1, 1];
-  const currentPresetVal = currentAnimParams.presetId || 'none';
+  const rawPresetVal = currentAnimParams.presetId || 'none';
+  const currentPresetVal = availablePresetIds.has(rawPresetVal)
+    ? rawPresetVal
+    : 'none';
   const hasPreset = currentPresetVal !== 'none';
   const isPhysicsOn =
     currentAnimParams.usePhysics || currentPresetVal.startsWith('physics');
+
+  useEffect(() => {
+    if (params && rawPresetVal !== currentPresetVal) {
+      onUpdateAnimation(currentMotionState, 'presetId', currentPresetVal);
+    }
+  }, [
+    currentMotionState,
+    currentPresetVal,
+    onUpdateAnimation,
+    params,
+    rawPresetVal,
+  ]);
+
+  if (!params || !params.styles)
+    return <div style={{ padding: 20 }}>Loading...</div>;
 
   // РОЗУМНА ФІЛЬТРАЦІЯ ЧЕРЕЗ UNIFIED CONTRACT
   const getSupportedControls = () => {
     if (!hasPreset) return [];
     const paramsSet = new Set();
 
-    paramsSet.add('motionToken'); // Токени підтримуються завжди (якщо пресет не 'none')
 
     let targetId = currentPresetVal;
     // Фізика - це окремий рушій, який замінює базові пресети
@@ -196,11 +229,7 @@ const ControlsPanel = ({
     // 3. Якщо перевірку пройдено - перевіряємо, чи підтримує це поточний пресет
     return supportedControls.includes(key);
   };
-  const hasPlaybackParams =
-    isSupported('iterationCount') ||
-    isSupported('direction') ||
-    isSupported('fillMode') ||
-    isSupported('motionAxis');
+  const hasPlaybackParams = isSupported('direction');
   const hasVisualParams =
     isSupported('transformOrigin') ||
     isSupported('intensity') ||
@@ -214,6 +243,8 @@ const ControlsPanel = ({
 
   const inputStyle = {
     width: '100%',
+    maxWidth: '100%',
+    minWidth: 0,
     boxSizing: 'border-box',
     padding: '8px 12px',
     borderRadius: '8px',
@@ -230,7 +261,39 @@ const ControlsPanel = ({
     color: '#6B7280',
     display: 'block',
     marginBottom: '6px',
+    maxWidth: '100%',
+    overflowWrap: 'anywhere',
+    wordBreak: 'break-word',
   };
+
+  const isTextLike = params.type === 'text' || params.type === 'link';
+  const isChoiceControl = params.type === 'checkbox' || params.type === 'radio';
+  const showWidthControl = !isChoiceControl;
+  const showHeightControl = !isTextLike && !isChoiceControl;
+  const showPaddingControl = !isChoiceControl;
+  const showBackgroundControl =
+    params.type !== 'image' &&
+    params.type !== 'text' &&
+    params.type !== 'link' &&
+    !isChoiceControl;
+  const showTextColorControl = params.type !== 'image';
+  const showOpacityControl = !isChoiceControl;
+  const showBorderControls = !isTextLike && !isChoiceControl;
+  const showShadowControls = [
+    'button',
+    'block',
+    'image',
+    'input',
+    'textarea',
+  ].includes(params.type);
+  const hasDimensionControls =
+    showWidthControl || showHeightControl || showPaddingControl;
+  const hasAppearanceControls =
+    showBackgroundControl ||
+    showTextColorControl ||
+    showOpacityControl ||
+    showBorderControls ||
+    showShadowControls;
 
   const handleAnimChange = (key, value) => {
     onUpdateAnimation(currentMotionState, key, value);
@@ -248,12 +311,19 @@ const ControlsPanel = ({
     }
   };
 
+  const getNumericStyleValue = (key, fallback = 0) => {
+    const value = params.styles[key];
+    if (typeof value === 'number') return value;
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
   const renderSettingField = (key, label, type, options = [], step = 1) => {
     const value = params.specificSettings[key];
     const onChange = (val) => onSpecificSettingChange(key, val);
 
     return (
-      <div key={key}>
+      <div key={key} style={panelBlockStyle}>
         <label style={labelStyle}>{label}</label>
         {type === 'select' && (
           <select
@@ -321,6 +391,54 @@ const ControlsPanel = ({
     );
   };
 
+  const renderShadowControls = () => {
+    if (!showShadowControls) return null;
+
+    const settings = params.specificSettings || {};
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {renderSettingField('shadowEnabled', 'Shadow', 'checkbox')}
+        {settings.shadowEnabled && (
+          <>
+            <ColorPicker
+              label="Shadow Color"
+              value={settings.shadowColor || '#111827'}
+              onChange={(val) => onSpecificSettingChange('shadowColor', val)}
+            />
+            <RangeSlider
+              label="Shadow Blur (px)"
+              min={0}
+              max={80}
+              step={1}
+              value={settings.shadowBlur ?? 18}
+              unit=""
+              onChange={(val) => onSpecificSettingChange('shadowBlur', val)}
+            />
+            <RangeSlider
+              label="Shadow Offset Y (px)"
+              min={-40}
+              max={80}
+              step={1}
+              value={settings.shadowOffsetY ?? 6}
+              unit=""
+              onChange={(val) => onSpecificSettingChange('shadowOffsetY', val)}
+            />
+            <RangeSlider
+              label="Shadow Opacity"
+              min={0}
+              max={1}
+              step={0.05}
+              value={settings.shadowOpacity ?? 0.16}
+              unit=""
+              onChange={(val) => onSpecificSettingChange('shadowOpacity', val)}
+            />
+          </>
+        )}
+      </div>
+    );
+  };
+
   const renderSpecificSettings = () => {
     switch (params.type) {
       case 'block':
@@ -329,7 +447,7 @@ const ControlsPanel = ({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                 gap: '12px',
               }}
             >
@@ -364,7 +482,7 @@ const ControlsPanel = ({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                 gap: '12px',
               }}
             >
@@ -378,7 +496,7 @@ const ControlsPanel = ({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                 gap: '12px',
               }}
             >
@@ -400,7 +518,7 @@ const ControlsPanel = ({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                 gap: '12px',
               }}
             >
@@ -417,6 +535,13 @@ const ControlsPanel = ({
         return (
           <>
             {renderSettingField('content', 'Text Content', 'textarea')}
+            {renderSettingField('tag', 'Tag', 'select', [
+              { label: 'Paragraph', value: 'p' },
+              { label: 'Span', value: 'span' },
+              { label: 'Heading 1', value: 'h1' },
+              { label: 'Heading 2', value: 'h2' },
+              { label: 'Heading 3', value: 'h3' },
+            ])}
             {renderSettingField(
               'fontFamily',
               'Font Family',
@@ -426,7 +551,7 @@ const ControlsPanel = ({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                 gap: '12px',
               }}
             >
@@ -440,7 +565,7 @@ const ControlsPanel = ({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                 gap: '12px',
               }}
             >
@@ -455,6 +580,20 @@ const ControlsPanel = ({
                 { label: 'Left', value: 'left' },
                 { label: 'Center', value: 'center' },
                 { label: 'Right', value: 'right' },
+              ])}
+            </div>
+            <div style={twoColumnGridStyle}>
+              {renderSettingField(
+                'letterSpacing',
+                'Letter Spacing (px)',
+                'number',
+                [],
+                0.1
+              )}
+              {renderSettingField('textTransform', 'Transform', 'select', [
+                { label: 'None', value: 'none' },
+                { label: 'Uppercase', value: 'uppercase' },
+                { label: 'Lowercase', value: 'lowercase' },
               ])}
             </div>
           </>
@@ -474,7 +613,7 @@ const ControlsPanel = ({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                 gap: '12px',
               }}
             >
@@ -490,9 +629,9 @@ const ControlsPanel = ({
               style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
             >
               {renderSettingField('size', 'Icon Size (px)', 'number')}
-              {params.type === 'checkbox'
-                ? renderSettingField('checkColor', 'Mark Color', 'color')
-                : renderSettingField('color', 'Accent Color', 'color')}
+              {renderSettingField('color', 'Accent Color', 'color')}
+              {params.type === 'checkbox' &&
+                renderSettingField('checkColor', 'Mark Color', 'color')}
             </div>
           </>
         );
@@ -500,9 +639,17 @@ const ControlsPanel = ({
         return (
           <>
             {renderSettingField('src', 'Image URL', 'text')}
+            {renderSettingField('alt', 'Alt Text', 'text')}
             {renderSettingField('objectFit', 'Object Fit', 'select', [
               { label: 'Cover', value: 'cover' },
               { label: 'Contain', value: 'contain' },
+            ])}
+            {renderSettingField('objectPosition', 'Object Position', 'select', [
+              { label: 'Center', value: 'center' },
+              { label: 'Top', value: 'top' },
+              { label: 'Bottom', value: 'bottom' },
+              { label: 'Left', value: 'left' },
+              { label: 'Right', value: 'right' },
             ])}
           </>
         );
@@ -510,6 +657,7 @@ const ControlsPanel = ({
         return (
           <>
             {renderSettingField('text', 'Link Text', 'text')}
+            {renderSettingField('href', 'URL', 'text')}
             {renderSettingField(
               'fontFamily',
               'Font Family',
@@ -519,7 +667,7 @@ const ControlsPanel = ({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                 gap: '12px',
               }}
             >
@@ -530,6 +678,11 @@ const ControlsPanel = ({
                 { label: 'Bold', value: 700 },
               ])}
             </div>
+            {renderSettingField('underline', 'Underline', 'select', [
+              { label: 'None', value: 'none' },
+              { label: 'Always', value: 'always' },
+              { label: 'Hover', value: 'hover' },
+            ])}
             {renderSettingField('hoverColor', 'Hover Color', 'color')}
           </>
         );
@@ -543,6 +696,15 @@ const ControlsPanel = ({
               'select',
               fontFamilies
             )}
+            <div style={twoColumnGridStyle}>
+              {renderSettingField('rows', 'Rows', 'number')}
+              {renderSettingField('resize', 'Resize', 'select', [
+                { label: 'None', value: 'none' },
+                { label: 'Vertical', value: 'vertical' },
+                { label: 'Horizontal', value: 'horizontal' },
+                { label: 'Both', value: 'both' },
+              ])}
+            </div>
             {renderSettingField('focusBorderColor', 'Focus Border', 'color')}
           </>
         );
@@ -560,9 +722,36 @@ const ControlsPanel = ({
         height: '100%',
         background: '#ffffff',
         overflowY: 'auto',
+        overflowX: 'hidden',
         borderRadius: '12px',
+        ...panelBlockStyle,
       }}
     >
+      <style>{`
+        .controls-panel,
+        .controls-panel * {
+          max-width: 100%;
+          box-sizing: border-box;
+          min-width: 0;
+        }
+
+        .controls-panel input,
+        .controls-panel select,
+        .controls-panel button,
+        .controls-panel textarea {
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+
+        .controls-panel label,
+        .controls-panel button,
+        .controls-panel span,
+        .controls-panel p {
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        }
+      `}</style>
       <div
         style={{
           display: 'flex',
@@ -571,6 +760,7 @@ const ControlsPanel = ({
           top: 0,
           background: '#fff',
           zIndex: 10,
+          ...panelBlockStyle,
         }}
       >
         <button
@@ -626,7 +816,7 @@ const ControlsPanel = ({
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
+                  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                   gap: '8px',
                   background: '#F9FAFB',
                   padding: '12px',
@@ -677,69 +867,81 @@ const ControlsPanel = ({
                   {renderSpecificSettings()}
                 </AccordionSection>
               )}
+            {hasDimensionControls && (
             <AccordionSection
               title="Dimensions & Box Model"
               defaultOpen={false}
             >
-              <RangeSlider
-                label="Width (px)"
-                min={20}
-                max={600}
-                step={1}
-                value={params.styles.width || 0}
-                unit=""
-                onChange={(val) => onStyleChange('width', val)}
-              />
-              {params.type !== 'text' && params.type !== 'link' && (
+              {showWidthControl && (
+                <RangeSlider
+                  label="Width (px)"
+                  min={20}
+                  max={600}
+                  step={1}
+                  value={getNumericStyleValue('width')}
+                  unit=""
+                  onChange={(val) => onStyleChange('width', val)}
+                />
+              )}
+              {showHeightControl && (
                 <RangeSlider
                   label="Height (px)"
                   min={20}
                   max={600}
                   step={1}
-                  value={params.styles.height || 0}
+                  value={getNumericStyleValue(
+                    'height',
+                    params.type === 'textarea' ? 112 : 0
+                  )}
                   unit=""
                   onChange={(val) => onStyleChange('height', val)}
                 />
               )}
-              <RangeSlider
-                label="Padding (px)"
-                min={0}
-                max={100}
-                step={1}
-                value={parseInt(params.styles.padding) || 0}
-                unit=""
-                onChange={(val) => onStyleChange('padding', `${val}px`)}
-              />
+              {showPaddingControl && (
+                <RangeSlider
+                  label="Padding (px)"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={parseInt(params.styles.padding) || 0}
+                  unit=""
+                  onChange={(val) => onStyleChange('padding', `${val}px`)}
+                />
+              )}
             </AccordionSection>
+            )}
+            {hasAppearanceControls && (
             <AccordionSection title="Appearance" defaultOpen={false}>
-              {params.type !== 'image' && (
+              {showBackgroundControl && (
                 <ColorPicker
                   label="Background Fill"
                   value={params.styles.backgroundColor || 'transparent'}
                   onChange={(val) => onStyleChange('backgroundColor', val)}
                 />
               )}
-              {params.type !== 'image' && (
+              {showTextColorControl && (
                 <ColorPicker
                   label="Text Color"
                   value={params.styles.color || '#111827'}
                   onChange={(val) => onStyleChange('color', val)}
                 />
               )}
-              <RangeSlider
-                label="Opacity"
-                min={0}
-                max={1}
-                step={0.05}
-                value={
-                  params.styles.opacity !== undefined
-                    ? params.styles.opacity
-                    : 1
-                }
-                unit=""
-                onChange={(val) => onStyleChange('opacity', val)}
-              />
-              {params.type !== 'text' && params.type !== 'link' && (
+              {showOpacityControl && (
+                <RangeSlider
+                  label="Opacity"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={
+                    params.styles.opacity !== undefined
+                      ? params.styles.opacity
+                      : 1
+                  }
+                  unit=""
+                  onChange={(val) => onStyleChange('opacity', val)}
+                />
+              )}
+              {showBorderControls && (
                 <>
                   <RangeSlider
                     label="Corner Radius (px)"
@@ -768,7 +970,9 @@ const ControlsPanel = ({
                   )}
                 </>
               )}
+              {renderShadowControls()}
             </AccordionSection>
+            )}
           </>
         )}
 
@@ -856,10 +1060,7 @@ const ControlsPanel = ({
                   onChange={(e) => handleAnimChange('presetId', e.target.value)}
                   style={inputStyle}
                 >
-                  {getAvailablePresetsForType(
-                    params.type,
-                    currentMotionState
-                  ).map((preset) => (
+                  {availablePresets.map((preset) => (
                     <option key={preset.id} value={preset.id}>
                       {preset.name}
                     </option>
@@ -1023,7 +1224,7 @@ const ControlsPanel = ({
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
+                      gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                       gap: '12px',
                     }}
                   >
@@ -1046,18 +1247,18 @@ const ControlsPanel = ({
                     )}
                     {isSupported('direction') && (
                       <div>
-                        <label style={labelStyle}>Direction</label>
+                        <label style={labelStyle}>Slide Direction</label>
                         <select
-                          value={currentAnimParams.direction || 'normal'}
+                          value={currentAnimParams.direction || 'bottom'}
                           onChange={(e) =>
                             handleAnimChange('direction', e.target.value)
                           }
                           style={inputStyle}
                         >
-                          <option value="normal">Normal</option>
-                          <option value="reverse">Reverse</option>
-                          <option value="alternate">Alternate</option>
-                          <option value="alternate-reverse">Alt Reverse</option>
+                          <option value="bottom">Bottom</option>
+                          <option value="top">Top</option>
+                          <option value="left">Left</option>
+                          <option value="right">Right</option>
                         </select>
                       </div>
                     )}
@@ -1065,7 +1266,7 @@ const ControlsPanel = ({
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
+                      gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                       gap: '12px',
                     }}
                   >
@@ -1244,7 +1445,7 @@ const ControlsPanel = ({
                       <div
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: '1fr 1fr',
+                          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                           gap: '12px',
                         }}
                       >

@@ -32,6 +32,9 @@ export const RangeSlider = ({
     <div
       style={{
         width: '100%',
+        maxWidth: '100%',
+        minWidth: 0,
+        boxSizing: 'border-box',
         opacity: disabled ? 0.5 : 1,
         pointerEvents: disabled ? 'none' : 'auto',
       }}
@@ -41,15 +44,33 @@ export const RangeSlider = ({
           display: 'flex',
           justifyContent: 'space-between',
           marginBottom: '8px',
+          maxWidth: '100%',
+          minWidth: 0,
+          boxSizing: 'border-box',
         }}
       >
         <label
-          style={{ fontSize: '12px', fontWeight: '700', color: '#6B7280' }}
+          style={{
+            fontSize: '12px',
+            fontWeight: '700',
+            color: '#6B7280',
+            overflowWrap: 'anywhere',
+            wordBreak: 'break-word',
+          }}
         >
           {label}
         </label>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          maxWidth: '100%',
+          minWidth: 0,
+          boxSizing: 'border-box',
+        }}
+      >
         <input
           type="range"
           min={min}
@@ -57,7 +78,15 @@ export const RangeSlider = ({
           step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          style={{ flex: 1, accentColor: '#111827', cursor: 'pointer' }}
+          style={{
+            flex: 1,
+            width: '100%',
+            maxWidth: '100%',
+            minWidth: 0,
+            boxSizing: 'border-box',
+            accentColor: '#111827',
+            cursor: 'pointer',
+          }}
         />
         <div
           style={{
@@ -67,7 +96,10 @@ export const RangeSlider = ({
             border: '1px solid #D1D5DB',
             borderRadius: '6px',
             overflow: 'hidden',
-            width: '70px',
+            flex: '0 1 70px',
+            minWidth: 0,
+            maxWidth: '70px',
+            boxSizing: 'border-box',
           }}
         >
           <input
@@ -79,6 +111,9 @@ export const RangeSlider = ({
             onChange={(e) => onChange(Number(e.target.value))}
             style={{
               width: '100%',
+              maxWidth: '100%',
+              minWidth: 0,
+              boxSizing: 'border-box',
               border: 'none',
               background: 'transparent',
               padding: '6px',
@@ -90,6 +125,18 @@ export const RangeSlider = ({
               appearance: 'textfield',
             }}
           />
+          {unit ? (
+            <span
+              style={{
+                paddingRight: '6px',
+                fontSize: '11px',
+                fontWeight: 700,
+                color: '#6B7280',
+              }}
+            >
+              {unit}
+            </span>
+          ) : null}
         </div>
       </div>
     </div>
@@ -154,15 +201,34 @@ export const Button = ({ children, onClick, variant = 'primary' }) => (
 
 // 5. Вибір кольору (ColorPicker)
 export const ColorPicker = ({ label, value, onChange }) => (
-  <div style={{ marginBottom: '20px' }}>
+  <div
+    style={{
+      marginBottom: '20px',
+      maxWidth: '100%',
+      minWidth: 0,
+      boxSizing: 'border-box',
+    }}
+  >
     <Label>{label}</Label>
-    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+    <div
+      style={{
+        display: 'flex',
+        gap: '8px',
+        alignItems: 'center',
+        maxWidth: '100%',
+        minWidth: 0,
+        boxSizing: 'border-box',
+      }}
+    >
       <input
         type="color"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         style={{
           width: '38px',
+          maxWidth: '38px',
+          minWidth: '38px',
+          boxSizing: 'border-box',
           height: '38px',
           padding: '0',
           border: '1px solid #E5E7EB',
@@ -177,6 +243,10 @@ export const ColorPicker = ({ label, value, onChange }) => (
         onChange={(e) => onChange(e.target.value)}
         style={{
           flex: 1,
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0,
+          boxSizing: 'border-box',
           padding: '10px 12px',
           borderRadius: '8px',
           border: '1px solid #D1D5DB',

@@ -26,19 +26,22 @@ const generateImageHoverStyles = (presetId, config = {}) => {
     delay = 0,
     easing = 'ease',
     blurAmount = 10,
-    zoomIntensity = 50,
     rotationAngle = 15,
+    hoverDepth = 20,
+    transformOrigin = 'center',
+    intensity = 100,
     parallaxDirection = 'diagonal',
   } = config;
 
   const transitionStyles = {
     transition: `transform ${duration}ms ${easing} ${delay}ms, filter ${duration}ms ${easing} ${delay}ms`,
     willChange: 'transform, filter',
+    transformOrigin,
   };
 
   switch (presetId) {
     case 'parallaxHover': {
-      const offset = Math.max(4, zoomIntensity / 10);
+      const offset = Math.max(4, hoverDepth / 2);
       const x =
         parallaxDirection === 'vertical'
           ? 0
@@ -55,13 +58,79 @@ const generateImageHoverStyles = (presetId, config = {}) => {
       break;
     }
     case 'tiltHover':
-      transitionStyles.transform = `rotate(${rotationAngle}deg)`;
+      transitionStyles.transform = `perspective(700px) rotate(${rotationAngle}deg) translateY(-${hoverDepth / 4}px)`;
       break;
     case 'hoverBrightness':
-      transitionStyles.filter = 'brightness(1.12)';
+      transitionStyles.filter = `brightness(${1 + intensity / 500})`;
       break;
     case 'hoverBlur':
-      transitionStyles.filter = `blur(${blurAmount}px)`;
+      transitionStyles.filter = `blur(${Math.min(Math.max(blurAmount || 3, 0), 4)}px)`;
+      break;
+    default:
+      return { keyframes: '', animationStr: 'none', transitionStyles: null };
+  }
+
+  return { keyframes: '', animationStr: 'none', transitionStyles };
+};
+
+const colorToRgba = (color = '#111827', opacity = 0.22) => {
+  if (String(color).startsWith('rgba(')) return color;
+  if (String(color).startsWith('rgb(')) {
+    return String(color).replace('rgb(', 'rgba(').replace(')', `, ${opacity})`);
+  }
+
+  const hex = String(color).replace('#', '');
+  if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(hex)) {
+    return `rgba(17, 24, 39, ${opacity})`;
+  }
+
+  const normalized =
+    hex.length === 3
+      ? hex
+          .split('')
+          .map((char) => char + char)
+          .join('')
+      : hex;
+  const value = parseInt(normalized, 16);
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+const resolveAccentGlow = (config = {}) =>
+  colorToRgba(
+    config.shadowColor ||
+      config.accentColor ||
+      config.backgroundColor ||
+      config.color ||
+      config.borderColor ||
+      '#111827',
+    Math.min(config.shadowOpacity ?? 0.22, 0.32)
+  );
+
+const generateFormHoverStyles = (presetId, config = {}) => {
+  const {
+    duration = 300,
+    delay = 0,
+    easing = 'ease',
+    glowColor = resolveAccentGlow(config),
+  } = config;
+
+  const transitionStyles = {
+    transition: `box-shadow ${duration}ms ${easing} ${delay}ms, border-color ${duration}ms ${easing} ${delay}ms, opacity ${duration}ms ${easing} ${delay}ms`,
+    willChange: 'box-shadow, border-color, opacity',
+  };
+
+  switch (presetId) {
+    case 'focusGlow':
+      transitionStyles.boxShadow = `0 0 0 3px ${glowColor}`;
+      break;
+    case 'borderSlide':
+      transitionStyles.boxShadow = 'inset 0 -2px 0 0 currentColor';
+      break;
+    case 'placeholderFade':
+      transitionStyles.opacity = 0.82;
       break;
     default:
       return { keyframes: '', animationStr: 'none', transitionStyles: null };
@@ -126,7 +195,20 @@ export const generateAnimationCSS = (
       'underlineDraw',
     ].includes(presetId)
   )
-    return generateTypographyCSS(presetId, config, uniqueId);
+    return generateTypographyCSS(
+      presetId,
+      {
+        ...config,
+        intensity:
+          presetId === 'blurReveal'
+            ? Math.max(0, (config.blurAmount ?? config.intensity ?? 10) * 10)
+            : presetId === 'typewriter' && config.stagger !== undefined
+              ? Math.max(0, Math.min(140, 160 - Number(config.stagger) * 2))
+            : config.intensity,
+      },
+      uniqueId,
+      triggerState
+    );
 
   if (
     [
@@ -158,7 +240,9 @@ export const generateAnimationCSS = (
       'scrollReveal',
     ].includes(presetId)
   )
-    return generateLayoutFormCSS(presetId, config, uniqueId);
+    return triggerState === 'hover'
+      ? generateFormHoverStyles(presetId, config)
+      : generateLayoutFormCSS(presetId, config, uniqueId);
 
   if (
     [
@@ -184,7 +268,7 @@ export const generateAnimationCSS = (
     motionAxis = 'all',
     blurAmount = 0,
     rotationAngle = 0,
-    floatingAmount = 15,
+    transformOrigin = 'center',
   } = config;
 
   if (triggerState === 'click') {
@@ -220,8 +304,8 @@ export const generateAnimationCSS = (
       }
       break;
 
-    case 'slide':
-      let val = triggerState === 'hover' ? intensity / 5 : intensity;
+    case 'slide': {
+      const val = triggerState === 'hover' ? intensity / 5 : intensity;
       let dx = 0,
         dy = 0;
       if (direction === 'left') dx = -val;
@@ -241,8 +325,9 @@ export const generateAnimationCSS = (
         motionObj.end.opacity = 1;
       }
       break;
+    }
 
-    case 'scale':
+    case 'scale': {
       const sStart = scaleRange[0] !== 1 ? scaleRange[0] : 0.8;
       const sEnd = 1 + intensity / 500;
       if (triggerState === 'hover') {
@@ -265,13 +350,15 @@ export const generateAnimationCSS = (
         }
       }
       break;
+    }
 
     case 'rotate':
       if (triggerState === 'hover') motionObj.end.rotate = rotationAngle || 15;
       break;
 
     case 'hoverBlur':
-      if (triggerState === 'hover') motionObj.end.blur = blurAmount || 5;
+      if (triggerState === 'hover')
+        motionObj.end.blur = Math.min(Math.max(blurAmount || 3, 0), 4);
       break;
 
     default:
@@ -301,6 +388,7 @@ export const generateAnimationCSS = (
     const transitionStyles = {
       transition,
       willChange: 'transform, filter, opacity',
+      transformOrigin,
     };
 
     if (transformParts.length > 0) {
@@ -322,5 +410,14 @@ export const generateAnimationCSS = (
     };
   }
 
-  return compileNormalizedMotion(motionObj, animName, triggerState);
+  const compiled = compileNormalizedMotion(motionObj, animName, triggerState);
+
+  if (triggerState === 'load' && presetId === 'scale' && transformOrigin) {
+    return {
+      ...compiled,
+      keyframes: `#${uniqueId} { transform-origin: ${transformOrigin}; }\n${compiled.keyframes}`,
+    };
+  }
+
+  return compiled;
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   LayoutTemplate,
   RotateCcw,
@@ -18,9 +18,6 @@ const EMPTY_MOTION = {
   config: null,
 };
 
-const DEFAULT_HOVER_TRANSITION =
-  'transform 240ms ease-out, filter 240ms ease-out, opacity 240ms ease-out, box-shadow 240ms ease-out, background-color 240ms ease-out, color 240ms ease-out, border-color 240ms ease-out';
-
 const px = (value) => {
   if (value === undefined || value === null) return undefined;
   if (value === 'auto') return 'auto';
@@ -28,9 +25,66 @@ const px = (value) => {
   return value;
 };
 
-const usePreviewStyle = (styleId, css) => {
+const colorToRgba = (color = '#111827', opacity = 0.16) => {
+  if (String(color).startsWith('rgba(')) return color;
+  if (String(color).startsWith('rgb(')) {
+    return String(color).replace('rgb(', 'rgba(').replace(')', `, ${opacity})`);
+  }
+
+  const hex = String(color).replace('#', '');
+  if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(hex)) {
+    return `rgba(17, 24, 39, ${opacity})`;
+  }
+
+  const normalized =
+    hex.length === 3
+      ? hex
+          .split('')
+          .map((char) => char + char)
+          .join('')
+      : hex;
+  const value = parseInt(normalized, 16);
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+const getShadowStyle = (settings = {}) => {
+  if (!settings.shadowEnabled) return null;
+
+  return `0 ${settings.shadowOffsetY ?? 6}px ${settings.shadowBlur ?? 18}px ${colorToRgba(
+    settings.shadowColor,
+    settings.shadowOpacity ?? 0.16
+  )}`;
+};
+
+const getMotionConfig = (params, state) => {
+  const settings = params.specificSettings || {};
+  const styles = params.styles || {};
+  const config = params.animations?.[state];
+
+  if (!config) return config;
+
+  return {
+    ...config,
+    shadowColor: settings.shadowColor,
+    shadowOpacity: settings.shadowOpacity,
+    accentColor:
+      settings.color ||
+      settings.checkColor ||
+      styles.backgroundColor ||
+      styles.color ||
+      styles.borderColor,
+    backgroundColor: styles.backgroundColor,
+    color: styles.color,
+    borderColor: styles.borderColor,
+  };
+};
+
+const usePreviewStyle = (styleId, keyframes) => {
   useEffect(() => {
-    if (!css) return undefined;
+    if (!keyframes) return;
 
     let styleEl = document.getElementById(styleId);
 
@@ -40,13 +94,13 @@ const usePreviewStyle = (styleId, css) => {
       document.head.appendChild(styleEl);
     }
 
-    styleEl.innerHTML = css;
+    styleEl.innerHTML = keyframes;
 
     return () => {
       const el = document.getElementById(styleId);
       if (el) el.remove();
     };
-  }, [styleId, css]);
+  }, [styleId, keyframes]);
 };
 
 const HintCursor = ({ type, visible }) => {
@@ -72,11 +126,13 @@ const HintCursor = ({ type, visible }) => {
       ) : (
         <Pointer size={34} fill="#ffffff" color="#111827" />
       )}
+
       <style>{`
         @keyframes animadiv-hint-hover {
           0%, 100% { transform: translate(18px, 18px); opacity: 0.8; }
           50% { transform: translate(-8px, -8px); opacity: 1; }
         }
+
         @keyframes animadiv-hint-click {
           0%, 100% { transform: translateY(8px) scale(1); opacity: 0.8; }
           50% { transform: translateY(-4px) scale(0.92); opacity: 1; }
@@ -89,7 +145,7 @@ const HintCursor = ({ type, visible }) => {
 const getMotion = (params, state) => {
   if (!params || state === 'static') return EMPTY_MOTION;
 
-  const config = params.animations?.[state];
+  const config = getMotionConfig(params, state);
 
   if (!config || !config.presetId || config.presetId === 'none') {
     return {
@@ -119,7 +175,7 @@ const getTag = (params) => {
   return params.tag || 'div';
 };
 
-const buildBaseStyles = (params, state) => {
+const getBaseElementStyles = (params, state) => {
   const s = params.specificSettings || {};
   const styles = params.styles || {};
 
@@ -127,13 +183,14 @@ const buildBaseStyles = (params, state) => {
     ...styles,
     width: px(styles.width),
     height: px(styles.height),
+    minHeight: px(styles.minHeight),
     padding: px(styles.padding),
     borderRadius: px(styles.borderRadius),
     boxSizing: 'border-box',
     position: 'relative',
     animation: 'none',
     transition: 'none',
-    cursor: state === 'hover' || state === 'click' ? 'pointer' : 'default',
+    cursor: state === 'static' || state === 'load' ? 'default' : 'pointer',
   };
 
   if (styles.borderWidth > 0) {
@@ -144,6 +201,11 @@ const buildBaseStyles = (params, state) => {
 
   if (styles.opacity !== undefined) {
     base.opacity = styles.opacity;
+  }
+
+  const shadow = getShadowStyle(s);
+  if (shadow) {
+    base.boxShadow = shadow;
   }
 
   if (params.type === 'block') {
@@ -171,15 +233,33 @@ const buildBaseStyles = (params, state) => {
     base.fontWeight = s.fontWeight || 400;
     base.fontFamily = s.fontFamily || 'inherit';
     base.padding = styles.padding || '0 16px';
+    base.display = 'block';
+    base.whiteSpace = 'nowrap';
+    base.overflow = 'hidden';
+    base.textOverflow = 'ellipsis';
     base.outline = 'none';
   }
 
   if (params.type === 'textarea') {
+    const rows = Math.max(Number(s.rows) || 4, 1);
+    const hasManualHeight =
+      styles.height !== undefined &&
+      styles.height !== null &&
+      styles.height !== '' &&
+      styles.height !== 'auto' &&
+      styles.height !== 100;
+
     base.fontSize = `${s.fontSize || 14}px`;
+    base.fontWeight = s.fontWeight || 400;
     base.fontFamily = s.fontFamily || 'inherit';
     base.padding = styles.padding || '12px 16px';
-    base.resize = s.resize || 'both';
+    base.resize = s.resize || 'vertical';
     base.outline = 'none';
+
+    if (!hasManualHeight) {
+      delete base.height;
+      base.minHeight = px(styles.minHeight) || `${rows * 24 + 24}px`;
+    }
   }
 
   if (params.type === 'text') {
@@ -188,11 +268,14 @@ const buildBaseStyles = (params, state) => {
     base.fontFamily = s.fontFamily || 'inherit';
     base.textAlign = s.textAlign || 'center';
     base.lineHeight = s.lineHeight || 1.5;
+    base.letterSpacing = `${s.letterSpacing || 0}px`;
+    base.textTransform = s.textTransform || 'none';
     base.whiteSpace = 'pre-wrap';
   }
 
   if (params.type === 'image') {
     base.objectFit = s.objectFit || 'cover';
+    base.objectPosition = s.objectPosition || 'center';
     base.display = 'block';
     base.padding = 0;
   }
@@ -203,6 +286,8 @@ const buildBaseStyles = (params, state) => {
     base.fontFamily = s.fontFamily || 'inherit';
     base.display = 'inline-flex';
     base.textDecoration = s.underline === 'always' ? 'underline' : 'none';
+    base.backgroundColor = 'transparent';
+    base.border = 'none';
   }
 
   if (params.type === 'checkbox' || params.type === 'radio') {
@@ -243,6 +328,7 @@ const renderContent = (params, textPreset) => {
 
   if (params.type === 'checkbox') {
     const iconSize = s.size || 24;
+
     return (
       <>
         <div
@@ -250,8 +336,8 @@ const renderContent = (params, textPreset) => {
             width: `${iconSize}px`,
             height: `${iconSize}px`,
             flexShrink: 0,
-            backgroundColor: s.checked ? styles.backgroundColor : '#fff',
-            border: `2px solid ${styles.backgroundColor || '#111827'}`,
+            backgroundColor: s.checked ? s.color || '#111827' : '#fff',
+            border: `2px solid ${s.color || '#111827'}`,
             borderRadius: '6px',
             display: 'flex',
             alignItems: 'center',
@@ -283,6 +369,7 @@ const renderContent = (params, textPreset) => {
 
   if (params.type === 'radio') {
     const iconSize = s.size || 24;
+
     return (
       <>
         <div
@@ -331,34 +418,25 @@ const PreviewElement = ({ params, state, replayKey }) => {
   const [hovered, setHovered] = useState(false);
   const [clicked, setClicked] = useState(false);
   const [clickKey, setClickKey] = useState(0);
-  const clickTimerRef = useRef(null);
 
   const motion = useMemo(() => getMotion(params, state), [params, state]);
 
   usePreviewStyle(
     `animadiv-preview-${params.id}-${state}`,
-    state === 'static' ? '' : motion.keyframes
+    state === 'load' || state === 'click' ? motion.keyframes : ''
   );
 
   useEffect(() => {
     setHovered(false);
     setClicked(false);
     setClickKey(0);
-    if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current);
   }, [state, motion.presetId]);
-
-  useEffect(
-    () => () => {
-      if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current);
-    },
-    []
-  );
 
   const Tag = getTag(params);
   const s = params.specificSettings || {};
   const isVoidElement = Tag === 'input' || Tag === 'img' || Tag === 'textarea';
 
-  let elementStyles = buildBaseStyles(params, state);
+  let elementStyles = getBaseElementStyles(params, state);
 
   if (state === 'static') {
     elementStyles = {
@@ -366,7 +444,6 @@ const PreviewElement = ({ params, state, replayKey }) => {
       animation: 'none',
       transition: 'none',
       cursor: 'default',
-      pointerEvents: 'none',
     };
   }
 
@@ -380,15 +457,19 @@ const PreviewElement = ({ params, state, replayKey }) => {
   }
 
   if (state === 'hover') {
+    const fallbackHoverTransition =
+      'transform 240ms ease-out, filter 240ms ease-out, opacity 240ms ease-out, box-shadow 240ms ease-out, background-color 240ms ease-out, color 240ms ease-out, border-color 240ms ease-out';
+
     elementStyles = {
       ...elementStyles,
       transition:
-        motion.transitionStyles?.transition || DEFAULT_HOVER_TRANSITION,
+        motion.transitionStyles?.transition || fallbackHoverTransition,
       cursor: 'pointer',
     };
 
     if (hovered && motion.transitionStyles) {
-      const { transition, ...hoverOnlyStyles } = motion.transitionStyles;
+      const hoverOnlyStyles = { ...motion.transitionStyles };
+      delete hoverOnlyStyles.transition;
       elementStyles = {
         ...elementStyles,
         ...hoverOnlyStyles,
@@ -415,36 +496,15 @@ const PreviewElement = ({ params, state, replayKey }) => {
   if (state === 'click') {
     elementStyles = {
       ...elementStyles,
-      animation:
-        clicked && motion.animationStr && motion.animationStr !== 'none'
-          ? motion.animationStr
-          : 'none',
-      transition: clicked
-        ? motion.transitionStyles?.transition || 'none'
-        : 'none',
+      animation: clicked ? motion.animationStr || 'none' : 'none',
+      transition: 'none',
       cursor: 'pointer',
     };
-
-    if (clicked && motion.transitionStyles) {
-      const { transition, ...clickOnlyStyles } = motion.transitionStyles;
-      elementStyles = {
-        ...elementStyles,
-        ...clickOnlyStyles,
-      };
-    }
   }
 
-  const elementId = `${params.id}_${state}`;
   const elementProps = {
-    id: elementId,
     style: elementStyles,
-    className: [
-      'animadiv-element',
-      state === 'hover' && hovered ? 'is-hovered' : '',
-      state === 'click' && clicked ? 'is-clicked' : '',
-    ]
-      .filter(Boolean)
-      .join(' '),
+    className: 'animadiv-element',
   };
 
   if (state === 'load') {
@@ -454,6 +514,21 @@ const PreviewElement = ({ params, state, replayKey }) => {
   if (state === 'click') {
     elementProps.key = `click-${clickKey}`;
     elementProps.onAnimationEnd = () => setClicked(false);
+  }
+
+  if (state === 'hover') {
+    elementProps.onMouseEnter = () => setHovered(true);
+    elementProps.onMouseLeave = () => setHovered(false);
+  }
+
+  if (state === 'click') {
+    elementProps.onMouseDown = () => {
+      setClicked(false);
+      requestAnimationFrame(() => {
+        setClickKey((value) => value + 1);
+        setClicked(true);
+      });
+    };
   }
 
   if (params.type === 'input') {
@@ -476,41 +551,14 @@ const PreviewElement = ({ params, state, replayKey }) => {
 
   if (params.type === 'link') {
     elementProps.href = s.href || '#';
-    elementProps.onClick = (event) => event.preventDefault();
+    elementProps.onClick = (e) => e.preventDefault();
   }
 
   const textPreset =
     state === 'click' || state === 'static' ? 'none' : motion.presetId;
 
-  const interactionHandlers = {};
-
-  if (state === 'hover') {
-    interactionHandlers.onMouseEnter = () => setHovered(true);
-    interactionHandlers.onMouseLeave = () => setHovered(false);
-  }
-
-  if (state === 'click') {
-    interactionHandlers.onMouseDown = () => {
-      if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current);
-      setClicked(false);
-      requestAnimationFrame(() => {
-        setClickKey((value) => value + 1);
-        setClicked(true);
-        const duration = Number(motion.config?.duration) || 180;
-        const delay = Number(motion.config?.delay) || 0;
-        clickTimerRef.current = window.setTimeout(
-          () => {
-            setClicked(false);
-          },
-          duration + delay + 100
-        );
-      });
-    };
-  }
-
   return (
     <div
-      {...interactionHandlers}
       style={{
         width: '100%',
         height: '100%',
@@ -518,7 +566,6 @@ const PreviewElement = ({ params, state, replayKey }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        pointerEvents: state === 'static' || state === 'load' ? 'none' : 'auto',
       }}
     >
       <HintCursor
