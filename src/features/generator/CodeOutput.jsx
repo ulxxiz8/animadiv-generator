@@ -13,7 +13,10 @@ const CodeOutput = ({ params, code }) => {
 
   const htmlCode = useMemo(() => generateHtml(params), [params]);
   const cleanCSS = useMemo(() => (code ? code.trim() : ''), [code]);
-  const cleanHTML = useMemo(() => (htmlCode ? htmlCode.trim() : ''), [htmlCode]);
+  const cleanHTML = useMemo(
+    () => (htmlCode ? htmlCode.trim() : ''),
+    [htmlCode]
+  );
 
   const renderedCode = useMemo(() => {
     if (activeTab === 'html') return cleanHTML;

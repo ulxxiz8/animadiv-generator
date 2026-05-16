@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LayoutTemplate,
   RotateCcw,
@@ -18,6 +18,9 @@ const EMPTY_MOTION = {
   config: null,
 };
 
+const DEFAULT_HOVER_TRANSITION =
+  'transform 240ms ease-out, filter 240ms ease-out, opacity 240ms ease-out, box-shadow 240ms ease-out, background-color 240ms ease-out, color 240ms ease-out, border-color 240ms ease-out';
+
 const px = (value) => {
   if (value === undefined || value === null) return undefined;
   if (value === 'auto') return 'auto';
@@ -25,9 +28,9 @@ const px = (value) => {
   return value;
 };
 
-const usePreviewStyle = (styleId, keyframes) => {
+const usePreviewStyle = (styleId, css) => {
   useEffect(() => {
-    if (!keyframes) return;
+    if (!css) return undefined;
 
     let styleEl = document.getElementById(styleId);
 
@@ -37,13 +40,13 @@ const usePreviewStyle = (styleId, keyframes) => {
       document.head.appendChild(styleEl);
     }
 
-    styleEl.innerHTML = keyframes;
+    styleEl.innerHTML = css;
 
     return () => {
       const el = document.getElementById(styleId);
       if (el) el.remove();
     };
-  }, [styleId, keyframes]);
+  }, [styleId, css]);
 };
 
 const HintCursor = ({ type, visible }) => {
@@ -69,13 +72,11 @@ const HintCursor = ({ type, visible }) => {
       ) : (
         <Pointer size={34} fill="#ffffff" color="#111827" />
       )}
-
       <style>{`
         @keyframes animadiv-hint-hover {
           0%, 100% { transform: translate(18px, 18px); opacity: 0.8; }
           50% { transform: translate(-8px, -8px); opacity: 1; }
         }
-
         @keyframes animadiv-hint-click {
           0%, 100% { transform: translateY(8px) scale(1); opacity: 0.8; }
           50% { transform: translateY(-4px) scale(0.92); opacity: 1; }
@@ -118,7 +119,7 @@ const getTag = (params) => {
   return params.tag || 'div';
 };
 
-const getBaseElementStyles = (params, state) => {
+const buildBaseStyles = (params, state) => {
   const s = params.specificSettings || {};
   const styles = params.styles || {};
 
@@ -132,7 +133,7 @@ const getBaseElementStyles = (params, state) => {
     position: 'relative',
     animation: 'none',
     transition: 'none',
-    cursor: state === 'static' || state === 'load' ? 'default' : 'pointer',
+    cursor: state === 'hover' || state === 'click' ? 'pointer' : 'default',
   };
 
   if (styles.borderWidth > 0) {
@@ -242,7 +243,6 @@ const renderContent = (params, textPreset) => {
 
   if (params.type === 'checkbox') {
     const iconSize = s.size || 24;
-
     return (
       <>
         <div
@@ -283,7 +283,6 @@ const renderContent = (params, textPreset) => {
 
   if (params.type === 'radio') {
     const iconSize = s.size || 24;
-
     return (
       <>
         <div
@@ -332,25 +331,34 @@ const PreviewElement = ({ params, state, replayKey }) => {
   const [hovered, setHovered] = useState(false);
   const [clicked, setClicked] = useState(false);
   const [clickKey, setClickKey] = useState(0);
+  const clickTimerRef = useRef(null);
 
   const motion = useMemo(() => getMotion(params, state), [params, state]);
 
   usePreviewStyle(
     `animadiv-preview-${params.id}-${state}`,
-    state === 'load' || state === 'click' ? motion.keyframes : ''
+    state === 'static' ? '' : motion.keyframes
   );
 
   useEffect(() => {
     setHovered(false);
     setClicked(false);
     setClickKey(0);
+    if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current);
   }, [state, motion.presetId]);
+
+  useEffect(
+    () => () => {
+      if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current);
+    },
+    []
+  );
 
   const Tag = getTag(params);
   const s = params.specificSettings || {};
   const isVoidElement = Tag === 'input' || Tag === 'img' || Tag === 'textarea';
 
-  let elementStyles = getBaseElementStyles(params, state);
+  let elementStyles = buildBaseStyles(params, state);
 
   if (state === 'static') {
     elementStyles = {
@@ -358,6 +366,7 @@ const PreviewElement = ({ params, state, replayKey }) => {
       animation: 'none',
       transition: 'none',
       cursor: 'default',
+      pointerEvents: 'none',
     };
   }
 
@@ -371,13 +380,10 @@ const PreviewElement = ({ params, state, replayKey }) => {
   }
 
   if (state === 'hover') {
-    const fallbackHoverTransition =
-      'transform 240ms ease-out, filter 240ms ease-out, opacity 240ms ease-out, box-shadow 240ms ease-out, background-color 240ms ease-out, color 240ms ease-out, border-color 240ms ease-out';
-
     elementStyles = {
       ...elementStyles,
       transition:
-        motion.transitionStyles?.transition || fallbackHoverTransition,
+        motion.transitionStyles?.transition || DEFAULT_HOVER_TRANSITION,
       cursor: 'pointer',
     };
 
@@ -409,15 +415,36 @@ const PreviewElement = ({ params, state, replayKey }) => {
   if (state === 'click') {
     elementStyles = {
       ...elementStyles,
-      animation: clicked ? motion.animationStr || 'none' : 'none',
-      transition: 'none',
+      animation:
+        clicked && motion.animationStr && motion.animationStr !== 'none'
+          ? motion.animationStr
+          : 'none',
+      transition: clicked
+        ? motion.transitionStyles?.transition || 'none'
+        : 'none',
       cursor: 'pointer',
     };
+
+    if (clicked && motion.transitionStyles) {
+      const { transition, ...clickOnlyStyles } = motion.transitionStyles;
+      elementStyles = {
+        ...elementStyles,
+        ...clickOnlyStyles,
+      };
+    }
   }
 
+  const elementId = `${params.id}_${state}`;
   const elementProps = {
+    id: elementId,
     style: elementStyles,
-    className: 'animadiv-element',
+    className: [
+      'animadiv-element',
+      state === 'hover' && hovered ? 'is-hovered' : '',
+      state === 'click' && clicked ? 'is-clicked' : '',
+    ]
+      .filter(Boolean)
+      .join(' '),
   };
 
   if (state === 'load') {
@@ -427,21 +454,6 @@ const PreviewElement = ({ params, state, replayKey }) => {
   if (state === 'click') {
     elementProps.key = `click-${clickKey}`;
     elementProps.onAnimationEnd = () => setClicked(false);
-  }
-
-  if (state === 'hover') {
-    elementProps.onMouseEnter = () => setHovered(true);
-    elementProps.onMouseLeave = () => setHovered(false);
-  }
-
-  if (state === 'click') {
-    elementProps.onMouseDown = () => {
-      setClicked(false);
-      requestAnimationFrame(() => {
-        setClickKey((value) => value + 1);
-        setClicked(true);
-      });
-    };
   }
 
   if (params.type === 'input') {
@@ -464,14 +476,41 @@ const PreviewElement = ({ params, state, replayKey }) => {
 
   if (params.type === 'link') {
     elementProps.href = s.href || '#';
-    elementProps.onClick = (e) => e.preventDefault();
+    elementProps.onClick = (event) => event.preventDefault();
   }
 
   const textPreset =
     state === 'click' || state === 'static' ? 'none' : motion.presetId;
 
+  const interactionHandlers = {};
+
+  if (state === 'hover') {
+    interactionHandlers.onMouseEnter = () => setHovered(true);
+    interactionHandlers.onMouseLeave = () => setHovered(false);
+  }
+
+  if (state === 'click') {
+    interactionHandlers.onMouseDown = () => {
+      if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current);
+      setClicked(false);
+      requestAnimationFrame(() => {
+        setClickKey((value) => value + 1);
+        setClicked(true);
+        const duration = Number(motion.config?.duration) || 180;
+        const delay = Number(motion.config?.delay) || 0;
+        clickTimerRef.current = window.setTimeout(
+          () => {
+            setClicked(false);
+          },
+          duration + delay + 100
+        );
+      });
+    };
+  }
+
   return (
     <div
+      {...interactionHandlers}
       style={{
         width: '100%',
         height: '100%',
@@ -479,6 +518,7 @@ const PreviewElement = ({ params, state, replayKey }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        pointerEvents: state === 'static' || state === 'load' ? 'none' : 'auto',
       }}
     >
       <HintCursor
