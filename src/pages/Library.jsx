@@ -37,7 +37,7 @@ const sectionDefinitions = [
     description: 'High-impact pieces for first-screen motion.',
     matches: (item) =>
       [
-        'gradient-hero-title',
+        'gradient-blur-title',
         'glass-floating-card',
         'cinematic-image-reveal',
         'neon-cta-block',
@@ -50,7 +50,7 @@ const sectionDefinitions = [
     matches: (item) =>
       ['Button', 'Input', 'Link'].includes(item.category) &&
       ![
-        'gradient-hero-title',
+        'gradient-blur-title',
         'glass-floating-card',
         'cinematic-image-reveal',
         'neon-cta-block',
@@ -75,17 +75,11 @@ const sectionDefinitions = [
     matches: (item) =>
       item.category === 'Layout' &&
       ![
-        'gradient-hero-title',
+        'gradient-blur-title',
         'glass-floating-card',
         'cinematic-image-reveal',
         'neon-cta-block',
       ].includes(item.id),
-  },
-  {
-    id: 'templates',
-    title: 'Showcase Templates',
-    description: 'Richer compositions with real exportable HTML and CSS.',
-    matches: (item) => item.category === 'Template',
   },
 ];
 
@@ -180,7 +174,7 @@ const Library = () => {
                 maxWidth: 520,
               }}
             >
-              Animated elements and exportable templates.
+              Animated editable elements for the Generator.
             </p>
           </div>
 
@@ -364,10 +358,10 @@ const Library = () => {
             <div
               style={{
                 display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 340px))',
-            gap: 24,
-            alignItems: 'stretch',
-            justifyContent: 'center',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 340px))',
+                gap: 24,
+                alignItems: 'stretch',
+                justifyContent: 'center',
               }}
             >
               {section.items.map((item) => (
