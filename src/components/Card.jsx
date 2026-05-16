@@ -152,15 +152,12 @@ const getPreviewStyle = (item) => {
   return base;
 };
 
-const isDarkPreview = (item) =>
-  String(item.preview?.background || '').includes('#020617') ||
-  String(item.preview?.background || '').includes('#111827');
-
-const getPreviewBackground = (item) => {
-  if (isDarkPreview(item)) return '#111827';
-  if (item.category === 'Minimal White') return '#FFFFFF';
-  return '#F9FAFB';
+const isDarkPreview = (item) => {
+  const background = String(item.preview?.background || '');
+  return background.includes('#020617') || background.includes('#111827');
 };
+
+const getPreviewBackground = (item) => item.preview?.background || '#F9FAFB';
 
 const getDisplayType = (item) => {
   if (item.displayType) return item.displayType;
@@ -354,7 +351,7 @@ const Preview = ({
         key={replayKey}
         className={`library-template-preview${isHovered ? ' is-hovered' : ''}`}
         style={{
-          minHeight: 236,
+          minHeight: 238,
           background: getPreviewBackground(item),
           borderBottom: darkPreview
             ? '1px solid rgba(255, 255, 255, 0.12)'
@@ -376,7 +373,7 @@ const Preview = ({
   return (
     <div
       style={{
-        minHeight: 236,
+        minHeight: 238,
         background: getPreviewBackground(item),
         borderBottom: darkPreview
           ? '1px solid rgba(255, 255, 255, 0.12)'

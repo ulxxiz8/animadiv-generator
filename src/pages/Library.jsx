@@ -3,8 +3,8 @@ import { Search, SearchX } from 'lucide-react';
 import Card from '../components/Card';
 import { libraryItems } from '../data/libraryItems';
 
-const INITIAL_VISIBLE_COUNT = 12;
-const LOAD_MORE_COUNT = 6;
+const INITIAL_VISIBLE_COUNT = 18;
+const LOAD_MORE_COUNT = 9;
 
 const getUniqueValues = (key) => [
   'All',
@@ -13,9 +13,21 @@ const getUniqueValues = (key) => [
 
 const filterGroups = [
   { id: 'category', label: 'Category', options: getUniqueValues('category') },
-  { id: 'collection', label: 'Collection', options: getUniqueValues('collection') },
-  { id: 'motionStyle', label: 'Motion', options: getUniqueValues('motionStyle') },
-  { id: 'intensity', label: 'Intensity', options: getUniqueValues('intensity') },
+  {
+    id: 'collection',
+    label: 'Collection',
+    options: getUniqueValues('collection'),
+  },
+  {
+    id: 'motionStyle',
+    label: 'Motion',
+    options: getUniqueValues('motionStyle'),
+  },
+  {
+    id: 'intensity',
+    label: 'Intensity',
+    options: getUniqueValues('intensity'),
+  },
 ];
 
 const sectionDefinitions = [
@@ -24,15 +36,25 @@ const sectionDefinitions = [
     title: 'Hero Showcase',
     description: 'High-impact pieces for first-screen motion.',
     matches: (item) =>
-      item.tags?.some((tag) => ['CTA', 'Hero', 'Panel', 'Signal'].includes(tag)),
+      [
+        'gradient-hero-title',
+        'glass-floating-card',
+        'cinematic-image-reveal',
+        'neon-cta-block',
+      ].includes(item.id),
   },
   {
     id: 'interactive',
     title: 'Interactive Elements',
     description: 'Buttons and inputs tuned for hover, click, and focus.',
     matches: (item) =>
-      ['Button', 'Input', 'Textarea'].includes(item.category) &&
-      !item.tags?.some((tag) => ['CTA'].includes(tag)),
+      ['Button', 'Input', 'Link'].includes(item.category) &&
+      ![
+        'gradient-hero-title',
+        'glass-floating-card',
+        'cinematic-image-reveal',
+        'neon-cta-block',
+      ].includes(item.id),
   },
   {
     id: 'typography',
@@ -52,7 +74,18 @@ const sectionDefinitions = [
     description: 'Exportable sections and structural motion patterns.',
     matches: (item) =>
       item.category === 'Layout' &&
-      !item.tags?.some((tag) => ['Hero', 'Panel', 'Signal'].includes(tag)),
+      ![
+        'gradient-hero-title',
+        'glass-floating-card',
+        'cinematic-image-reveal',
+        'neon-cta-block',
+      ].includes(item.id),
+  },
+  {
+    id: 'templates',
+    title: 'Showcase Templates',
+    description: 'Richer compositions with real exportable HTML and CSS.',
+    matches: (item) => item.category === 'Template',
   },
 ];
 
@@ -107,10 +140,10 @@ const Library = () => {
       <div
         style={{
           display: 'grid',
-          gap: 18,
-          marginBottom: 28,
+          gap: 14,
+          marginBottom: 24,
           background: '#fff',
-          padding: 22,
+          padding: 18,
           borderRadius: 24,
           border: '1px solid #E5E7EB',
           boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
@@ -172,7 +205,11 @@ const Library = () => {
               <Search
                 size={16}
                 color="#6B7280"
-                style={{ position: 'absolute', left: 14, pointerEvents: 'none' }}
+                style={{
+                  position: 'absolute',
+                  left: 14,
+                  pointerEvents: 'none',
+                }}
               />
               <input
                 type="text"
@@ -216,10 +253,10 @@ const Library = () => {
         <div>
           <div
             style={{
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: 800,
               color: '#6B7280',
-              marginBottom: 10,
+              marginBottom: 8,
             }}
           >
             Curated filters
@@ -227,7 +264,7 @@ const Library = () => {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(136px, 1fr))',
               gap: 8,
             }}
           >
@@ -236,7 +273,7 @@ const Library = () => {
                 key={group.id}
                 style={{
                   display: 'grid',
-                  gap: 6,
+                  gap: 4,
                   minWidth: 0,
                 }}
               >
@@ -251,16 +288,18 @@ const Library = () => {
                 </span>
                 <select
                   value={filters[group.id]}
-                  onChange={(event) => handleFilterChange(group.id, event.target.value)}
+                  onChange={(event) =>
+                    handleFilterChange(group.id, event.target.value)
+                  }
                   style={{
-                    height: 40,
+                    height: 36,
                     width: '100%',
                     minWidth: 0,
-                    borderRadius: 14,
+                    borderRadius: 12,
                     border: '1px solid #E5E7EB',
                     background: '#FFFFFF',
                     color: '#111827',
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 800,
                     padding: '0 12px',
                     outline: 'none',
@@ -325,9 +364,10 @@ const Library = () => {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-                gap: 24,
-                alignItems: 'stretch',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 340px))',
+            gap: 24,
+            alignItems: 'stretch',
+            justifyContent: 'center',
               }}
             >
               {section.items.map((item) => (
@@ -339,7 +379,9 @@ const Library = () => {
       )}
 
       {hasMore && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 36 }}>
+        <div
+          style={{ display: 'flex', justifyContent: 'center', marginTop: 36 }}
+        >
           <button
             onClick={() => setVisibleCount((count) => count + LOAD_MORE_COUNT)}
             style={{
