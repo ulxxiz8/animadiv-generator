@@ -3,129 +3,38 @@ import { Search, SearchX } from 'lucide-react';
 import Card from '../components/Card';
 import { libraryItems } from '../data/libraryItems';
 
-const INITIAL_VISIBLE_COUNT = 18;
-const LOAD_MORE_COUNT = 9;
-
-const getUniqueValues = (key) => [
-  'All',
-  ...new Set(libraryItems.map((item) => item[key]).filter(Boolean)),
+const categoryFilters = [
+  { label: 'All', value: 'All' },
+  { label: 'Buttons', value: 'Buttons' },
+  { label: 'Typography', value: 'Typography' },
+  { label: 'Inputs', value: 'Inputs' },
+  { label: 'Images', value: 'Images' },
+  { label: 'Links', value: 'Links' },
+  { label: 'Blocks', value: 'Blocks' },
 ];
-
-const filterGroups = [
-  { id: 'category', label: 'Category', options: getUniqueValues('category') },
-  {
-    id: 'collection',
-    label: 'Collection',
-    options: getUniqueValues('collection'),
-  },
-  {
-    id: 'motionStyle',
-    label: 'Motion',
-    options: getUniqueValues('motionStyle'),
-  },
-  {
-    id: 'intensity',
-    label: 'Intensity',
-    options: getUniqueValues('intensity'),
-  },
-];
-
-const sectionDefinitions = [
-  {
-    id: 'hero',
-    title: 'Featured Elements',
-    description: 'Single editable elements with stronger motion settings.',
-    matches: (item) =>
-      [
-        'gradient-blur-title',
-        'glass-floating-card',
-        'cinematic-image-reveal',
-        'neon-cta-block',
-      ].includes(item.id),
-  },
-  {
-    id: 'interactive',
-    title: 'Interactive Elements',
-    description: 'Buttons, inputs, and links that open cleanly in Generator.',
-    matches: (item) =>
-      ['Button', 'Input', 'Link'].includes(item.category) &&
-      ![
-        'gradient-blur-title',
-        'glass-floating-card',
-        'cinematic-image-reveal',
-        'neon-cta-block',
-      ].includes(item.id),
-  },
-  {
-    id: 'typography',
-    title: 'Typography Motion',
-    description: 'Readable text effects for editorial rhythm.',
-    matches: (item) => item.category === 'Typography',
-  },
-  {
-    id: 'images',
-    title: 'Image Motion',
-    description: 'Cinematic image reveals and hover depth.',
-    matches: (item) => item.category === 'Image',
-  },
-  {
-    id: 'layouts',
-    title: 'Block Motion',
-    description: 'Editable block elements with simple structural motion.',
-    matches: (item) =>
-      item.category === 'Layout' &&
-      ![
-        'gradient-blur-title',
-        'glass-floating-card',
-        'cinematic-image-reveal',
-        'neon-cta-block',
-      ].includes(item.id),
-  },
-];
-
-const getSectionedItems = (items) =>
-  sectionDefinitions
-    .map((section) => ({
-      ...section,
-      items: items.filter(section.matches),
-    }))
-    .filter((section) => section.items.length > 0);
 
 const Library = () => {
+  const [activeCategory, setActiveCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({
-    category: 'All',
-    collection: 'All',
-    motionStyle: 'All',
-    intensity: 'All',
-  });
-  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
 
+  const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredItems = libraryItems.filter((item) => {
-    const matchesSearch = item.name
-      .toLowerCase()
-      .includes(searchTerm.trim().toLowerCase());
-    const matchesFilters = Object.entries(filters).every(
-      ([key, value]) => value === 'All' || item[key] === value
-    );
-    return matchesSearch && matchesFilters;
-  });
-  const visibleItems = filteredItems.slice(0, visibleCount);
-  const visibleSections = getSectionedItems(visibleItems);
-  const hasMore = visibleCount < filteredItems.length;
+    const matchesCategory =
+      activeCategory === 'All' || item.category === activeCategory;
+    const matchesSearch =
+      !normalizedSearch ||
+      [item.name, item.motionStyle, ...(item.tags || [])]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedSearch);
 
-  const handleFilterChange = (filterId, value) => {
-    setFilters((current) => ({ ...current, [filterId]: value }));
-    setVisibleCount(INITIAL_VISIBLE_COUNT);
-  };
+    return matchesCategory && matchesSearch;
+  });
 
   return (
-    <div
+    <main
       style={{
-        maxWidth: 1180,
-        margin: '0 auto',
-        padding: '36px 20px',
-        paddingBottom: 100,
+        minHeight: '100%',
         background: '#F9FAFB',
         fontFamily:
           'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -133,267 +42,189 @@ const Library = () => {
     >
       <div
         style={{
-          display: 'grid',
-          gap: 14,
-          marginBottom: 22,
-          background: '#fff',
-          padding: 18,
-          borderRadius: 24,
-          border: '1px solid #E5E7EB',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+          maxWidth: 1180,
+          margin: '0 auto',
+          padding: '34px 20px 90px',
+          boxSizing: 'border-box',
         }}
       >
-        <div
+        <header
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 20,
-            flexWrap: 'wrap',
+            background: '#fff',
+            border: '1px solid #E5E7EB',
+            borderRadius: 24,
+            padding: 18,
+            marginBottom: 22,
+            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
           }}
         >
-          <div style={{ minWidth: 220, flex: '1 1 320px' }}>
-            <h1
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16,
+              flexWrap: 'wrap',
+              marginBottom: 14,
+            }}
+          >
+            <div style={{ minWidth: 220 }}>
+              <h1
+                style={{
+                  margin: '0 0 6px',
+                  color: '#111827',
+                  fontSize: 30,
+                  lineHeight: 1.05,
+                  fontWeight: 900,
+                  letterSpacing: 0,
+                }}
+              >
+                Library
+              </h1>
+              <p
+                style={{
+                  margin: 0,
+                  color: '#6B7280',
+                  fontSize: 14,
+                  lineHeight: 1.45,
+                }}
+              >
+                Editable single elements with stable hover previews.
+              </p>
+            </div>
+
+            <label
               style={{
-                fontSize: 30,
-                fontWeight: 900,
-                color: '#111827',
-                lineHeight: 1.1,
-                letterSpacing: '-0.01em',
-                margin: '0 0 6px',
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                width: 'min(100%, 360px)',
               }}
             >
-              Library
-            </h1>
-            <p
-              style={{
-                color: '#6B7280',
-                fontSize: 14,
-                lineHeight: 1.5,
-                margin: 0,
-                maxWidth: 520,
-              }}
-            >
-              Animated editable elements for the Generator.
-            </p>
+              <Search
+                size={16}
+                color="#6B7280"
+                style={{ position: 'absolute', left: 14, pointerEvents: 'none' }}
+              />
+              <input
+                type="text"
+                value={searchTerm}
+                placeholder="Search elements"
+                onChange={(event) => setSearchTerm(event.target.value)}
+                style={{
+                  width: '100%',
+                  height: 42,
+                  border: '1px solid #E5E7EB',
+                  borderRadius: 999,
+                  background: '#F9FAFB',
+                  color: '#111827',
+                  outline: 'none',
+                  padding: '0 16px 0 40px',
+                  fontSize: 14,
+                  boxSizing: 'border-box',
+                }}
+              />
+            </label>
           </div>
 
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 10,
-              flex: '0 1 440px',
-              minWidth: 260,
+              justifyContent: 'space-between',
+              gap: 12,
+              flexWrap: 'wrap',
             }}
           >
-            <label
-              style={{
-                position: 'relative',
-                flex: '1 1 260px',
-                minWidth: 0,
-                display: 'flex',
-                alignItems: 'center',
-              }}
-            >
-              <Search
-                size={16}
-                color="#6B7280"
-                style={{
-                  position: 'absolute',
-                  left: 14,
-                  pointerEvents: 'none',
-                }}
-              />
-              <input
-                type="text"
-                placeholder="Search library"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                style={{
-                  width: '100%',
-                  height: 44,
-                  padding: '0 16px 0 40px',
-                  borderRadius: 16,
-                  border: '1px solid #E5E7EB',
-                  fontSize: 14,
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  color: '#111827',
-                  background: '#F9FAFB',
-                }}
-              />
-            </label>
             <div
               style={{
-                height: 40,
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 8,
+              }}
+            >
+              {categoryFilters.map((filter) => {
+                const isActive = activeCategory === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    onClick={() => setActiveCategory(filter.value)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 'auto',
+                      flex: 'none',
+                      height: 34,
+                      padding: '0 12px',
+                      borderRadius: 999,
+                      border: isActive ? '1px solid #111827' : '1px solid #E5E7EB',
+                      background: isActive ? '#111827' : '#FFFFFF',
+                      color: isActive ? '#D6F854' : '#374151',
+                      fontSize: 12,
+                      fontWeight: 850,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {filter.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                height: 34,
                 padding: '0 12px',
                 borderRadius: 999,
                 background: '#111827',
                 color: '#D6F854',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                fontSize: 12,
+                fontWeight: 850,
                 whiteSpace: 'nowrap',
-                fontSize: 13,
-                fontWeight: 800,
               }}
             >
               {filteredItems.length} items
-            </div>
+            </span>
           </div>
-        </div>
+        </header>
 
-        <div>
+        {filteredItems.length === 0 ? (
           <div
             style={{
-              fontSize: 12,
-              fontWeight: 800,
+              background: '#fff',
+              border: '1px dashed #D1D5DB',
+              borderRadius: 24,
+              padding: '64px 20px',
+              textAlign: 'center',
               color: '#6B7280',
-              marginBottom: 8,
             }}
           >
-            Curated filters
+            <SearchX size={28} color="#6B7280" style={{ marginBottom: 12 }} />
+            <div style={{ fontSize: 18, fontWeight: 850, color: '#111827' }}>
+              No matching elements found
+            </div>
           </div>
+        ) : (
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))',
-              gap: 8,
+              gridTemplateColumns: 'repeat(auto-fit, minmax(292px, 330px))',
+              gap: 22,
+              justifyContent: 'center',
+              alignItems: 'stretch',
+              overflowX: 'hidden',
             }}
           >
-            {filterGroups.map((group) => (
-              <label
-                key={group.id}
-                style={{
-                  display: 'grid',
-                  gap: 4,
-                  minWidth: 0,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 800,
-                    color: '#6B7280',
-                  }}
-                >
-                  {group.label}
-                </span>
-                <select
-                  value={filters[group.id]}
-                  onChange={(event) =>
-                    handleFilterChange(group.id, event.target.value)
-                  }
-                  style={{
-                    height: 36,
-                    width: '100%',
-                    minWidth: 0,
-                    borderRadius: 12,
-                    border: '1px solid #E5E7EB',
-                    background: '#FFFFFF',
-                    color: '#111827',
-                    fontSize: 12,
-                    fontWeight: 800,
-                    padding: '0 12px',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  {group.options.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            {filteredItems.map((item) => (
+              <Card key={item.id} item={item} />
             ))}
           </div>
-        </div>
+        )}
       </div>
-
-      {filteredItems.length === 0 ? (
-        <div
-          style={{
-            background: '#fff',
-            border: '1px dashed #D1D5DB',
-            borderRadius: 24,
-            padding: '64px 20px',
-            textAlign: 'center',
-            color: '#6B7280',
-          }}
-        >
-          <SearchX size={28} color="#6B7280" style={{ marginBottom: 12 }} />
-          <div style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>
-            No matching elements found
-          </div>
-        </div>
-      ) : (
-        visibleSections.map((section) => (
-          <section key={section.id} style={{ marginBottom: 34 }}>
-            <div style={{ marginBottom: 14 }}>
-              <h2
-                style={{
-                  margin: '0 0 4px',
-                  color: '#111827',
-                  fontSize: 22,
-                  fontWeight: 900,
-                  lineHeight: 1.1,
-                  letterSpacing: '-0.01em',
-                }}
-              >
-                {section.title}
-              </h2>
-              <p
-                style={{
-                  margin: 0,
-                  color: '#6B7280',
-                  fontSize: 14,
-                  lineHeight: 1.5,
-                }}
-              >
-                {section.description}
-              </p>
-            </div>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 330px))',
-                gap: 24,
-                alignItems: 'stretch',
-                justifyContent: 'center',
-              }}
-            >
-              {section.items.map((item) => (
-                <Card key={item.id} item={item} />
-              ))}
-            </div>
-          </section>
-        ))
-      )}
-
-      {hasMore && (
-        <div
-          style={{ display: 'flex', justifyContent: 'center', marginTop: 36 }}
-        >
-          <button
-            onClick={() => setVisibleCount((count) => count + LOAD_MORE_COUNT)}
-            style={{
-              padding: '12px 18px',
-              borderRadius: 14,
-              border: '1px solid #111827',
-              background: '#111827',
-              color: '#D6F854',
-              fontWeight: 800,
-              fontSize: 14,
-              cursor: 'pointer',
-            }}
-          >
-            Load More
-          </button>
-        </div>
-      )}
-    </div>
+    </main>
   );
 };
 
