@@ -95,8 +95,9 @@ const getCategoryLabel = (item) =>
   item.group || item.category || getDisplayType(item);
 
 const getMotionBadges = (item) =>
-  [item.motionStyle, item.previewMotion?.type]
+  [item.motionStyle, item.animations?.load?.presetId, item.animations?.hover?.presetId]
     .filter(Boolean)
+    .filter((badge) => badge !== 'none')
     .map((badge) =>
       String(badge)
         .replace(/([A-Z])/g, ' $1')
@@ -146,15 +147,26 @@ const getBasePreviewStyle = (item) => {
   };
 };
 
+const getAnimationPreset = (item, state) =>
+  item.animations?.[state]?.presetId && item.animations[state].presetId !== 'none'
+    ? item.animations[state].presetId
+    : null;
+
+const getPrimaryTextPreset = (item) =>
+  [getAnimationPreset(item, 'hover'), getAnimationPreset(item, 'load')].find(
+    (preset) => ['fadeByWord', 'typewriter', 'blurReveal', 'underlineDraw'].includes(preset)
+  );
+
 const getMotionCss = (uid, item, targetSelector) => {
-  const motion = item.previewMotion || {
-    trigger: 'hover',
-    type: 'blurReveal',
-    duration: 560,
-    intensity: 40,
-  };
-  const duration = motion.duration || 640;
-  const intensity = Math.max(0, Math.min(100, motion.intensity ?? 50));
+  const load = item.animations?.load || {};
+  const hover = item.animations?.hover || {};
+  const loadPreset = getAnimationPreset(item, 'load');
+  const hoverPreset = getAnimationPreset(item, 'hover');
+  const duration = Math.max(load.duration || hover.duration || 640, hover.duration || 0);
+  const intensity = Math.max(
+    0,
+    Math.min(100, hover.intensity ?? load.intensity ?? 50)
+  );
   const accent = getAccent(item);
   const lift = Math.round(4 + intensity * 0.08);
   const blur = Math.max(2, Math.round(intensity * 0.09));
@@ -235,28 +247,47 @@ ${targetSelector} [data-underline] {
 
   const hovered = `.is-preview-hovered ${targetSelector}`;
 
-  const effects = {
-    fade: `${hovered} { animation: ${uid}-fade ${duration}ms ease-out both; }`,
-    slide: `${hovered} { animation: ${uid}-slide ${duration}ms cubic-bezier(.16,1,.3,1) both; }`,
-    scale: `${hovered} { animation: ${uid}-scale ${duration}ms cubic-bezier(.16,1,.3,1) both; box-shadow: 0 20px 46px ${colorToRgba(accent, shadowOpacity)}; }`,
-    blurReveal: `${hovered} { animation: ${uid}-blur-reveal ${duration}ms cubic-bezier(.16,1,.3,1) both; }`,
-    fadeByWord: `${hovered} [data-word] { animation: ${uid}-word-reveal ${duration}ms cubic-bezier(.16,1,.3,1) both; animation-delay: calc(var(--word-index) * 58ms); }`,
-    typewriter: `${hovered} [data-typewriter] { animation: ${uid}-typewriter ${duration}ms steps(24,end) both; }
+  const effect = (preset, config = {}, role = 'load') => {
+    if (!preset) return '';
+
+    const ms = config.duration || duration;
+    const timing = role === 'hover' ? 'cubic-bezier(.16,1,.3,1)' : 'ease-out';
+    const liftRule =
+      role === 'hover'
+        ? `transform: translateY(-${Math.max(3, lift - 2)}px); box-shadow: 0 24px 58px ${colorToRgba(accent, shadowOpacity)};`
+        : '';
+
+    const effects = {
+      fade: `${hovered} { animation: ${uid}-fade ${ms}ms ${timing} both; ${liftRule} }`,
+      slide: `${hovered} { animation: ${uid}-slide ${ms}ms cubic-bezier(.16,1,.3,1) both; ${liftRule} }`,
+      scale: `${hovered} { animation: ${uid}-scale ${ms}ms cubic-bezier(.16,1,.3,1) both; box-shadow: 0 20px 46px ${colorToRgba(accent, shadowOpacity)}; }`,
+      blurReveal: `${hovered} { animation: ${uid}-blur-reveal ${ms}ms cubic-bezier(.16,1,.3,1) both; ${liftRule} }`,
+      fadeByWord: `${hovered} [data-word] { animation: ${uid}-word-reveal ${ms}ms cubic-bezier(.16,1,.3,1) both; animation-delay: calc(var(--word-index) * 58ms); }`,
+      typewriter: `${hovered} [data-typewriter] { animation: ${uid}-typewriter ${ms}ms steps(24,end) both; }
 ${hovered} [data-caret] { animation: ${uid}-caret 780ms steps(1,end) infinite; }`,
-    floatingImage: `${hovered} { animation: ${uid}-float ${duration}ms ease-in-out both; box-shadow: 0 20px 46px ${colorToRgba(accent, shadowOpacity)}; }`,
-    floatingSection: `${hovered} { animation: ${uid}-panel-drift ${duration}ms ease-in-out both; box-shadow: 0 24px 58px ${colorToRgba(accent, shadowOpacity)}; }`,
-    tiltHover: `${hovered} { animation: ${uid}-tilt ${duration}ms cubic-bezier(.16,1,.3,1) both; box-shadow: 0 24px 54px ${colorToRgba(accent, shadowOpacity)}; }`,
-    underlineDraw: `${hovered} { transform: translateY(-${Math.max(2, lift - 4)}px); }
-${hovered} [data-underline] { animation: ${uid}-underline ${duration}ms cubic-bezier(.16,1,.3,1) both; }`,
-    zoomReveal: `${hovered} img, ${hovered}[data-image-target] { animation: ${uid}-image-zoom ${duration}ms cubic-bezier(.16,1,.3,1) both; }
-${hovered} { transform: translateY(-${Math.max(3, lift - 2)}px); box-shadow: 0 24px 58px ${colorToRgba(accent, shadowOpacity)}; }`,
-    kenBurns: `${hovered} img, ${hovered}[data-image-target] { animation: ${uid}-image-zoom ${duration}ms ease-in-out both; }
+      floatingImage: `${hovered} { animation: ${uid}-float ${ms}ms ease-in-out both; box-shadow: 0 20px 46px ${colorToRgba(accent, shadowOpacity)}; }`,
+      floatingSection: `${hovered} { animation: ${uid}-panel-drift ${ms}ms ease-in-out both; box-shadow: 0 24px 58px ${colorToRgba(accent, shadowOpacity)}; }`,
+      tiltHover: `${hovered} { animation: ${uid}-tilt ${ms}ms cubic-bezier(.16,1,.3,1) both; box-shadow: 0 24px 54px ${colorToRgba(accent, shadowOpacity)}; }`,
+      underlineDraw: `${hovered} { transform: translateY(-${Math.max(2, lift - 4)}px); }
+${hovered} [data-underline] { animation: ${uid}-underline ${ms}ms cubic-bezier(.16,1,.3,1) both; }`,
+      zoomReveal: `${hovered} img, ${hovered}[data-image-target] { animation: ${uid}-image-zoom ${ms}ms cubic-bezier(.16,1,.3,1) both; }
+${hovered} { ${liftRule} }`,
+      kenBurns: `${hovered} img, ${hovered}[data-image-target] { animation: ${uid}-image-zoom ${ms}ms ease-in-out both; }
 ${hovered} { box-shadow: 0 24px 58px ${colorToRgba(accent, shadowOpacity)}; }`,
-    hoverBrightness: `${hovered} img, ${hovered}[data-image-target] { animation: ${uid}-brightness ${duration}ms ease-out both; }
-${hovered} { transform: translateY(-${Math.max(3, lift - 2)}px); box-shadow: 0 24px 58px ${colorToRgba(accent, shadowOpacity)}; }`,
+      hoverBrightness: `${hovered} img, ${hovered}[data-image-target] { animation: ${uid}-brightness ${ms}ms ease-out both; }
+${hovered} { ${liftRule} }`,
+      hoverBlur: `${hovered} img, ${hovered}[data-image-target] { filter: blur(${Math.min(Math.max(config.blurAmount || 2, 0), 4)}px); }
+${hovered} { ${liftRule} }`,
+    };
+
+    return effects[preset] || '';
   };
 
-  return `${common}\n${keyframes}\n${effects[motion.type] || effects.blurReveal}`;
+  return `${common}\n${keyframes}\n${effect(loadPreset, load, 'load')}\n${effect(
+    hoverPreset,
+    hover,
+    'hover'
+  )}`;
 };
 
 const WordText = ({ children }) =>
@@ -279,7 +310,7 @@ const WordText = ({ children }) =>
 const TextPreview = ({ item, uid }) => {
   const settings = item.specificSettings || {};
   const Tag = settings.tag || item.tag || 'h2';
-  const motionType = item.previewMotion?.type;
+  const motionType = getPrimaryTextPreset(item);
   const content = settings.content || item.content || item.name;
 
   return (
@@ -301,7 +332,7 @@ const TextPreview = ({ item, uid }) => {
         overflow: 'visible',
       }}
     >
-      {motionType === 'fadeByWord' ? (
+      {['fadeByWord', 'blurReveal', 'underlineDraw'].includes(motionType) ? (
         <WordText>{content}</WordText>
       ) : motionType === 'typewriter' ? (
         <>
@@ -329,6 +360,8 @@ const TextPreview = ({ item, uid }) => {
 
 const LinkPreview = ({ item, uid }) => {
   const settings = item.specificSettings || {};
+  const content = settings.text || item.content;
+  const motionType = getPrimaryTextPreset(item);
 
   return (
     <a
@@ -348,7 +381,11 @@ const LinkPreview = ({ item, uid }) => {
         transition: 'transform 220ms ease, color 220ms ease',
       }}
     >
-      {settings.text || item.content}
+      {['fadeByWord', 'blurReveal'].includes(motionType) ? (
+        <WordText>{content}</WordText>
+      ) : (
+        content
+      )}
       <span
         data-underline
         style={{
@@ -509,7 +546,7 @@ const BlockPreview = ({ item, uid }) => {
           maxWidth: 210,
         }}
       >
-        {item.previewMotion?.type === 'fadeByWord' ? (
+        {getPrimaryTextPreset(item) === 'fadeByWord' ? (
           <WordText>{settings.previewTitle || 'Animated surface'}</WordText>
         ) : (
           settings.previewTitle || 'Animated surface'
@@ -618,8 +655,10 @@ const Card = ({ item, mode = 'library', onSavedChange }) => {
 
   const actionButtonStyle = {
     minWidth: 0,
-    padding: '8px 10px',
-    borderRadius: 12,
+    flex: 'none',
+    width: 'auto',
+    padding: '8px 12px',
+    borderRadius: 999,
     fontWeight: 800,
     fontSize: 12,
     cursor: 'pointer',

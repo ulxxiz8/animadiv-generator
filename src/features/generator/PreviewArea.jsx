@@ -8,7 +8,10 @@ import {
 } from 'lucide-react';
 import { generateAnimationCSS } from '../../utils/animationEngine';
 import { renderSplitText } from '../../utils/typographyMotion';
-import { isStateAllowedForType } from '../../utils/semanticMapping';
+import {
+  isStateAllowedForType,
+  sanitizeAnimationConfigForType,
+} from '../../utils/semanticMapping';
 
 const EMPTY_MOTION = {
   keyframes: '',
@@ -145,7 +148,11 @@ const HintCursor = ({ type, visible }) => {
 const getMotion = (params, state) => {
   if (!params || state === 'static') return EMPTY_MOTION;
 
-  const config = getMotionConfig(params, state);
+  const config = sanitizeAnimationConfigForType(
+    params.type,
+    state,
+    getMotionConfig(params, state)
+  );
 
   if (!config || !config.presetId || config.presetId === 'none') {
     return {
@@ -426,7 +433,7 @@ const PreviewElement = ({ params, state, replayKey }) => {
 
   usePreviewStyle(
     `animadiv-preview-${params.id}-${state}`,
-    state === 'load' || state === 'click' ? motion.keyframes : ''
+    state !== 'static' ? motion.keyframes : ''
   );
 
   useEffect(() => {
@@ -480,6 +487,14 @@ const PreviewElement = ({ params, state, replayKey }) => {
       };
     }
 
+    if (
+      hovered &&
+      motion.animationStr &&
+      motion.animationStr !== 'none'
+    ) {
+      elementStyles.animation = motion.animationStr;
+    }
+
     if (hovered && params.type === 'button') {
       if (s.hoverBackground) elementStyles.backgroundColor = s.hoverBackground;
       if (s.hoverColor) elementStyles.color = s.hoverColor;
@@ -492,15 +507,29 @@ const PreviewElement = ({ params, state, replayKey }) => {
   }
 
   if (state === 'click') {
+    const clickTransition = motion.transitionStyles?.transition || 'none';
     elementStyles = {
       ...elementStyles,
-      animation: clicked ? motion.animationStr || 'none' : 'none',
-      transition: 'none',
+      animation:
+        clicked && motion.animationStr && motion.animationStr !== 'none'
+          ? motion.animationStr
+          : 'none',
+      transition: clickTransition,
       cursor: 'pointer',
     };
+
+    if (clicked && motion.transitionStyles) {
+      const activeOnlyStyles = { ...motion.transitionStyles };
+      delete activeOnlyStyles.transition;
+      elementStyles = {
+        ...elementStyles,
+        ...activeOnlyStyles,
+      };
+    }
   }
 
   const elementProps = {
+    id: `${params.id}_${state}`,
     style: elementStyles,
     className: 'animadiv-element',
   };

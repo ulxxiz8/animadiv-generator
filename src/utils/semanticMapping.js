@@ -1,3 +1,5 @@
+import { DEFAULT_ANIMATION_CONFIG } from './elementSystem';
+
 export const PRESET_NAMES = {
   none: 'No Effect',
   fade: 'Fade',
@@ -163,6 +165,43 @@ export const getAvailablePresetsForType = (
     name: PRESET_NAMES[id] || id,
   }));
 };
+
+const normalizeAnimationConfig = (config) => {
+  const { effectPreset, ...nextConfig } = config || {};
+
+  return {
+    ...DEFAULT_ANIMATION_CONFIG,
+    ...nextConfig,
+    presetId: nextConfig.presetId || effectPreset || 'none',
+  };
+};
+
+const resetAnimationConfig = () => ({
+  ...DEFAULT_ANIMATION_CONFIG,
+  presetId: 'none',
+});
+
+export const sanitizeAnimationConfigForType = (type, state, config) => {
+  const normalized = normalizeAnimationConfig(config);
+  const availableIds = new Set(
+    getAvailablePresetsForType(type, state).map((preset) => preset.id)
+  );
+
+  if (
+    !isStateAllowedForType(state, type) ||
+    !availableIds.has(normalized.presetId)
+  ) {
+    return resetAnimationConfig();
+  }
+
+  return normalized;
+};
+
+export const sanitizeAnimationsForType = (type, animations = {}) => ({
+  load: sanitizeAnimationConfigForType(type, 'load', animations.load),
+  hover: sanitizeAnimationConfigForType(type, 'hover', animations.hover),
+  click: sanitizeAnimationConfigForType(type, 'click', animations.click),
+});
 
 const timedParams = ['duration', 'delay', 'easing'];
 

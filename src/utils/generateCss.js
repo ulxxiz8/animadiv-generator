@@ -1,4 +1,5 @@
 import { generateAnimationCSS } from './animationEngine';
+import { sanitizeAnimationsForType } from './semanticMapping';
 
 const PX_FIELDS = new Set([
   'width',
@@ -295,9 +296,13 @@ const getSection = (title, blocks) => {
 };
 
 export const generateFullCSS = (params = {}) => {
-  const loadConfig = getMotionConfig(params, 'load');
-  const hoverConfig = getMotionConfig(params, 'hover');
-  const clickConfig = getMotionConfig(params, 'click');
+  const sanitizedParams = {
+    ...params,
+    animations: sanitizeAnimationsForType(params.type, params.animations),
+  };
+  const loadConfig = getMotionConfig(sanitizedParams, 'load');
+  const hoverConfig = getMotionConfig(sanitizedParams, 'hover');
+  const clickConfig = getMotionConfig(sanitizedParams, 'click');
 
   const loadData = generateAnimationCSS(
     loadConfig.presetId,
@@ -319,8 +324,8 @@ export const generateFullCSS = (params = {}) => {
   );
 
   const baseSection = getSection('Base styles', [
-    createRule('.animadiv-element', getBaseStyles(params)),
-    ...getSemanticChildRules(params),
+    createRule('.animadiv-element', getBaseStyles(sanitizedParams)),
+    ...getSemanticChildRules(sanitizedParams),
   ]);
 
   const loadSection = getSection('Load animation', [
@@ -332,15 +337,24 @@ export const generateFullCSS = (params = {}) => {
   ]);
 
   const hoverSection = getSection('Hover styles', [
-    getStateRule('.animadiv-element:hover', hoverData, getTypeHoverStyles(params), {
-      clearBaseAnimation: true,
-    }),
+    hoverConfig.presetId !== 'none'
+      ? getStateRule(
+          '.animadiv-element:hover',
+          hoverData,
+          getTypeHoverStyles(sanitizedParams),
+          {
+            clearBaseAnimation: true,
+          }
+        )
+      : '',
   ]);
 
   const clickSection = getSection('Click styles', [
-    getStateRule('.animadiv-element:active', clickData, {}, {
-      clearBaseAnimation: true,
-    }),
+    clickConfig.presetId !== 'none'
+      ? getStateRule('.animadiv-element:active', clickData, {}, {
+          clearBaseAnimation: true,
+        })
+      : '',
   ]);
 
   const keyframesSection = getSection(

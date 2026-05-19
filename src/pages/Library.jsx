@@ -33,8 +33,8 @@ const filterGroups = [
 const sectionDefinitions = [
   {
     id: 'hero',
-    title: 'Hero Showcase',
-    description: 'High-impact pieces for first-screen motion.',
+    title: 'Featured Elements',
+    description: 'Single editable elements with stronger motion settings.',
     matches: (item) =>
       [
         'gradient-blur-title',
@@ -46,7 +46,7 @@ const sectionDefinitions = [
   {
     id: 'interactive',
     title: 'Interactive Elements',
-    description: 'Buttons and inputs tuned for hover, click, and focus.',
+    description: 'Buttons, inputs, and links that open cleanly in Generator.',
     matches: (item) =>
       ['Button', 'Input', 'Link'].includes(item.category) &&
       ![
@@ -70,8 +70,8 @@ const sectionDefinitions = [
   },
   {
     id: 'layouts',
-    title: 'Layout Motion',
-    description: 'Exportable sections and structural motion patterns.',
+    title: 'Block Motion',
+    description: 'Editable block elements with simple structural motion.',
     matches: (item) =>
       item.category === 'Layout' &&
       ![
@@ -122,9 +122,9 @@ const Library = () => {
   return (
     <div
       style={{
-        maxWidth: 1280,
+        maxWidth: 1180,
         margin: '0 auto',
-        padding: '48px 24px',
+        padding: '36px 20px',
         paddingBottom: 100,
         background: '#F9FAFB',
         fontFamily:
@@ -135,7 +135,7 @@ const Library = () => {
         style={{
           display: 'grid',
           gap: 14,
-          marginBottom: 24,
+          marginBottom: 22,
           background: '#fff',
           padding: 18,
           borderRadius: 24,
@@ -258,7 +258,7 @@ const Library = () => {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(136px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))',
               gap: 8,
             }}
           >
@@ -358,7 +358,7 @@ const Library = () => {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 340px))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 330px))',
                 gap: 24,
                 alignItems: 'stretch',
                 justifyContent: 'center',

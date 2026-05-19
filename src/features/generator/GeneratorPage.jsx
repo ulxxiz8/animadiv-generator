@@ -3,6 +3,7 @@ import ControlsPanel from './ControlsPanel';
 import PreviewArea from './PreviewArea';
 import CodeOutput from './CodeOutput';
 import { generateFullCSS } from '../../utils/generateCss';
+import { sanitizeAnimationsForType } from '../../utils/semanticMapping';
 import {
   createElement,
   DEFAULT_ANIMATION_CONFIG,
@@ -21,11 +22,11 @@ const normalizeAnimationConfig = (config) => {
 
 const normalizeSavedParams = (savedParams) => ({
   ...savedParams,
-  animations: {
+  animations: sanitizeAnimationsForType(savedParams.type, {
     load: normalizeAnimationConfig(savedParams.animations?.load),
     hover: normalizeAnimationConfig(savedParams.animations?.hover),
     click: normalizeAnimationConfig(savedParams.animations?.click),
-  },
+  }),
 });
 
 // Функція ініціалізації стану
@@ -48,8 +49,8 @@ const getInitialState = () => {
     ...defaultElement,
     animations: {
       load: {
-        presetId: 'bounce',
-        duration: 800,
+        presetId: 'fade',
+        duration: 500,
         easing: 'ease-out',
         intensity: 100,
       },
@@ -79,7 +80,10 @@ const GeneratorPage = () => {
     if (newElement) {
       setParams((prev) => ({
         ...newElement,
-        animations: prev.animations || newElement.animations, // Переносимо анімації на новий елемент
+        animations: sanitizeAnimationsForType(
+          newType,
+          prev.animations || newElement.animations
+        ),
       }));
     }
   };
