@@ -64,7 +64,7 @@ const twoColumnGridStyle = {
 const AccordionSection = ({ title, children, defaultOpen = true }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <div style={{ borderBottom: '1px solid #E5E7EB', ...panelBlockStyle }}>
+    <div style={{ borderBottom: '1px solid var(--border)', ...panelBlockStyle }}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
@@ -76,7 +76,7 @@ const AccordionSection = ({ title, children, defaultOpen = true }) => {
           background: 'transparent',
           border: 'none',
           cursor: 'pointer',
-          color: '#111827',
+          color: 'var(--text-main)',
           fontWeight: '800',
           fontSize: '12px',
           textTransform: 'uppercase',
@@ -88,9 +88,9 @@ const AccordionSection = ({ title, children, defaultOpen = true }) => {
       >
         {title}
         {isOpen ? (
-          <ChevronUp size={16} color="#111827" />
+          <ChevronUp size={16} color="currentColor" />
         ) : (
-          <ChevronDown size={16} color="#6B7280" />
+          <ChevronDown size={16} color="currentColor" />
         )}
       </button>
       {isOpen && (
@@ -112,6 +112,8 @@ const AccordionSection = ({ title, children, defaultOpen = true }) => {
 
 const ControlsPanel = ({
   params,
+  activeMotionState: controlledActiveMotionState,
+  onActiveMotionStateChange,
   onTypeChange,
   onStyleChange,
   onSpecificSettingChange,
@@ -120,7 +122,10 @@ const ControlsPanel = ({
   onReplay,
 }) => {
   const [activeTab, setActiveTab] = useState('design');
-  const [activeMotionState, setActiveMotionState] = useState('load');
+  const [localActiveMotionState, setLocalActiveMotionState] = useState('load');
+  const activeMotionState =
+    controlledActiveMotionState || localActiveMotionState;
+  const setActiveMotionState = onActiveMotionStateChange || setLocalActiveMotionState;
   const allowedMotionStates = useMemo(
     () =>
       ['load', 'hover', 'click'].filter((state) =>
@@ -132,6 +137,17 @@ const ControlsPanel = ({
     ? activeMotionState
     : allowedMotionStates[0] || 'load';
 
+  useEffect(() => {
+    if (!allowedMotionStates.includes(activeMotionState) && currentMotionState) {
+      setActiveMotionState(currentMotionState);
+    }
+  }, [
+    activeMotionState,
+    allowedMotionStates,
+    currentMotionState,
+    setActiveMotionState,
+  ]);
+
   const currentAnimParams = params?.animations?.[currentMotionState] || {
     presetId: 'none',
   };
@@ -141,6 +157,10 @@ const ControlsPanel = ({
   );
   const availablePresetIds = useMemo(
     () => new Set(availablePresets.map((preset) => preset.id)),
+    [availablePresets]
+  );
+  const defaultPresetId = useMemo(
+    () => availablePresets.find((preset) => preset.id !== 'none')?.id || 'none',
     [availablePresets]
   );
   const scaleRange = currentAnimParams.scaleRange || [1, 1];
@@ -162,6 +182,18 @@ const ControlsPanel = ({
     onUpdateAnimation,
     params,
     rawPresetVal,
+  ]);
+
+  useEffect(() => {
+    if (params && currentPresetVal === 'none' && defaultPresetId !== 'none') {
+      onUpdateAnimation(currentMotionState, 'presetId', defaultPresetId);
+    }
+  }, [
+    currentMotionState,
+    currentPresetVal,
+    defaultPresetId,
+    onUpdateAnimation,
+    params,
   ]);
 
   if (!params || !params.styles)
@@ -248,17 +280,17 @@ const ControlsPanel = ({
     boxSizing: 'border-box',
     padding: '8px 12px',
     borderRadius: '8px',
-    border: '1px solid #D1D5DB',
+    border: '1px solid var(--control-border)',
     fontSize: '13px',
     outline: 'none',
-    background: '#F9FAFB',
-    color: '#111827',
+    background: 'var(--control-bg)',
+    color: 'var(--text-main)',
     fontFamily: 'inherit',
   };
   const labelStyle = {
     fontSize: '12px',
     fontWeight: '700',
-    color: '#6B7280',
+    color: 'var(--text-muted)',
     display: 'block',
     marginBottom: '6px',
     maxWidth: '100%',
@@ -297,6 +329,20 @@ const ControlsPanel = ({
 
   const handleAnimChange = (key, value) => {
     onUpdateAnimation(currentMotionState, key, value);
+  };
+
+  const handleMotionStateClick = (state) => {
+    setActiveMotionState(state);
+
+    const presetId = params?.animations?.[state]?.presetId || 'none';
+    const stateDefault =
+      getAvailablePresetsForType(params?.type, state).find(
+        (preset) => preset.id !== 'none'
+      )?.id || 'none';
+
+    if (presetId === 'none' && stateDefault !== 'none') {
+      onUpdateAnimation(state, 'presetId', stateDefault);
+    }
   };
 
   const handleTokenApply = (tokenId) => {
@@ -375,14 +421,14 @@ const ControlsPanel = ({
               cursor: 'pointer',
               fontSize: '13px',
               fontWeight: '600',
-              color: '#111827',
+              color: 'var(--text-main)',
             }}
           >
             <input
               type="checkbox"
               checked={value || false}
               onChange={(e) => onChange(e.target.checked)}
-              style={{ width: '16px', height: '16px', accentColor: '#111827' }}
+              style={{ width: '16px', height: '16px', accentColor: 'var(--button-bg)' }}
             />{' '}
             Увімкнути
           </label>
@@ -466,13 +512,45 @@ const ControlsPanel = ({
             {renderSettingField('overflow', 'Overflow', 'select', [
               { label: 'Visible', value: 'visible' },
               { label: 'Hidden', value: 'hidden' },
+              { label: 'Auto', value: 'auto' },
+              { label: 'Scroll', value: 'scroll' },
             ])}
+            {renderSettingField('backgroundMode', 'Background Type', 'select', [
+              { label: 'Color', value: 'color' },
+              { label: 'Gradient', value: 'gradient' },
+              { label: 'Image', value: 'image' },
+            ])}
+            {params.specificSettings.backgroundMode === 'gradient' &&
+              renderSettingField('backgroundGradient', 'Gradient CSS', 'text')}
+            {params.specificSettings.backgroundMode === 'image' &&
+              renderSettingField('backgroundImage', 'Background Image URL', 'text')}
           </>
         );
       case 'button':
         return (
           <>
             {renderSettingField('text', 'Button Text', 'textarea')}
+            <div style={twoColumnGridStyle}>
+              {renderSettingField('actionType', 'Action', 'select', [
+                { label: 'None', value: 'none' },
+                { label: 'Link', value: 'link' },
+              ])}
+              {renderSettingField('cursor', 'Cursor', 'select', [
+                { label: 'Pointer', value: 'pointer' },
+                { label: 'Default', value: 'default' },
+                { label: 'Help', value: 'help' },
+                { label: 'Wait', value: 'wait' },
+              ])}
+            </div>
+            {params.specificSettings.actionType === 'link' && (
+              <div style={twoColumnGridStyle}>
+                {renderSettingField('href', 'Link URL', 'text')}
+                {renderSettingField('target', 'Target', 'select', [
+                  { label: 'Same Tab', value: '_self' },
+                  { label: 'New Tab', value: '_blank' },
+                ])}
+              </div>
+            )}
             {renderSettingField(
               'fontFamily',
               'Font Family',
@@ -529,6 +607,16 @@ const ControlsPanel = ({
               ])}
             </div>
             {renderSettingField('focusBorderColor', 'Focus Border', 'color')}
+            <div style={twoColumnGridStyle}>
+              {renderSettingField('validationState', 'Validation', 'select', [
+                { label: 'None', value: 'none' },
+                { label: 'Valid', value: 'valid' },
+                { label: 'Error', value: 'error' },
+              ])}
+              {renderSettingField('disabled', 'Disabled', 'checkbox')}
+            </div>
+            {params.specificSettings.validationState === 'error' &&
+              renderSettingField('errorBorderColor', 'Error Border', 'color')}
           </>
         );
       case 'text':
@@ -604,6 +692,9 @@ const ControlsPanel = ({
           <>
             {renderSettingField('checked', 'Default Checked', 'checkbox')}
             {renderSettingField('label', 'Label Text', 'textarea')}
+            {params.type === 'radio' &&
+              renderSettingField('name', 'Group Name', 'text')}
+            {renderSettingField('disabled', 'Disabled', 'checkbox')}
             {renderSettingField(
               'fontFamily',
               'Font Family',
@@ -651,6 +742,10 @@ const ControlsPanel = ({
               { label: 'Left', value: 'left' },
               { label: 'Right', value: 'right' },
             ])}
+            {renderSettingField('loading', 'Lazy Load', 'select', [
+              { label: 'Lazy', value: 'lazy' },
+              { label: 'Eager', value: 'eager' },
+            ])}
           </>
         );
       case 'link':
@@ -658,6 +753,10 @@ const ControlsPanel = ({
           <>
             {renderSettingField('text', 'Link Text', 'text')}
             {renderSettingField('href', 'URL', 'text')}
+            {renderSettingField('target', 'Target', 'select', [
+              { label: 'Same Tab', value: '_self' },
+              { label: 'New Tab', value: '_blank' },
+            ])}
             {renderSettingField(
               'fontFamily',
               'Font Family',
@@ -706,6 +805,19 @@ const ControlsPanel = ({
               ])}
             </div>
             {renderSettingField('focusBorderColor', 'Focus Border', 'color')}
+            <div style={twoColumnGridStyle}>
+              {renderSettingField('fontSize', 'Font Size (px)', 'number')}
+              {renderSettingField('validationState', 'Validation', 'select', [
+                { label: 'None', value: 'none' },
+                { label: 'Valid', value: 'valid' },
+                { label: 'Error', value: 'error' },
+              ])}
+            </div>
+            <div style={twoColumnGridStyle}>
+              {renderSettingField('disabled', 'Disabled', 'checkbox')}
+              {params.specificSettings.validationState === 'error' &&
+                renderSettingField('errorBorderColor', 'Error Border', 'color')}
+            </div>
           </>
         );
       default:
@@ -720,7 +832,7 @@ const ControlsPanel = ({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        background: '#ffffff',
+        background: 'var(--surface)',
         overflowY: 'auto',
         overflowX: 'hidden',
         borderRadius: '12px',
@@ -755,10 +867,10 @@ const ControlsPanel = ({
       <div
         style={{
           display: 'flex',
-          borderBottom: '1px solid #E5E7EB',
+          borderBottom: '1px solid var(--border)',
           position: 'sticky',
           top: 0,
-          background: '#fff',
+          background: 'var(--surface)',
           zIndex: 10,
           ...panelBlockStyle,
         }}
@@ -772,9 +884,9 @@ const ControlsPanel = ({
             border: 'none',
             borderBottom:
               activeTab === 'design'
-                ? '2px solid #111827'
+                ? '2px solid var(--text-main)'
                 : '2px solid transparent',
-            color: activeTab === 'design' ? '#111827' : '#9CA3AF',
+            color: activeTab === 'design' ? 'var(--text-main)' : 'var(--text-muted)',
             fontWeight: activeTab === 'design' ? '800' : '600',
             cursor: 'pointer',
             display: 'flex',
@@ -794,9 +906,9 @@ const ControlsPanel = ({
             border: 'none',
             borderBottom:
               activeTab === 'motion'
-                ? '2px solid #111827'
+                ? '2px solid var(--text-main)'
                 : '2px solid transparent',
-            color: activeTab === 'motion' ? '#111827' : '#9CA3AF',
+            color: activeTab === 'motion' ? 'var(--text-main)' : 'var(--text-muted)',
             fontWeight: activeTab === 'motion' ? '800' : '600',
             cursor: 'pointer',
             display: 'flex',
@@ -818,10 +930,10 @@ const ControlsPanel = ({
                   display: 'grid',
                   gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                   gap: '8px',
-                  background: '#F9FAFB',
+                  background: 'var(--surface-muted)',
                   padding: '12px',
                   borderRadius: '16px',
-                  border: '1px solid #E5E7EB',
+                  border: '1px solid var(--border)',
                 }}
               >
                 {figmaElements.map((el) => (
@@ -836,8 +948,11 @@ const ControlsPanel = ({
                       border: 'none',
                       borderRadius: '12px',
                       background:
-                        params.type === el.id ? '#111827' : 'transparent',
-                      color: params.type === el.id ? '#ffffff' : '#6B7280',
+                        params.type === el.id ? 'var(--button-bg)' : 'transparent',
+                      color:
+                        params.type === el.id
+                          ? 'var(--button-text)'
+                          : 'var(--text-muted)',
                       fontSize: '12px',
                       fontWeight: '700',
                       cursor: 'pointer',
@@ -851,7 +966,10 @@ const ControlsPanel = ({
                   >
                     <span
                       style={{
-                        color: params.type === el.id ? '#D6F854' : '#9CA3AF',
+                        color:
+                          params.type === el.id
+                            ? 'var(--button-text)'
+                            : 'var(--text-muted)',
                       }}
                     >
                       {el.icon}
@@ -908,8 +1026,44 @@ const ControlsPanel = ({
                   onChange={(val) => onStyleChange('padding', `${val}px`)}
                 />
               )}
+              {!isChoiceControl && (
+                <RangeSlider
+                  label="Margin (px)"
+                  min={0}
+                  max={120}
+                  step={1}
+                  value={getNumericStyleValue('margin')}
+                  unit=""
+                  onChange={(val) => onStyleChange('margin', val)}
+                />
+              )}
             </AccordionSection>
             )}
+            <AccordionSection title="Position & Layer" defaultOpen={false}>
+              <div style={twoColumnGridStyle}>
+                <div style={panelBlockStyle}>
+                  <label style={labelStyle}>Position</label>
+                  <select
+                    value={params.styles.position || 'relative'}
+                    onChange={(e) => onStyleChange('position', e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="relative">Relative</option>
+                    <option value="absolute">Absolute</option>
+                    <option value="fixed">Fixed</option>
+                  </select>
+                </div>
+                <div style={panelBlockStyle}>
+                  <label style={labelStyle}>Z-index</label>
+                  <input
+                    type="number"
+                    value={params.styles.zIndex ?? 1}
+                    onChange={(e) => onStyleChange('zIndex', Number(e.target.value))}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+            </AccordionSection>
             {hasAppearanceControls && (
             <AccordionSection title="Appearance" defaultOpen={false}>
               {showBackgroundControl && (
@@ -986,25 +1140,29 @@ const ControlsPanel = ({
                 style={{
                   display: 'flex',
                   gap: '4px',
-                  background: '#F9FAFB',
+                  background: 'var(--surface-muted)',
                   padding: '6px',
                   borderRadius: '12px',
-                  border: '1px solid #E5E7EB',
+                  border: '1px solid var(--border)',
                 }}
               >
                 {allowedMotionStates.map((state) => (
                   <button
                     key={state}
-                    onClick={() => setActiveMotionState(state)}
+                    onClick={() => handleMotionStateClick(state)}
                     style={{
                       flex: 1,
                       padding: '10px 0',
                       border: 'none',
                       borderRadius: '8px',
                       background:
-                        currentMotionState === state ? '#111827' : 'transparent',
+                        currentMotionState === state
+                          ? 'var(--button-bg)'
+                          : 'transparent',
                       color:
-                        currentMotionState === state ? '#D6F854' : '#6B7280',
+                        currentMotionState === state
+                          ? 'var(--button-text)'
+                          : 'var(--text-muted)',
                       fontSize: '13px',
                       fontWeight: '800',
                       cursor: 'pointer',
@@ -1029,15 +1187,15 @@ const ControlsPanel = ({
                       style={{
                         padding: '6px 12px',
                         borderRadius: '20px',
-                        border: '1px solid #E5E7EB',
+                        border: '1px solid var(--border)',
                         background:
                           currentAnimParams.motionToken === tokenId
-                            ? '#D6F854'
-                            : '#F9FAFB',
+                            ? 'var(--button-text)'
+                            : 'var(--surface-muted)',
                         color:
                           currentAnimParams.motionToken === tokenId
-                            ? '#111827'
-                            : '#6B7280',
+                            ? 'var(--button-bg)'
+                            : 'var(--text-muted)',
                         fontSize: '12px',
                         fontWeight: '700',
                         cursor: 'pointer',
@@ -1140,7 +1298,7 @@ const ControlsPanel = ({
                     cursor: 'pointer',
                     fontSize: '13px',
                     fontWeight: '700',
-                    color: '#111827',
+                    color: 'var(--text-main)',
                     marginBottom: '16px',
                   }}
                 >
@@ -1153,14 +1311,14 @@ const ControlsPanel = ({
                     style={{
                       width: '16px',
                       height: '16px',
-                      accentColor: '#111827',
+                      accentColor: 'var(--button-bg)',
                     }}
                   />
                   <Zap
                     size={14}
                     color="#D6F854"
                     style={{
-                      background: '#111827',
+                      background: 'var(--button-bg)',
                       borderRadius: '4px',
                       padding: '2px',
                     }}
@@ -1493,15 +1651,15 @@ const ControlsPanel = ({
                   cursor: 'pointer',
                   fontSize: '13px',
                   fontWeight: '700',
-                  color: '#111827',
+                  color: 'var(--text-main)',
                   background: currentAnimParams.reduceMotion
-                    ? '#FEF3C7'
-                    : '#F9FAFB',
+                    ? 'var(--warning-bg)'
+                    : 'var(--surface-muted)',
                   padding: '12px',
                   borderRadius: '12px',
                   border: currentAnimParams.reduceMotion
-                    ? '1px solid #F59E0B'
-                    : '1px solid #E5E7EB',
+                    ? '1px solid var(--warning-border)'
+                    : '1px solid var(--border)',
                   transition: 'all 0.2s',
                 }}
               >
@@ -1514,19 +1672,19 @@ const ControlsPanel = ({
                   style={{
                     width: '16px',
                     height: '16px',
-                    accentColor: '#D97706',
+                    accentColor: 'var(--primary)',
                   }}
                 />
                 <Accessibility
                   size={16}
-                  color={currentAnimParams.reduceMotion ? '#D97706' : '#6B7280'}
+                  color={currentAnimParams.reduceMotion ? 'var(--primary)' : 'currentColor'}
                 />
                 Reduced Motion (Safe Mode)
               </label>
               <p
                 style={{
                   fontSize: '11px',
-                  color: '#6B7280',
+                  color: 'var(--text-muted)',
                   marginTop: '8px',
                   lineHeight: 1.4,
                 }}
@@ -1543,21 +1701,26 @@ const ControlsPanel = ({
       <div
         style={{
           padding: '20px 24px',
-          borderTop: '1px solid #E5E7EB',
+          borderTop: '1px solid var(--border)',
           display: 'flex',
+          flexWrap: 'wrap',
           gap: '12px',
-          background: '#F9FAFB',
+          background: 'var(--surface)',
+          position: 'sticky',
+          bottom: 0,
+          zIndex: 12,
+          boxShadow: '0 -12px 24px rgba(15, 23, 42, 0.08)',
           borderBottomLeftRadius: '12px',
           borderBottomRightRadius: '12px',
         }}
       >
         <Button
           onClick={onReplay}
-          style={{ flex: 1, background: '#111827', color: '#D6F854' }}
+          style={{ flex: '1 1 120px' }}
         >
           Відтворити
         </Button>
-        <Button variant="secondary" onClick={onReset} style={{ flex: 1 }}>
+        <Button variant="secondary" onClick={onReset} style={{ flex: '1 1 120px' }}>
           Скинути
         </Button>
       </div>

@@ -62,7 +62,7 @@ const EditableElement = ({
             right: '-10px',
             width: '24px',
             height: '24px',
-            background: '#EF4444',
+            background: 'var(--button-bg)',
             color: '#fff',
             borderRadius: '50%',
             border: '2px solid #fff',
@@ -111,7 +111,8 @@ const CollectionEditor = ({ layoutId, onBack, globalPreset, staggerDelay }) => {
 
   // Автоматично запускаємо при першому відкритті макета або зміні пресету
   useEffect(() => {
-    handlePlay();
+    const timer = window.setTimeout(handlePlay, 0);
+    return () => window.clearTimeout(timer);
   }, [globalPreset]);
 
   const renderLayout = () => {

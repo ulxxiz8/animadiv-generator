@@ -31,13 +31,13 @@ const MySets = () => {
           style={{
             fontSize: 32,
             fontWeight: 900,
-            color: '#111827',
+            color: 'var(--text-main)',
             marginBottom: 8,
           }}
         >
           My Sets
         </h1>
-        <p style={{ color: '#6B7280', fontSize: 16 }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: 16 }}>
           Saved library elements that can be reopened in the generator.
         </p>
       </div>
@@ -46,7 +46,7 @@ const MySets = () => {
         style={{
           display: 'flex',
           gap: 32,
-          borderBottom: '1px solid #E5E7EB',
+          borderBottom: '1px solid var(--border)',
           marginBottom: 40,
         }}
       >
@@ -58,9 +58,9 @@ const MySets = () => {
             border: 'none',
             borderBottom:
               activeTab === 'saved'
-                ? '2px solid #111827'
+                ? '2px solid var(--text-main)'
                 : '2px solid transparent',
-            color: activeTab === 'saved' ? '#111827' : '#6B7280',
+            color: activeTab === 'saved' ? 'var(--text-main)' : 'var(--text-muted)',
             fontWeight: activeTab === 'saved' ? 800 : 600,
             cursor: 'pointer',
           }}
@@ -75,9 +75,9 @@ const MySets = () => {
             border: 'none',
             borderBottom:
               activeTab === 'collections'
-                ? '2px solid #111827'
+                ? '2px solid var(--text-main)'
                 : '2px solid transparent',
-            color: activeTab === 'collections' ? '#111827' : '#6B7280',
+            color: activeTab === 'collections' ? 'var(--text-main)' : 'var(--text-muted)',
             fontWeight: activeTab === 'collections' ? 800 : 600,
             cursor: 'pointer',
           }}
@@ -107,9 +107,9 @@ const MySets = () => {
         ) : (
           <div
             style={{
-              background: '#fff',
+              background: 'var(--surface)',
               borderRadius: 24,
-              border: '1px dashed #D1D5DB',
+              border: '1px dashed var(--control-border)',
               padding: '80px 20px',
               textAlign: 'center',
               display: 'flex',
@@ -122,20 +122,20 @@ const MySets = () => {
                 fontSize: 24,
                 fontWeight: 800,
                 marginBottom: 12,
-                color: '#111827',
+                color: 'var(--text-main)',
               }}
             >
               Nothing saved yet
             </h2>
-            <p style={{ color: '#6B7280', marginBottom: 32 }}>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 32 }}>
               Save a library element to keep it here.
             </p>
             <Link
               to="/library"
               style={{
                 padding: '12px 24px',
-                background: '#111827',
-                color: '#D6F854',
+                background: 'var(--text-main)',
+                color: 'var(--primary)',
                 textDecoration: 'none',
                 borderRadius: 10,
                 fontWeight: 800,
@@ -147,7 +147,7 @@ const MySets = () => {
         ))}
 
       {activeTab === 'collections' && (
-        <div style={{ textAlign: 'center', padding: 80, color: '#9CA3AF' }}>
+        <div style={{ textAlign: 'center', padding: 80, color: 'var(--text-soft)' }}>
           Collections are not available yet.
         </div>
       )}

@@ -35,7 +35,7 @@ const Library = () => {
     <main
       style={{
         minHeight: '100%',
-        background: '#F9FAFB',
+        background: 'var(--bg-color)',
         fontFamily:
           'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
@@ -50,8 +50,8 @@ const Library = () => {
       >
         <header
           style={{
-            background: '#fff',
-            border: '1px solid #E5E7EB',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
             borderRadius: 24,
             padding: 18,
             marginBottom: 22,
@@ -72,7 +72,7 @@ const Library = () => {
               <h1
                 style={{
                   margin: '0 0 6px',
-                  color: '#111827',
+                  color: 'var(--text-main)',
                   fontSize: 30,
                   lineHeight: 1.05,
                   fontWeight: 900,
@@ -84,7 +84,7 @@ const Library = () => {
               <p
                 style={{
                   margin: 0,
-                  color: '#6B7280',
+                  color: 'var(--text-muted)',
                   fontSize: 14,
                   lineHeight: 1.45,
                 }}
@@ -103,7 +103,7 @@ const Library = () => {
             >
               <Search
                 size={16}
-                color="#6B7280"
+                color="var(--text-muted)"
                 style={{ position: 'absolute', left: 14, pointerEvents: 'none' }}
               />
               <input
@@ -114,10 +114,10 @@ const Library = () => {
                 style={{
                   width: '100%',
                   height: 42,
-                  border: '1px solid #E5E7EB',
+                  border: '1px solid var(--border)',
                   borderRadius: 999,
-                  background: '#F9FAFB',
-                  color: '#111827',
+                  background: 'var(--bg-color)',
+                  color: 'var(--text-main)',
                   outline: 'none',
                   padding: '0 16px 0 40px',
                   fontSize: 14,
@@ -158,9 +158,9 @@ const Library = () => {
                       height: 34,
                       padding: '0 12px',
                       borderRadius: 999,
-                      border: isActive ? '1px solid #111827' : '1px solid #E5E7EB',
-                      background: isActive ? '#111827' : '#FFFFFF',
-                      color: isActive ? '#D6F854' : '#374151',
+                      border: isActive ? '1px solid var(--text-main)' : '1px solid var(--border)',
+                      background: isActive ? 'var(--text-main)' : 'var(--surface)',
+                      color: isActive ? 'var(--primary)' : 'var(--button-secondary-text)',
                       fontSize: 12,
                       fontWeight: 850,
                       cursor: 'pointer',
@@ -179,8 +179,8 @@ const Library = () => {
                 height: 34,
                 padding: '0 12px',
                 borderRadius: 999,
-                background: '#111827',
-                color: '#D6F854',
+                background: 'var(--text-main)',
+                color: 'var(--primary)',
                 fontSize: 12,
                 fontWeight: 850,
                 whiteSpace: 'nowrap',
@@ -194,16 +194,16 @@ const Library = () => {
         {filteredItems.length === 0 ? (
           <div
             style={{
-              background: '#fff',
-              border: '1px dashed #D1D5DB',
+              background: 'var(--surface)',
+              border: '1px dashed var(--control-border)',
               borderRadius: 24,
               padding: '64px 20px',
               textAlign: 'center',
-              color: '#6B7280',
+              color: 'var(--text-muted)',
             }}
           >
-            <SearchX size={28} color="#6B7280" style={{ marginBottom: 12 }} />
-            <div style={{ fontSize: 18, fontWeight: 850, color: '#111827' }}>
+            <SearchX size={28} color="var(--text-muted)" style={{ marginBottom: 12 }} />
+            <div style={{ fontSize: 18, fontWeight: 850, color: 'var(--text-main)' }}>
               No matching elements found
             </div>
           </div>

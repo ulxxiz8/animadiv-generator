@@ -6,7 +6,7 @@ export const Label = ({ children }) => (
     style={{
       fontSize: '12px',
       fontWeight: '700',
-      color: '#6B7280',
+      color: 'var(--text-muted)',
       textTransform: 'uppercase',
       display: 'block',
       marginBottom: '8px',
@@ -53,7 +53,7 @@ export const RangeSlider = ({
           style={{
             fontSize: '12px',
             fontWeight: '700',
-            color: '#6B7280',
+            color: 'var(--text-muted)',
             overflowWrap: 'anywhere',
             wordBreak: 'break-word',
           }}
@@ -84,7 +84,7 @@ export const RangeSlider = ({
             maxWidth: '100%',
             minWidth: 0,
             boxSizing: 'border-box',
-            accentColor: '#111827',
+            accentColor: 'var(--button-bg)',
             cursor: 'pointer',
           }}
         />
@@ -92,8 +92,8 @@ export const RangeSlider = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            background: '#F9FAFB',
-            border: '1px solid #D1D5DB',
+            background: 'var(--control-bg)',
+            border: '1px solid var(--control-border)',
             borderRadius: '6px',
             overflow: 'hidden',
             flex: '0 1 70px',
@@ -119,7 +119,7 @@ export const RangeSlider = ({
               padding: '6px',
               fontSize: '13px',
               fontWeight: '600',
-              color: '#111827',
+              color: 'var(--text-main)',
               textAlign: 'center',
               outline: 'none',
               appearance: 'textfield',
@@ -131,7 +131,7 @@ export const RangeSlider = ({
                 paddingRight: '6px',
                 fontSize: '11px',
                 fontWeight: 700,
-                color: '#6B7280',
+                color: 'var(--text-muted)',
               }}
             >
               {unit}
@@ -154,10 +154,10 @@ export const Select = ({ label, options, value, onChange }) => (
         width: '100%',
         padding: '10px 12px',
         borderRadius: '8px',
-        border: '1px solid #D1D5DB',
-        background: '#fff',
+        border: '1px solid var(--control-border)',
+        background: 'var(--control-bg)',
         fontSize: '14px',
-        color: '#111827',
+        color: 'var(--text-main)',
         outline: 'none',
         cursor: 'pointer',
         boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
@@ -173,7 +173,7 @@ export const Select = ({ label, options, value, onChange }) => (
 );
 
 // 4. Кнопка (Button)
-export const Button = ({ children, onClick, variant = 'primary' }) => (
+export const Button = ({ children, onClick, variant = 'primary', style }) => (
   <button
     onClick={onClick}
     style={{
@@ -189,8 +189,13 @@ export const Button = ({ children, onClick, variant = 'primary' }) => (
       alignItems: 'center',
       justifyContent: 'center',
       gap: '8px',
-      backgroundColor: variant === 'primary' ? '#111827' : '#F3F4F6',
-      color: variant === 'primary' ? '#fff' : '#374151',
+      backgroundColor:
+        variant === 'primary' ? 'var(--button-bg)' : 'var(--button-secondary-bg)',
+      color:
+        variant === 'primary'
+          ? 'var(--button-text)'
+          : 'var(--button-secondary-text)',
+      ...style,
     }}
     onMouseEnter={(e) => (e.target.style.opacity = '0.9')}
     onMouseLeave={(e) => (e.target.style.opacity = '1')}
@@ -231,7 +236,7 @@ export const ColorPicker = ({ label, value, onChange }) => (
           boxSizing: 'border-box',
           height: '38px',
           padding: '0',
-          border: '1px solid #E5E7EB',
+          border: '1px solid var(--border)',
           borderRadius: '6px',
           cursor: 'pointer',
           background: 'none',
@@ -249,12 +254,12 @@ export const ColorPicker = ({ label, value, onChange }) => (
           boxSizing: 'border-box',
           padding: '10px 12px',
           borderRadius: '8px',
-          border: '1px solid #D1D5DB',
-          background: '#fff',
+          border: '1px solid var(--control-border)',
+          background: 'var(--control-bg)',
           fontSize: '13px',
           fontFamily: 'monospace',
           outline: 'none',
-          color: '#374151',
+          color: 'var(--text-main)',
         }}
       />
     </div>

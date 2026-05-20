@@ -10,6 +10,7 @@ const PX_FIELDS = new Set([
   'fontSize',
   'gap',
   'letterSpacing',
+  'margin',
 ]);
 
 const toKebabCase = (value) =>
@@ -108,25 +109,44 @@ const normalizeExportSelectors = (css) =>
 const getBaseStyles = (params = {}) => {
   const styles = params.styles || {};
   const settings = params.specificSettings || {};
+  const background =
+    settings.backgroundMode === 'gradient'
+      ? settings.backgroundGradient
+      : settings.backgroundMode === 'image' && settings.backgroundImage
+        ? `url("${settings.backgroundImage}")`
+        : styles.backgroundColor;
   const baseStyles = {
     ...styles,
+    background,
+    backgroundSize: settings.backgroundMode === 'image' ? 'cover' : undefined,
+    backgroundPosition: settings.backgroundMode === 'image' ? 'center' : undefined,
     width: styles.width !== 'auto' ? styles.width : 'auto',
     height: styles.height !== 'auto' ? styles.height : 'auto',
     minHeight: styles.minHeight,
-    position: 'relative',
+    position: styles.position || 'relative',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 1,
     visibility: 'visible',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-    cursor: 'pointer',
+    cursor: settings.cursor || 'pointer',
     fontSize: settings.fontSize || 14,
     fontWeight: settings.fontWeight || 600,
   };
 
   const shadow = getShadowStyle(settings);
   if (shadow) baseStyles.boxShadow = shadow;
+
+  if (Number(styles.borderWidth) > 0) {
+    baseStyles.border = `${styles.borderWidth}px solid ${
+      styles.borderColor || 'currentColor'
+    }`;
+  }
+
+  if (settings.validationState === 'error' && settings.errorBorderColor) {
+    baseStyles.borderColor = settings.errorBorderColor;
+  }
 
   if (params.type === 'block') {
     baseStyles.flexDirection = 'column';

@@ -13,7 +13,7 @@ const layoutTemplates = [
         style={{
           fontSize: '48px',
           fontWeight: '300',
-          color: '#9CA3AF',
+          color: 'var(--text-soft)',
           letterSpacing: '2px',
         }}
       >
@@ -39,7 +39,7 @@ const layoutTemplates = [
           style={{
             width: '60%',
             height: '12px',
-            background: '#D1D5DB',
+            background: 'var(--control-border)',
             borderRadius: '4px',
           }}
         />
@@ -47,7 +47,7 @@ const layoutTemplates = [
           style={{
             width: '40%',
             height: '8px',
-            background: '#E5E7EB',
+            background: 'var(--border)',
             borderRadius: '4px',
           }}
         />
@@ -55,7 +55,7 @@ const layoutTemplates = [
           style={{
             width: '80%',
             height: '8px',
-            background: '#E5E7EB',
+            background: 'var(--border)',
             borderRadius: '4px',
           }}
         />
@@ -63,7 +63,7 @@ const layoutTemplates = [
           style={{
             width: '36px',
             height: '14px',
-            background: '#9CA3AF',
+            background: 'var(--text-soft)',
             borderRadius: '4px',
             marginTop: '6px',
           }}
@@ -89,7 +89,7 @@ const layoutTemplates = [
           style={{
             width: '36px',
             height: '36px',
-            background: '#D1D5DB',
+            background: 'var(--control-border)',
             borderRadius: '6px',
           }}
         />
@@ -105,7 +105,7 @@ const layoutTemplates = [
             style={{
               width: '100%',
               height: '6px',
-              background: '#D1D5DB',
+              background: 'var(--control-border)',
               borderRadius: '2px',
             }}
           />
@@ -113,7 +113,7 @@ const layoutTemplates = [
             style={{
               width: '80%',
               height: '6px',
-              background: '#E5E7EB',
+              background: 'var(--border)',
               borderRadius: '2px',
             }}
           />
@@ -138,7 +138,7 @@ const layoutTemplates = [
           style={{
             width: '26px',
             height: '36px',
-            background: '#D1D5DB',
+            background: 'var(--control-border)',
             borderRadius: '4px',
           }}
         />
@@ -146,7 +146,7 @@ const layoutTemplates = [
           style={{
             width: '26px',
             height: '36px',
-            background: '#D1D5DB',
+            background: 'var(--control-border)',
             borderRadius: '4px',
           }}
         />
@@ -154,7 +154,7 @@ const layoutTemplates = [
           style={{
             width: '26px',
             height: '36px',
-            background: '#D1D5DB',
+            background: 'var(--control-border)',
             borderRadius: '4px',
           }}
         />
@@ -169,14 +169,14 @@ const SidebarPanel = ({ title, placeholderType, isActive, children }) => {
     <div
       style={{
         flex: 1,
-        background: isActive ? '#fff' : '#F3F4F6',
+        background: isActive ? 'var(--surface)' : 'var(--surface-subtle)',
         borderRadius: '12px',
         position: 'relative',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         padding: '20px',
-        border: isActive ? '1px solid #E5E7EB' : 'none',
+        border: isActive ? '1px solid var(--border)' : 'none',
         transition: 'all 0.3s ease',
       }}
     >
@@ -200,7 +200,7 @@ const SidebarPanel = ({ title, placeholderType, isActive, children }) => {
                 style={{
                   fontSize: '13px',
                   fontWeight: '700',
-                  color: '#111827',
+                  color: 'var(--text-main)',
                   textTransform: 'uppercase',
                   marginBottom: '24px',
                   letterSpacing: '0.05em',
@@ -225,7 +225,7 @@ const SidebarPanel = ({ title, placeholderType, isActive, children }) => {
                       style={{
                         width: '40%',
                         height: '10px',
-                        background: '#D1D5DB',
+                        background: 'var(--control-border)',
                         borderRadius: '4px',
                         marginBottom: '8px',
                       }}
@@ -234,9 +234,9 @@ const SidebarPanel = ({ title, placeholderType, isActive, children }) => {
                       style={{
                         width: '100%',
                         height: '34px',
-                        background: '#E5E7EB',
+                        background: 'var(--border)',
                         borderRadius: '6px',
-                        border: '1px solid #D1D5DB',
+                        border: '1px solid var(--control-border)',
                       }}
                     />
                   </div>
@@ -253,11 +253,11 @@ const SidebarPanel = ({ title, placeholderType, isActive, children }) => {
                 <div
                   style={{
                     flex: 1,
-                    background: '#111827',
+                    background: 'var(--text-main)',
                     borderRadius: '8px',
                     padding: '16px',
                     fontFamily: 'monospace',
-                    color: '#9CA3AF',
+                    color: 'var(--text-soft)',
                     fontSize: '12px',
                   }}
                 >
@@ -277,7 +277,7 @@ const SidebarPanel = ({ title, placeholderType, isActive, children }) => {
                     style={{
                       flex: 1,
                       height: '38px',
-                      background: '#D1D5DB',
+                      background: 'var(--control-border)',
                       borderRadius: '8px',
                       display: 'flex',
                       alignItems: 'center',
@@ -299,7 +299,7 @@ const SidebarPanel = ({ title, placeholderType, isActive, children }) => {
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: '13px',
-                      color: '#fff',
+                      color: 'var(--surface)',
                       fontWeight: '600',
                     }}
                   >
@@ -336,10 +336,10 @@ const SidebarPanel = ({ title, placeholderType, isActive, children }) => {
               padding: '12px 20px',
               borderRadius: '8px',
               boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
-              color: '#374151',
+              color: 'var(--button-secondary-text)',
               fontWeight: '500',
               fontSize: '14px',
-              border: '1px solid #E5E7EB',
+              border: '1px solid var(--border)',
             }}
           >
             {title}
@@ -366,7 +366,7 @@ const Collections = () => {
         height: 'calc(100vh - 80px)',
         padding: '20px',
         boxSizing: 'border-box',
-        background: '#ffffff',
+        background: 'var(--surface)',
       }}
     >
       {/* ЛІВА ПАНЕЛЬ */}
@@ -390,9 +390,9 @@ const Collections = () => {
       <div
         style={{
           flex: 1,
-          background: '#F9FAFB',
+          background: 'var(--bg-color)',
           borderRadius: '12px',
-          border: '1px solid #E5E7EB',
+          border: '1px solid var(--border)',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
@@ -415,7 +415,7 @@ const Collections = () => {
               <h2
                 style={{
                   fontSize: '28px',
-                  color: '#111827',
+                  color: 'var(--text-main)',
                   marginBottom: '12px',
                   fontWeight: '600',
                 }}
@@ -424,7 +424,7 @@ const Collections = () => {
               </h2>
               <p
                 style={{
-                  color: '#6B7280',
+                  color: 'var(--text-muted)',
                   fontSize: '15px',
                   maxWidth: '400px',
                   margin: '0 auto',
@@ -449,7 +449,7 @@ const Collections = () => {
                   key={layout.id}
                   onClick={() => setSelectedLayoutId(layout.id)}
                   style={{
-                    background: '#ffffff',
+                    background: 'var(--surface)',
                     border: '2px solid transparent',
                     borderRadius: '12px',
                     padding: '30px 20px',
@@ -491,7 +491,7 @@ const Collections = () => {
                     style={{
                       fontSize: '16px',
                       fontWeight: '600',
-                      color: '#1F2937',
+                      color: 'var(--border-strong)',
                       margin: 0,
                     }}
                   >
@@ -501,7 +501,7 @@ const Collections = () => {
                     <span
                       style={{
                         fontSize: '13px',
-                        color: '#6B7280',
+                        color: 'var(--text-muted)',
                         marginTop: '4px',
                       }}
                     >

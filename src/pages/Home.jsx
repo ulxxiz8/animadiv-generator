@@ -61,7 +61,7 @@ const Home = () => {
         display: 'flex',
         flexDirection: 'column',
         minHeight: 'calc(100vh - 155px)',
-        backgroundColor: '#F9FAFB',
+        backgroundColor: 'var(--bg-color)',
         fontFamily: 'Inter, system-ui, sans-serif',
       }}
     >
@@ -100,8 +100,8 @@ const Home = () => {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
-            background: '#111827',
-            color: '#D6F854',
+            background: 'var(--text-main)',
+            color: 'var(--primary)',
             padding: '6px 16px',
             borderRadius: '100px',
             fontSize: '13px',
@@ -118,7 +118,7 @@ const Home = () => {
           style={{
             fontSize: '48px',
             fontWeight: '900',
-            color: '#111827',
+            color: 'var(--text-main)',
             marginBottom: '16px',
             lineHeight: '1.1',
             letterSpacing: '-0.02em',
@@ -127,8 +127,8 @@ const Home = () => {
           Анімація інтерфейсів <br />
           <span
             style={{
-              background: '#D6F854',
-              color: '#111827',
+              background: 'var(--primary)',
+              color: 'var(--text-main)',
               padding: '2px 12px',
               borderRadius: '10px',
               display: 'inline-block',
@@ -142,7 +142,7 @@ const Home = () => {
         <p
           style={{
             fontSize: '16px',
-            color: '#6B7280',
+            color: 'var(--text-muted)',
             marginBottom: '40px',
             maxWidth: '600px',
             lineHeight: '1.5',
@@ -168,7 +168,7 @@ const Home = () => {
             to="/generator"
             style={{
               gridColumn: 'span 5',
-              background: '#111827',
+              background: 'var(--text-main)',
               padding: '24px',
               borderRadius: '24px',
               textDecoration: 'none',
@@ -198,8 +198,8 @@ const Home = () => {
                   width: '44px',
                   height: '44px',
                   borderRadius: '12px',
-                  background: '#1F2937',
-                  color: '#D6F854',
+                  background: 'var(--border-strong)',
+                  color: 'var(--primary)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -214,7 +214,7 @@ const Home = () => {
                 style={{
                   fontSize: '20px',
                   fontWeight: '800',
-                  color: '#ffffff',
+                  color: 'var(--surface)',
                   marginBottom: '6px',
                   letterSpacing: '-0.01em',
                 }}
@@ -224,7 +224,7 @@ const Home = () => {
               <p
                 style={{
                   fontSize: '13px',
-                  color: '#9CA3AF',
+                  color: 'var(--text-soft)',
                   lineHeight: '1.4',
                   margin: 0,
                 }}
@@ -240,8 +240,8 @@ const Home = () => {
             to="/collections"
             style={{
               gridColumn: 'span 4',
-              background: '#ffffff',
-              border: '1px solid #E5E7EB',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
               padding: '24px',
               borderRadius: '24px',
               textDecoration: 'none',
@@ -274,8 +274,8 @@ const Home = () => {
                   width: '44px',
                   height: '44px',
                   borderRadius: '12px',
-                  background: '#F3F4F6',
-                  color: '#111827',
+                  background: 'var(--surface-subtle)',
+                  color: 'var(--text-main)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -283,14 +283,14 @@ const Home = () => {
               >
                 <LayoutTemplate size={22} strokeWidth={2} />
               </div>
-              <ArrowUpRight size={22} color="#D1D5DB" />
+              <ArrowUpRight size={22} color="var(--control-border)" />
             </div>
             <div>
               <h3
                 style={{
                   fontSize: '20px',
                   fontWeight: '800',
-                  color: '#111827',
+                  color: 'var(--text-main)',
                   marginBottom: '6px',
                   letterSpacing: '-0.01em',
                 }}
@@ -300,7 +300,7 @@ const Home = () => {
               <p
                 style={{
                   fontSize: '13px',
-                  color: '#6B7280',
+                  color: 'var(--text-muted)',
                   lineHeight: '1.4',
                   margin: 0,
                 }}
@@ -316,7 +316,7 @@ const Home = () => {
             to="/library"
             style={{
               gridColumn: 'span 3',
-              background: '#D6F854',
+              background: 'var(--primary)',
               padding: '24px',
               borderRadius: '24px',
               textDecoration: 'none',
@@ -346,8 +346,8 @@ const Home = () => {
                   width: '44px',
                   height: '44px',
                   borderRadius: '12px',
-                  background: '#111827',
-                  color: '#D6F854',
+                  background: 'var(--text-main)',
+                  color: 'var(--primary)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -355,14 +355,14 @@ const Home = () => {
               >
                 <Library size={22} strokeWidth={2} />
               </div>
-              <ArrowUpRight size={22} color="#111827" opacity={0.3} />
+              <ArrowUpRight size={22} color="var(--text-main)" opacity={0.3} />
             </div>
             <div>
               <h3
                 style={{
                   fontSize: '20px',
                   fontWeight: '800',
-                  color: '#111827',
+                  color: 'var(--text-main)',
                   marginBottom: '6px',
                   letterSpacing: '-0.01em',
                 }}
@@ -372,7 +372,7 @@ const Home = () => {
               <p
                 style={{
                   fontSize: '13px',
-                  color: '#374151',
+                  color: 'var(--button-secondary-text)',
                   lineHeight: '1.4',
                   margin: 0,
                   fontWeight: '500',
@@ -407,12 +407,12 @@ const Home = () => {
           {marqueeList.map((el, index) => {
             let bg =
               el.type === 'accent'
-                ? '#D6F854'
+                ? 'var(--primary)'
                 : el.type === 'dark'
-                  ? '#1F2937'
-                  : '#ffffff';
-            let color = el.type === 'dark' ? '#ffffff' : '#111827';
-            let border = el.type === 'dark' ? '1px solid #374151' : 'none';
+                  ? 'var(--border-strong)'
+                  : 'var(--surface)';
+            let color = el.type === 'dark' ? 'var(--surface)' : 'var(--text-main)';
+            let border = el.type === 'dark' ? '1px solid var(--button-secondary-text)' : 'none';
 
             return (
               <div

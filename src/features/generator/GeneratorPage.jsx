@@ -73,6 +73,8 @@ const getInitialState = () => {
 const GeneratorPage = () => {
   const [params, setParams] = useState(getInitialState);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activePreviewState, setActivePreviewState] = useState('load');
+  const [activeMotionState, setActiveMotionState] = useState('load');
 
   // 1. ОНОВЛЕННЯ ТИПУ ЕЛЕМЕНТА (Зберігаємо поточні анімації, але повністю міняємо об'єкт)
   const handleTypeChange = (newType) => {
@@ -119,6 +121,19 @@ const GeneratorPage = () => {
 
   const handleReplay = () => setRefreshKey((prev) => prev + 1);
 
+  const handleMotionStateChange = (state) => {
+    setActiveMotionState(state);
+    setActivePreviewState(state);
+  };
+
+  const handlePreviewStateChange = (state) => {
+    setActivePreviewState(state);
+
+    if (state !== 'static') {
+      setActiveMotionState(state);
+    }
+  };
+
   // CSS генератор тимчасово може видавати помилки, поки ми його не оновимо, це ок
   const fullCss = useMemo(() => generateFullCSS(params), [params]);
 
@@ -130,7 +145,8 @@ const GeneratorPage = () => {
   }, [params]);
 
   useEffect(() => {
-    handleReplay();
+    const timer = window.setTimeout(handleReplay, 0);
+    return () => window.clearTimeout(timer);
   }, [params.animations?.load?.presetId]);
 
   return (
@@ -138,6 +154,8 @@ const GeneratorPage = () => {
       <div className="column settings-panel">
         <ControlsPanel
           params={params}
+          activeMotionState={activeMotionState}
+          onActiveMotionStateChange={handleMotionStateChange}
           onTypeChange={handleTypeChange}
           onStyleChange={handleStyleChange}
           onSpecificSettingChange={handleSpecificSettingChange}
@@ -147,7 +165,12 @@ const GeneratorPage = () => {
         />
       </div>
       <div className="column preview-panel">
-        <PreviewArea params={params} refreshKey={refreshKey} />
+        <PreviewArea
+          params={params}
+          refreshKey={refreshKey}
+          activeState={activePreviewState}
+          onActiveStateChange={handlePreviewStateChange}
+        />
       </div>
       <div className="column code-panel">
         <CodeOutput params={params} code={fullCss} />

@@ -149,10 +149,76 @@ export const generateAnimationCSS = (
     return { keyframes: '', animationStr: 'none', transitionStyles: null };
   }
 
+  const PRESET_ALIASES = {
+    fadeIn: 'fade',
+    popIn: 'scale',
+    slideIn: 'slide',
+    slideUp: 'slide',
+    slideDown: 'slide',
+    slideLeft: 'slide',
+    slideRight: 'slide',
+    scaleIn: 'scale',
+    scaleUp: 'scale',
+    scaleDown: 'scale',
+    rotateIn: 'rotate',
+    rotateSlightly: 'rotate',
+    rotateTap: 'rotate',
+    blurReveal: 'blurReveal',
+    bounceIn: 'squashStretch',
+    lift: 'magneticHover',
+    shadowLift: 'magneticHover',
+    shadowIncrease: 'glowHover',
+    backgroundChange: 'hoverBrightness',
+    backgroundShift: 'hoverBrightness',
+    colorTransition: 'hoverBrightness',
+    borderAnimation: 'borderDraw',
+    borderGlow: 'glowHover',
+    borderHighlight: 'glowHover',
+    glowAppear: 'glowHover',
+    glow: 'glowHover',
+    opacityChange: 'fade',
+    tilt: 'tiltHover',
+    pressDown: 'pressEffect',
+    press: 'pressEffect',
+    shake: 'errorShake',
+    pulse: 'radioPulse',
+    flash: 'fade',
+    elasticBounce: 'elasticToggle',
+    checkDraw: 'smoothCheck',
+    dotExpand: 'radioPulse',
+    underlineExpand: 'borderSlide',
+    underlineAnimate: 'borderSlide',
+    autoExpand: 'expandCollapse',
+    expandWidth: 'scale',
+    expandHeight: 'expandCollapse',
+    textShift: 'slide',
+    iconMove: 'slide',
+    arrowMove: 'slide',
+    gradientMotion: 'hoverBrightness',
+    brightnessChange: 'hoverBrightness',
+    zoom: 'parallaxHover',
+    expand: 'scale',
+    flip: 'rotate',
+  };
+
+  const resolvedPresetId = PRESET_ALIASES[presetId] || presetId;
+  const aliasConfig = { ...(rawConfig || {}) };
+
+  if (['slideUp', 'lift', 'shadowLift'].includes(presetId)) aliasConfig.direction = 'top';
+  if (presetId === 'slideDown') aliasConfig.direction = 'bottom';
+  if (presetId === 'slideLeft') aliasConfig.direction = 'left';
+  if (presetId === 'slideRight') aliasConfig.direction = 'right';
+  if (['rotateIn', 'rotateSlightly', 'rotateTap', 'flip'].includes(presetId)) {
+    aliasConfig.rotationAngle = presetId === 'flip' ? 180 : aliasConfig.rotationAngle || 10;
+  }
+  if (presetId === 'scaleDown') aliasConfig.intensity = Math.max(aliasConfig.intensity || 100, 140);
+
+  presetId = resolvedPresetId;
+
   const config =
     typeof applyAccessibilityFilters === 'function'
-      ? applyAccessibilityFilters(rawConfig)
-      : rawConfig;
+      ? applyAccessibilityFilters(aliasConfig)
+      : aliasConfig;
 
   // 1. Physics Layer
   if (config.usePhysics && (presetId === 'scale' || presetId === 'slide')) {
@@ -364,6 +430,13 @@ export const generateAnimationCSS = (
 
     case 'rotate':
       if (triggerState === 'hover') motionObj.end.rotate = rotationAngle || 15;
+      else if (triggerState === 'click') motionObj.mid = { rotate: rotationAngle || 12 };
+      else {
+        motionObj.start.opacity = 0;
+        motionObj.start.rotate = -(rotationAngle || 90);
+        motionObj.end.opacity = 1;
+        motionObj.end.rotate = 0;
+      }
       break;
 
     case 'hoverBlur':

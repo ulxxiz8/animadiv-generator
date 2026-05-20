@@ -6,10 +6,7 @@ export const generateImageCSS = (presetId, config, uniqueId) => {
     duration = 500,
     delay = 0,
     easing = 'ease',
-    blurAmount = 10,
     zoomIntensity = 50,
-    tiltAngle = 15,
-    parallaxDirection = 'diagonal',
     floatingAmount = 10,
   } = config;
 

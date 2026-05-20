@@ -29,7 +29,7 @@ const About = () => {
           style={{
             fontSize: '48px',
             fontWeight: '900',
-            color: '#111827',
+            color: 'var(--text-main)',
             letterSpacing: '-0.02em',
             lineHeight: '1.1',
             marginBottom: '16px',
@@ -38,7 +38,7 @@ const About = () => {
           Ми створюємо{' '}
           <span
             style={{
-              background: '#D6F854',
+              background: 'var(--primary)',
               padding: '2px 12px',
               borderRadius: '10px',
               display: 'inline-block',
@@ -51,7 +51,7 @@ const About = () => {
         <p
           style={{
             fontSize: '16px',
-            color: '#6B7280',
+            color: 'var(--text-muted)',
             maxWidth: '600px',
             margin: '0 auto',
             lineHeight: '1.5',
@@ -76,10 +76,10 @@ const About = () => {
         <section
           style={{
             gridColumn: 'span 8',
-            background: '#111827',
+            background: 'var(--text-main)',
             padding: '32px 40px',
             borderRadius: '24px',
-            color: '#ffffff',
+            color: 'var(--surface)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
@@ -94,7 +94,7 @@ const About = () => {
               top: '-20px',
               right: '-20px',
               opacity: 0.05,
-              color: '#D6F854',
+              color: 'var(--primary)',
             }}
           >
             <Target size={200} />
@@ -105,7 +105,7 @@ const About = () => {
               alignItems: 'center',
               gap: '10px',
               marginBottom: '16px',
-              color: '#D6F854',
+              color: 'var(--primary)',
             }}
           >
             <Target size={20} />
@@ -135,7 +135,7 @@ const About = () => {
           <p
             style={{
               fontSize: '14px',
-              color: '#9CA3AF',
+              color: 'var(--text-soft)',
               lineHeight: '1.5',
               maxWidth: '90%',
               margin: 0,
@@ -151,10 +151,10 @@ const About = () => {
         <section
           style={{
             gridColumn: 'span 4',
-            background: '#ffffff',
+            background: 'var(--surface)',
             padding: '32px',
             borderRadius: '24px',
-            border: '1px solid #E5E7EB',
+            border: '1px solid var(--border)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -174,8 +174,8 @@ const About = () => {
               width: '64px',
               height: '64px',
               borderRadius: '16px',
-              background: '#F3F4F6',
-              color: '#111827',
+              background: 'var(--surface-subtle)',
+              color: 'var(--text-main)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -188,7 +188,7 @@ const About = () => {
             style={{
               fontSize: '18px',
               fontWeight: '800',
-              color: '#111827',
+              color: 'var(--text-main)',
               margin: '0 0 6px 0',
               letterSpacing: '-0.01em',
             }}
@@ -198,7 +198,7 @@ const About = () => {
           <p
             style={{
               fontSize: '13px',
-              color: '#6B7280',
+              color: 'var(--text-muted)',
               fontWeight: '500',
               margin: '0 0 20px 0',
             }}
@@ -215,20 +215,20 @@ const About = () => {
                 width: '36px',
                 height: '36px',
                 borderRadius: '50%',
-                background: '#F3F4F6',
-                color: '#374151',
+                background: 'var(--surface-subtle)',
+                color: 'var(--button-secondary-text)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 transition: 'all 0.2s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#111827';
-                e.currentTarget.style.color = '#fff';
+                e.currentTarget.style.background = 'var(--text-main)';
+                e.currentTarget.style.color = 'var(--surface)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#F3F4F6';
-                e.currentTarget.style.color = '#374151';
+                e.currentTarget.style.background = 'var(--surface-subtle)';
+                e.currentTarget.style.color = 'var(--button-secondary-text)';
               }}
             >
               <Globe size={16} />
@@ -241,8 +241,8 @@ const About = () => {
                 width: '36px',
                 height: '36px',
                 borderRadius: '50%',
-                background: '#F3F4F6',
-                color: '#374151',
+                background: 'var(--surface-subtle)',
+                color: 'var(--button-secondary-text)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -250,11 +250,11 @@ const About = () => {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = '#0A66C2';
-                e.currentTarget.style.color = '#fff';
+                e.currentTarget.style.color = 'var(--surface)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#F3F4F6';
-                e.currentTarget.style.color = '#374151';
+                e.currentTarget.style.background = 'var(--surface-subtle)';
+                e.currentTarget.style.color = 'var(--button-secondary-text)';
               }}
             >
               <Briefcase size={16} />
@@ -273,7 +273,7 @@ const About = () => {
         >
           <div
             style={{
-              background: '#D6F854',
+              background: 'var(--primary)',
               padding: '24px',
               borderRadius: '24px',
               border: '1px solid #C4E84A',
@@ -287,8 +287,8 @@ const About = () => {
                 width: '40px',
                 height: '40px',
                 borderRadius: '10px',
-                background: '#111827',
-                color: '#D6F854',
+                background: 'var(--text-main)',
+                color: 'var(--primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -301,7 +301,7 @@ const About = () => {
               style={{
                 fontSize: '16px',
                 fontWeight: '800',
-                color: '#111827',
+                color: 'var(--text-main)',
                 marginBottom: '8px',
               }}
             >
@@ -310,7 +310,7 @@ const About = () => {
             <p
               style={{
                 fontSize: '13px',
-                color: '#374151',
+                color: 'var(--button-secondary-text)',
                 lineHeight: '1.5',
                 fontWeight: '500',
                 margin: 0,
@@ -323,10 +323,10 @@ const About = () => {
 
           <div
             style={{
-              background: '#ffffff',
+              background: 'var(--surface)',
               padding: '24px',
               borderRadius: '24px',
-              border: '1px solid #E5E7EB',
+              border: '1px solid var(--border)',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',
@@ -337,8 +337,8 @@ const About = () => {
                 width: '40px',
                 height: '40px',
                 borderRadius: '10px',
-                background: '#F3F4F6',
-                color: '#111827',
+                background: 'var(--surface-subtle)',
+                color: 'var(--text-main)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -351,7 +351,7 @@ const About = () => {
               style={{
                 fontSize: '16px',
                 fontWeight: '800',
-                color: '#111827',
+                color: 'var(--text-main)',
                 marginBottom: '8px',
               }}
             >
@@ -360,7 +360,7 @@ const About = () => {
             <p
               style={{
                 fontSize: '13px',
-                color: '#6B7280',
+                color: 'var(--text-muted)',
                 lineHeight: '1.5',
                 margin: 0,
               }}
@@ -372,10 +372,10 @@ const About = () => {
 
           <div
             style={{
-              background: '#111827',
+              background: 'var(--text-main)',
               padding: '24px',
               borderRadius: '24px',
-              border: '1px solid #1F2937',
+              border: '1px solid var(--border-strong)',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',
@@ -386,8 +386,8 @@ const About = () => {
                 width: '40px',
                 height: '40px',
                 borderRadius: '10px',
-                background: '#1F2937',
-                color: '#ffffff',
+                background: 'var(--border-strong)',
+                color: 'var(--surface)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -400,7 +400,7 @@ const About = () => {
               style={{
                 fontSize: '16px',
                 fontWeight: '700',
-                color: '#ffffff',
+                color: 'var(--surface)',
                 marginBottom: '8px',
               }}
             >
@@ -409,7 +409,7 @@ const About = () => {
             <p
               style={{
                 fontSize: '13px',
-                color: '#9CA3AF',
+                color: 'var(--text-soft)',
                 lineHeight: '1.5',
                 margin: 0,
               }}

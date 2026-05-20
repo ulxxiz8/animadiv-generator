@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { generateFullCSS } from '../utils/generateCss';
-import { generateHtml } from '../utils/generateHtml';
+import DeveloperHandoffModal from './DeveloperHandoffModal';
 
 const PARAMS_KEY = 'animadiv-params';
 const SAVED_KEY = 'animadiv-saved-items';
@@ -60,26 +60,6 @@ const getShadowStyle = (settings = {}) => {
   )}`;
 };
 
-const copyText = async (text) => {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
-
-  const textarea = document.createElement('textarea');
-  textarea.value = text;
-  textarea.setAttribute('readonly', '');
-  textarea.style.position = 'fixed';
-  textarea.style.left = '-9999px';
-  document.body.appendChild(textarea);
-  textarea.select();
-  document.execCommand('copy');
-  document.body.removeChild(textarea);
-};
-
-const getCopyCode = (item) =>
-  `${generateHtml(item)}\n\n<style>\n${generateFullCSS(item)}\n</style>`;
-
 const getPreviewBackground = (item) => item.preview?.background || '#F9FAFB';
 const getAccent = (item) => item.preview?.accent || '#D6F854';
 
@@ -100,6 +80,8 @@ const getDisplayType = (item) => {
   if (item.type === 'text') return 'Typography';
   if (item.type === 'input') return 'Input';
   if (item.type === 'textarea') return 'Textarea';
+  if (item.type === 'checkbox') return 'Checkbox';
+  if (item.type === 'radio') return 'Radio';
   if (item.type === 'image') return 'Image';
   if (item.type === 'link') return 'Link';
   if (item.type === 'block') return 'Block';
@@ -318,6 +300,79 @@ const PreviewElement = ({ item, uid }) => {
     );
   }
 
+  if (item.type === 'checkbox' || item.type === 'radio') {
+    const size = settings.size || 24;
+    const checked = Boolean(settings.checked);
+    const accent = settings.color || getAccent(item);
+    const isRadio = item.type === 'radio';
+
+    return (
+      <label
+        id={uid}
+        style={{
+          ...baseStyle,
+          width: 'auto',
+          height: 'auto',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '12px 14px',
+          borderRadius: 16,
+          background: item.preview?.background === '#FFFFFF' ? '#F9FAFB' : 'rgba(255,255,255,.08)',
+          border: `1px solid ${colorToRgba(accent, 0.3)}`,
+          color: item.styles?.color || '#111827',
+        }}
+      >
+        <span
+          style={{
+            width: size,
+            height: size,
+            borderRadius: isRadio ? '50%' : 8,
+            border: `2px solid ${accent}`,
+            background: checked && !isRadio ? accent : '#FFFFFF',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            boxShadow: checked ? `0 0 0 5px ${colorToRgba(accent, 0.16)}` : 'none',
+          }}
+        >
+          {checked && isRadio && (
+            <span
+              style={{
+                width: size * 0.48,
+                height: size * 0.48,
+                borderRadius: '50%',
+                background: accent,
+              }}
+            />
+          )}
+          {checked && !isRadio && (
+            <span
+              style={{
+                width: size * 0.48,
+                height: size * 0.28,
+                borderLeft: '3px solid #111827',
+                borderBottom: '3px solid #111827',
+                transform: 'rotate(-45deg) translateY(-1px)',
+              }}
+            />
+          )}
+        </span>
+        <span
+          style={{
+            fontSize: px(settings.fontSize || 14),
+            fontWeight: settings.fontWeight || 850,
+            fontFamily: settings.fontFamily || 'Inter, system-ui, sans-serif',
+            color: item.styles?.color || '#111827',
+          }}
+        >
+          {settings.label}
+        </span>
+      </label>
+    );
+  }
+
   if (item.type === 'image') {
     return (
       <div
@@ -391,41 +446,23 @@ const PreviewElement = ({ item, uid }) => {
           alignItems: settings.alignX || 'center',
           justifyContent: settings.alignY || 'center',
           gap: px(settings.gap || 10),
-          overflow: 'hidden',
+          overflow: settings.overflow || 'visible',
         }}
       >
-        <span
+        <div
           style={{
-            color: getAccent(item),
-            fontSize: 10,
-            fontWeight: 900,
-            letterSpacing: 1.3,
-            textTransform: 'uppercase',
-          }}
-        >
-          {item.motionStyle}
-        </span>
-        <span
-          style={{
+            opacity: 0.42,
+            border: '1px dashed currentColor',
+            padding: '12px 14px',
+            borderRadius: 8,
             color: item.styles?.color || '#111827',
-            fontSize: 22,
-            fontWeight: 900,
-            lineHeight: 1.1,
-            textAlign: 'center',
+            fontSize: 13,
+            fontWeight: 850,
+            lineHeight: 1.2,
           }}
         >
-          {settings.previewTitle || item.name}
-        </span>
-        <span
-          style={{
-            color: item.styles?.color || '#4B5563',
-            fontSize: 12,
-            fontWeight: 700,
-            opacity: 0.68,
-          }}
-        >
-          {settings.previewMeta || 'Editable block'}
-        </span>
+          Inner Content
+        </div>
       </div>
     );
   }
@@ -494,17 +531,11 @@ const Card = ({ item, mode = 'library', onSavedChange }) => {
   );
   const [isHovered, setIsHovered] = useState(false);
   const [replayKey, setReplayKey] = useState(0);
-  const [copied, setCopied] = useState(false);
+  const [isHandoffOpen, setIsHandoffOpen] = useState(false);
 
   const useInGenerator = () => {
     localStorage.setItem(PARAMS_KEY, JSON.stringify(item));
     navigate('/generator');
-  };
-
-  const handleCopyCode = async () => {
-    await copyText(getCopyCode(item));
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1400);
   };
 
   const toggleSave = () => {
@@ -521,26 +552,27 @@ const Card = ({ item, mode = 'library', onSavedChange }) => {
   };
 
   return (
-    <article
-      style={{
-        background: '#fff',
-        borderRadius: 24,
-        border: isHovered ? '1px solid #D1D5DB' : '1px solid #E5E7EB',
-        overflow: 'hidden',
-        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
-        boxShadow: isHovered
-          ? '0 16px 34px -14px rgba(17,24,39,0.2)'
-          : '0 1px 2px rgba(0,0,0,0.03)',
-        transition:
-          'transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease',
-      }}
-      onMouseEnter={() => {
-        setIsHovered(true);
-        setReplayKey((key) => key + 1);
-      }}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <Preview item={item} replayKey={replayKey} isHovered={isHovered} />
+    <>
+      <article
+        style={{
+          background: '#fff',
+          borderRadius: 24,
+          border: isHovered ? '1px solid #D1D5DB' : '1px solid #E5E7EB',
+          overflow: 'hidden',
+          transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
+          boxShadow: isHovered
+            ? '0 16px 34px -14px rgba(17,24,39,0.2)'
+            : '0 1px 2px rgba(0,0,0,0.03)',
+          transition:
+            'transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease',
+        }}
+        onMouseEnter={() => {
+          setIsHovered(true);
+          setReplayKey((key) => key + 1);
+        }}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <Preview item={item} replayKey={replayKey} isHovered={isHovered} />
 
       <div style={{ padding: 18 }}>
         <h3
@@ -612,13 +644,22 @@ const Card = ({ item, mode = 'library', onSavedChange }) => {
             )}
           </ActionButton>
 
-          <ActionButton onClick={handleCopyCode} active={copied}>
-            {copied ? <CheckCircle size={14} /> : <Code2 size={14} />}
+          <ActionButton onClick={() => setIsHandoffOpen(true)}>
+            <Code2 size={14} />
             Code
           </ActionButton>
         </div>
       </div>
-    </article>
+      </article>
+
+      <DeveloperHandoffModal
+        open={isHandoffOpen}
+        onClose={() => setIsHandoffOpen(false)}
+        params={item}
+        css={generateFullCSS(item)}
+        title={item.name}
+      />
+    </>
   );
 };
 

@@ -177,6 +177,9 @@ const getMotion = (params, state) => {
 };
 
 const getTag = (params) => {
+  if (params.type === 'button' && params.specificSettings?.actionType === 'link') {
+    return 'a';
+  }
   if (params.type === 'text') return params.specificSettings?.tag || 'p';
   if (params.type === 'checkbox' || params.type === 'radio') return 'label';
   return params.tag || 'div';
@@ -185,19 +188,32 @@ const getTag = (params) => {
 const getBaseElementStyles = (params, state) => {
   const s = params.specificSettings || {};
   const styles = params.styles || {};
+  const background =
+    s.backgroundMode === 'gradient'
+      ? s.backgroundGradient
+      : s.backgroundMode === 'image' && s.backgroundImage
+        ? `url("${s.backgroundImage}")`
+        : styles.backgroundColor;
 
   const base = {
     ...styles,
+    background,
+    backgroundSize: s.backgroundMode === 'image' ? 'cover' : undefined,
+    backgroundPosition: s.backgroundMode === 'image' ? 'center' : undefined,
     width: px(styles.width),
     height: px(styles.height),
     minHeight: px(styles.minHeight),
     padding: px(styles.padding),
+    margin: px(styles.margin),
     borderRadius: px(styles.borderRadius),
     boxSizing: 'border-box',
-    position: 'relative',
+    position: styles.position || 'relative',
     animation: 'none',
     transition: 'none',
-    cursor: state === 'static' || state === 'load' ? 'default' : 'pointer',
+    cursor:
+      state === 'static' || state === 'load'
+        ? 'default'
+        : s.cursor || 'pointer',
   };
 
   if (styles.borderWidth > 0) {
@@ -208,6 +224,10 @@ const getBaseElementStyles = (params, state) => {
 
   if (styles.opacity !== undefined) {
     base.opacity = styles.opacity;
+  }
+
+  if (s.validationState === 'error' && s.errorBorderColor) {
+    base.borderColor = s.errorBorderColor;
   }
 
   const shadow = getShadowStyle(s);
@@ -245,6 +265,7 @@ const getBaseElementStyles = (params, state) => {
     base.overflow = 'hidden';
     base.textOverflow = 'ellipsis';
     base.outline = 'none';
+    if (s.disabled) base.opacity = 0.5;
   }
 
   if (params.type === 'textarea') {
@@ -262,6 +283,7 @@ const getBaseElementStyles = (params, state) => {
     base.padding = styles.padding || '12px 16px';
     base.resize = s.resize || 'vertical';
     base.outline = 'none';
+    if (s.disabled) base.opacity = 0.5;
 
     if (!hasManualHeight) {
       delete base.height;
@@ -305,6 +327,7 @@ const getBaseElementStyles = (params, state) => {
     base.border = 'none';
     base.width = 'auto';
     base.height = 'auto';
+    if (s.disabled) base.opacity = 0.5;
   }
 
   return base;
@@ -437,10 +460,14 @@ const PreviewElement = ({ params, state, replayKey }) => {
   );
 
   useEffect(() => {
-    setHovered(false);
-    setClicked(false);
-    setClickKey(0);
-    setPreviewChecked(Boolean(params.specificSettings?.checked));
+    const timer = window.setTimeout(() => {
+      setHovered(false);
+      setClicked(false);
+      setClickKey(0);
+      setPreviewChecked(Boolean(params.specificSettings?.checked));
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [state, motion.presetId, params.type, params.specificSettings?.checked]);
 
   const Tag = getTag(params);
@@ -580,22 +607,35 @@ const PreviewElement = ({ params, state, replayKey }) => {
     elementProps.type = s.inputType || 'text';
     elementProps.placeholder = s.placeholder || '';
     elementProps.readOnly = true;
+    elementProps.disabled = Boolean(s.disabled);
+    elementProps['aria-invalid'] = s.validationState === 'error';
   }
 
   if (params.type === 'textarea') {
     elementProps.placeholder = s.placeholder || '';
     elementProps.rows = s.rows || 4;
     elementProps.readOnly = true;
+    elementProps.disabled = Boolean(s.disabled);
+    elementProps['aria-invalid'] = s.validationState === 'error';
   }
 
   if (params.type === 'image') {
     elementProps.src = s.src;
     elementProps.alt = s.alt || 'image';
+    elementProps.loading = s.loading || 'lazy';
     elementProps.draggable = false;
   }
 
   if (params.type === 'link') {
     elementProps.href = s.href || '#';
+    elementProps.target = s.target || '_self';
+    elementProps.onClick = (e) => e.preventDefault();
+  }
+
+  if (params.type === 'button' && Tag === 'a') {
+    elementProps.href = s.href || '#';
+    elementProps.target = s.target || '_self';
+    elementProps.role = 'button';
     elementProps.onClick = (e) => e.preventDefault();
   }
 
@@ -620,24 +660,31 @@ const PreviewElement = ({ params, state, replayKey }) => {
         }
       />
 
-      {isVoidElement ? (
-        <Tag {...elementProps} />
-      ) : (
-        <Tag {...elementProps}>
-          {renderContent(params, textPreset, previewChecked)}
-        </Tag>
+      {React.createElement(
+        Tag,
+        elementProps,
+        isVoidElement
+          ? undefined
+          : renderContent(params, textPreset, previewChecked)
       )}
     </div>
   );
 };
 
-const PreviewArea = ({ params }) => {
-  const [activeState, setActiveState] = useState('load');
+const PreviewArea = ({
+  params,
+  activeState: controlledActiveState,
+  onActiveStateChange,
+}) => {
+  const [localActiveState, setLocalActiveState] = useState('load');
+  const activeState = controlledActiveState || localActiveState;
+  const setActiveState = onActiveStateChange || setLocalActiveState;
   const [isGridView, setIsGridView] = useState(false);
   const [localReplayKey, setLocalReplayKey] = useState(0);
+  const type = params?.type;
 
   const states = useMemo(() => {
-    if (!params?.type) return [{ id: 'static', label: 'Static' }];
+    if (!type) return [{ id: 'static', label: 'Static' }];
 
     return [
       { id: 'static', label: 'Static' },
@@ -646,15 +693,19 @@ const PreviewArea = ({ params }) => {
       { id: 'click', label: 'Click' },
     ].filter(
       (item) =>
-        item.id === 'static' || isStateAllowedForType(item.id, params.type)
+        item.id === 'static' || isStateAllowedForType(item.id, type)
     );
-  }, [params?.type]);
+  }, [type]);
 
   useEffect(() => {
     if (!states.some((item) => item.id === activeState)) {
-      setActiveState(states[0]?.id || 'static');
+      const timer = window.setTimeout(() => {
+        setActiveState(states[0]?.id || 'static');
+      }, 0);
+
+      return () => window.clearTimeout(timer);
     }
-  }, [activeState, states]);
+  }, [activeState, setActiveState, states]);
 
   if (!params || !params.styles) {
     return (
@@ -662,7 +713,7 @@ const PreviewArea = ({ params }) => {
         style={{
           width: '100%',
           height: '100%',
-          background: '#F9FAFB',
+          background: 'var(--canvas-bg)',
           borderRadius: 24,
         }}
       />
@@ -682,7 +733,7 @@ const PreviewArea = ({ params }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          border: isGridView ? '0.5px dashed #D1D5DB' : 'none',
+          border: isGridView ? '0.5px dashed var(--control-border)' : 'none',
         }}
       >
         {isGridView && (
@@ -691,12 +742,12 @@ const PreviewArea = ({ params }) => {
               position: 'absolute',
               top: 12,
               left: 12,
-              background: '#fff',
+              background: 'var(--surface)',
               padding: '4px 8px',
               borderRadius: 6,
               fontSize: 10,
               fontWeight: 900,
-              border: '1px solid #E5E7EB',
+              border: '1px solid var(--border)',
               zIndex: 5,
             }}
           >
@@ -711,8 +762,8 @@ const PreviewArea = ({ params }) => {
               position: 'absolute',
               top: 12,
               right: 12,
-              background: '#111827',
-              color: '#D6F854',
+              background: 'var(--button-bg)',
+              color: 'var(--button-text)',
               border: 'none',
               borderRadius: 8,
               padding: '8px 12px',
@@ -758,10 +809,10 @@ const PreviewArea = ({ params }) => {
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 20,
-          background: '#ffffff',
+          background: 'var(--surface)',
           padding: '12px 20px',
           borderRadius: 16,
-          border: '1px solid #E5E7EB',
+          border: '1px solid var(--border)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -769,14 +820,14 @@ const PreviewArea = ({ params }) => {
             style={{
               fontSize: 14,
               fontWeight: 800,
-              color: '#111827',
+              color: 'var(--text-main)',
               margin: 0,
               display: 'flex',
               alignItems: 'center',
               gap: 8,
             }}
           >
-            <LayoutTemplate size={18} color="#111827" /> Canvas
+            <LayoutTemplate size={18} color="currentColor" /> Canvas
           </h4>
 
           {!isGridView && (
@@ -784,7 +835,7 @@ const PreviewArea = ({ params }) => {
               style={{
                 display: 'flex',
                 gap: 4,
-                borderLeft: '1px solid #E5E7EB',
+                borderLeft: '1px solid var(--border)',
                 paddingLeft: 16,
               }}
             >
@@ -797,8 +848,13 @@ const PreviewArea = ({ params }) => {
                     borderRadius: 8,
                     border: 'none',
                     background:
-                      activeState === state.id ? '#111827' : 'transparent',
-                    color: activeState === state.id ? '#D6F854' : '#6B7280',
+                      activeState === state.id
+                        ? 'var(--button-bg)'
+                        : 'transparent',
+                    color:
+                      activeState === state.id
+                        ? 'var(--button-text)'
+                        : 'var(--text-muted)',
                     fontSize: 12,
                     fontWeight: 700,
                     cursor: 'pointer',
@@ -814,7 +870,7 @@ const PreviewArea = ({ params }) => {
         <div
           style={{
             display: 'flex',
-            background: '#F3F4F6',
+            background: 'var(--surface-subtle)',
             padding: 4,
             borderRadius: 10,
           }}
@@ -823,8 +879,8 @@ const PreviewArea = ({ params }) => {
             onClick={() => setIsGridView(false)}
             style={{
               padding: '6px 16px',
-              background: !isGridView ? '#111827' : 'transparent',
-              color: !isGridView ? '#D6F854' : '#6B7280',
+              background: !isGridView ? 'var(--button-bg)' : 'transparent',
+              color: !isGridView ? 'var(--button-text)' : 'var(--text-muted)',
               border: 'none',
               borderRadius: 8,
               fontSize: 12,
@@ -839,8 +895,8 @@ const PreviewArea = ({ params }) => {
             onClick={() => setIsGridView(true)}
             style={{
               padding: '6px 16px',
-              background: isGridView ? '#111827' : 'transparent',
-              color: isGridView ? '#D6F854' : '#6B7280',
+              background: isGridView ? 'var(--button-bg)' : 'transparent',
+              color: isGridView ? 'var(--button-text)' : 'var(--text-muted)',
               border: 'none',
               borderRadius: 8,
               fontSize: 12,
@@ -856,9 +912,9 @@ const PreviewArea = ({ params }) => {
       <div
         style={{
           flex: 1,
-          background: '#F9FAFB',
+          background: 'var(--canvas-bg)',
           borderRadius: 24,
-          border: '1px solid #E5E7EB',
+          border: '1px solid var(--border)',
           overflow: 'hidden',
           display: isGridView ? 'grid' : 'flex',
           gridTemplateColumns: isGridView ? '1fr 1fr' : 'none',

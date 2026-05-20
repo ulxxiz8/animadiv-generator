@@ -5,11 +5,123 @@ const animation = (overrides = {}) => ({
   ...overrides,
 });
 
-const animations = ({ load = {}, hover = {} } = {}) => ({
+const animations = ({ load = {}, hover = {}, click = {} } = {}) => ({
   load: animation(load),
   hover: animation({ presetId: 'none', ...hover }),
-  click: animation({ presetId: 'none' }),
+  click: animation({ presetId: 'none', ...click }),
 });
+
+const withInteractionDefaults = (item) => {
+  const styles = item.styles || {};
+  const settings = item.specificSettings || {};
+  const isGradient = Boolean(styles.background);
+
+  const byType = {
+    button: {
+      hover: { presetId: 'scaleUp', duration: 220, intensity: 42 },
+      click: { presetId: 'pressEffect', duration: 140, intensity: 80 },
+      settings: {
+        actionType: 'none',
+        href: '#',
+        target: '_self',
+        cursor: 'pointer',
+      },
+    },
+    input: {
+      hover: { presetId: 'focusGlow', duration: 220 },
+      click: { presetId: 'borderAnimation', duration: 220 },
+      settings: {
+        validationState: 'none',
+        errorBorderColor: '#111827',
+        disabled: false,
+      },
+    },
+    textarea: {
+      hover: { presetId: 'borderGlow', duration: 220, intensity: 52 },
+      click: { presetId: 'autoExpand', duration: 260 },
+      settings: {
+        validationState: 'none',
+        errorBorderColor: '#111827',
+        disabled: false,
+      },
+    },
+    text: {
+      hover: { presetId: 'colorTransition', duration: 220, intensity: 30 },
+      click: { presetId: 'pulse', duration: 180, intensity: 45 },
+      settings: {},
+    },
+    image: {
+      hover: { presetId: 'tilt', duration: 260, rotationAngle: 4, hoverDepth: 16 },
+      click: { presetId: 'expand', duration: 160, intensity: 42 },
+      settings: {
+        loading: 'lazy',
+      },
+    },
+    link: {
+      hover: { presetId: 'underlineDraw', duration: 240 },
+      click: { presetId: 'pressEffect', duration: 120, intensity: 50 },
+      settings: {
+        target: '_self',
+      },
+    },
+    block: {
+      hover: { presetId: 'lift', duration: 260, intensity: 48 },
+      click: { presetId: 'pressDown', duration: 140, intensity: 54 },
+      settings: {},
+    },
+    checkbox: {
+      hover: { presetId: 'borderHighlight', duration: 180, intensity: 40 },
+      click: { presetId: 'checkDraw', duration: 180 },
+      settings: {
+        disabled: false,
+      },
+    },
+    radio: {
+      hover: { presetId: 'borderHighlight', duration: 180, intensity: 40 },
+      click: { presetId: 'dotExpand', duration: 180 },
+      settings: {
+        disabled: false,
+      },
+    },
+  };
+
+  const defaults = byType[item.type] || { settings: {} };
+  const nextAnimations = {
+    load: animation(item.animations?.load),
+    hover: animation({
+      ...(defaults.hover || {}),
+      ...(item.animations?.hover?.presetId &&
+      item.animations.hover.presetId !== 'none'
+        ? item.animations.hover
+        : {}),
+    }),
+    click: animation({
+      ...(defaults.click || {}),
+      ...(item.animations?.click?.presetId &&
+      item.animations.click.presetId !== 'none'
+        ? item.animations.click
+        : {}),
+    }),
+  };
+
+  return {
+    ...item,
+    styles: {
+      margin: 0,
+      position: 'relative',
+      zIndex: 1,
+      ...styles,
+    },
+    specificSettings: {
+      backgroundMode: isGradient ? 'gradient' : 'color',
+      backgroundGradient: styles.background || '',
+      backgroundImage: '',
+      ...defaults.settings,
+      ...settings,
+    },
+    animations: nextAnimations,
+  };
+};
 
 const preview = (background, accent) => ({ background, accent });
 
@@ -322,8 +434,6 @@ const blockItem = ({
   motionStyle,
   intensity,
   tags,
-  title,
-  meta,
   background,
   backgroundColor,
   color,
@@ -365,9 +475,63 @@ const blockItem = ({
     alignY: 'center',
     gap: 10,
     overflow: 'visible',
-    previewTitle: title,
-    previewMeta: meta,
     ...shadow({ shadowEnabled: true, shadowBlur: 26, shadowOffsetY: 12 }),
+  },
+  animations: animations(motion),
+});
+
+const choiceItem = ({
+  id,
+  name,
+  type,
+  collection,
+  motionStyle,
+  intensity,
+  tags,
+  label,
+  checked,
+  color,
+  previewBackground,
+  previewAccent,
+  previewEffect,
+  motion,
+}) => ({
+  ...baseMeta({
+    id,
+    name,
+    category: 'Inputs',
+    collection,
+    motionStyle,
+    intensity,
+    tags,
+    previewEffect,
+    previewBackground,
+    previewAccent,
+  }),
+  type,
+  tag: 'input',
+  styles: {
+    width: 'auto',
+    height: 'auto',
+    backgroundColor: 'transparent',
+    color: '#111827',
+    borderRadius: type === 'radio' ? 50 : 8,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    opacity: 1,
+    padding: 0,
+  },
+  content: null,
+  specificSettings: {
+    checked,
+    label,
+    name: type === 'radio' ? 'libraryOptions' : undefined,
+    color,
+    checkColor: '#111827',
+    size: 26,
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: 850,
   },
   animations: animations(motion),
 });
@@ -381,7 +545,7 @@ const imgDesk =
 const imgStudio =
   'https://images.unsplash.com/photo-1497366811353-6870744d04b2?q=80&w=900&auto=format&fit=crop';
 
-export const libraryItems = [
+const rawLibraryItems = [
   buttonItem({
     id: 'button-neon-scale',
     name: 'Neon Scale Button',
@@ -720,13 +884,11 @@ export const libraryItems = [
 
   blockItem({
     id: 'block-glass-float',
-    name: 'Glass Floating Block',
+    name: 'Glass Surface Container',
     collection: 'Blocks',
     motionStyle: 'Float',
     intensity: 'Medium',
-    tags: ['block', 'glass', 'float'],
-    title: 'Floating card',
-    meta: 'Soft drift',
+    tags: ['block', 'glass', 'container'],
     backgroundColor: 'rgba(255,255,255,.74)',
     color: '#111827',
     borderColor: 'rgba(255,255,255,.84)',
@@ -737,13 +899,11 @@ export const libraryItems = [
   }),
   blockItem({
     id: 'block-neon-scale',
-    name: 'Neon Info Block',
+    name: 'Dark Gradient Container',
     collection: 'Blocks',
     motionStyle: 'Soft scale',
     intensity: 'Bold',
-    tags: ['block', 'neon', 'scale'],
-    title: 'Ship vivid motion',
-    meta: 'Editable block',
+    tags: ['block', 'gradient', 'container'],
     background: 'linear-gradient(135deg,#111827,#312e81)',
     backgroundColor: '#111827',
     color: '#ffffff',
@@ -754,13 +914,11 @@ export const libraryItems = [
   }),
   blockItem({
     id: 'block-warm-stat',
-    name: 'Warm Stat Block',
+    name: 'Warm Outline Container',
     collection: 'Blocks',
     motionStyle: 'Slide up',
     intensity: 'Medium',
-    tags: ['block', 'stats', 'warm'],
-    title: '+38%',
-    meta: 'This month',
+    tags: ['block', 'warm', 'container'],
     backgroundColor: '#fff7ed',
     color: '#431407',
     borderColor: '#fed7aa',
@@ -769,4 +927,82 @@ export const libraryItems = [
     previewEffect: 'slideUp',
     motion: { load: { presetId: 'slide', duration: 520, direction: 'bottom' } },
   }),
+  choiceItem({
+    id: 'checkbox-lime-consent',
+    name: 'Lime Consent Checkbox',
+    type: 'checkbox',
+    collection: 'Inputs',
+    motionStyle: 'Check draw',
+    intensity: 'Subtle',
+    tags: ['checkbox', 'form', 'active'],
+    label: 'I accept updates',
+    checked: true,
+    color: '#D6F854',
+    previewBackground: '#111827',
+    previewAccent: '#D6F854',
+    previewEffect: 'pulse',
+    motion: {
+      load: { presetId: 'scaleIn', duration: 320, intensity: 36 },
+      hover: { presetId: 'glow', duration: 220, intensity: 42 },
+    },
+  }),
+  choiceItem({
+    id: 'checkbox-outline-task',
+    name: 'Outline Task Checkbox',
+    type: 'checkbox',
+    collection: 'Inputs',
+    motionStyle: 'Bounce check',
+    intensity: 'Medium',
+    tags: ['checkbox', 'task', 'outline'],
+    label: 'Mark as complete',
+    checked: false,
+    color: '#111827',
+    previewBackground: '#F9FAFB',
+    previewAccent: '#111827',
+    previewEffect: 'softScale',
+    motion: {
+      load: { presetId: 'fadeIn', duration: 300 },
+      click: { presetId: 'bounceCheck', duration: 220 },
+    },
+  }),
+  choiceItem({
+    id: 'radio-lime-plan',
+    name: 'Lime Plan Radio',
+    type: 'radio',
+    collection: 'Inputs',
+    motionStyle: 'Dot expand',
+    intensity: 'Subtle',
+    tags: ['radio', 'form', 'plan'],
+    label: 'Agency plan',
+    checked: true,
+    color: '#D6F854',
+    previewBackground: '#0B0F17',
+    previewAccent: '#D6F854',
+    previewEffect: 'pulse',
+    motion: {
+      load: { presetId: 'scaleIn', duration: 320, intensity: 34 },
+      click: { presetId: 'dotExpand', duration: 180 },
+    },
+  }),
+  choiceItem({
+    id: 'radio-minimal-option',
+    name: 'Minimal Option Radio',
+    type: 'radio',
+    collection: 'Inputs',
+    motionStyle: 'Soft pulse',
+    intensity: 'Subtle',
+    tags: ['radio', 'minimal', 'option'],
+    label: 'Minimal option',
+    checked: false,
+    color: '#111827',
+    previewBackground: '#FFFFFF',
+    previewAccent: '#111827',
+    previewEffect: 'fadeIn',
+    motion: {
+      load: { presetId: 'fadeIn', duration: 300 },
+      hover: { presetId: 'borderHighlight', duration: 180 },
+    },
+  }),
 ];
+
+export const libraryItems = rawLibraryItems.map(withInteractionDefaults);
