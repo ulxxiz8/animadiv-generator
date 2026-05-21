@@ -190,7 +190,9 @@ export const Button = ({ children, onClick, variant = 'primary', style }) => (
       justifyContent: 'center',
       gap: '8px',
       backgroundColor:
-        variant === 'primary' ? 'var(--button-bg)' : 'var(--button-secondary-bg)',
+        variant === 'primary'
+          ? 'var(--button-bg)'
+          : 'var(--button-secondary-bg)',
       color:
         variant === 'primary'
           ? 'var(--button-text)'

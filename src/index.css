@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
 :root {
@@ -66,12 +66,19 @@
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
     sans-serif;
   background-color: var(--bg-color);
   color: var(--text-main);
   margin: 0;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 html,
@@ -84,7 +91,7 @@ body,
   max-height: 100vh;
 }
 
-/* Каркас додатка */
+/* РљР°СЂРєР°СЃ РґРѕРґР°С‚РєР° */
 .app-layout {
   display: flex;
   flex-direction: column;
@@ -105,34 +112,36 @@ body,
   color: var(--text-main);
 }
 
-/* Головний контейнер (ТРИ В РЯД) */
+/* Р“РѕР»РѕРІРЅРёР№ РєРѕРЅС‚РµР№РЅРµСЂ (РўР Р Р’ Р РЇР”) */
 .main-container {
   display: flex;
   flex: 1;
-  height: calc(100vh - 80px); /* 80px — це висота твого хедера */
+  height: calc(
+    100vh - 80px
+  ); /* 80px вЂ” С†Рµ РІРёСЃРѕС‚Р° С‚РІРѕРіРѕ С…РµРґРµСЂР° */
   padding: 24px;
   gap: 24px;
-  overflow: hidden; /* ✅ Блокуємо скрол ТІЛЬКИ для Генератора! */
+  overflow: hidden; /* вњ… Р‘Р»РѕРєСѓС”РјРѕ СЃРєСЂРѕР» РўР†Р›Р¬РљР РґР»СЏ Р“РµРЅРµСЂР°С‚РѕСЂР°! */
 }
 
-/* Налаштування колонок */
+/* РќР°Р»Р°С€С‚СѓРІР°РЅРЅСЏ РєРѕР»РѕРЅРѕРє */
 .column {
   background-color: var(--surface);
   border-radius: 12px;
   border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Важливо для внутрішнього скролу */
+  overflow: hidden; /* Р’Р°Р¶Р»РёРІРѕ РґР»СЏ РІРЅСѓС‚СЂС–С€РЅСЊРѕРіРѕ СЃРєСЂРѕР»Сѓ */
 }
 
-/* Ліва і права панелі (Фіксовані) */
+/* Р›С–РІР° С– РїСЂР°РІР° РїР°РЅРµР»С– (Р¤С–РєСЃРѕРІР°РЅС–) */
 .settings-panel,
 .code-panel {
   width: 340px;
-  flex-shrink: 0; /* ЗАБОРОНА СТИСКАННЯ І РОЗТЯГУВАННЯ */
+  flex-shrink: 0; /* Р—РђР‘РћР РћРќРђ РЎРўРРЎРљРђРќРќРЇ Р† Р РћР—РўРЇР“РЈР’РђРќРќРЇ */
 }
 
-/* Канвас (Гнучкий) */
+/* РљР°РЅРІР°СЃ (Р“РЅСѓС‡РєРёР№) */
 .preview-panel {
   flex: 1;
   background-color: var(--bg-color);
@@ -153,7 +162,7 @@ body,
   min-height: 0;
 }
 
-/* Адаптивність (залишаємо як ти писала) */
+/* РђРґР°РїС‚РёРІРЅС–СЃС‚СЊ (Р·Р°Р»РёС€Р°С”РјРѕ СЏРє С‚Рё РїРёСЃР°Р»Р°) */
 @media (max-width: 1024px) {
   .main-container {
     flex-direction: column !important;

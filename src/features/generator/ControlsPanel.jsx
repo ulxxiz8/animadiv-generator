@@ -64,7 +64,9 @@ const twoColumnGridStyle = {
 const AccordionSection = ({ title, children, defaultOpen = true }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <div style={{ borderBottom: '1px solid var(--border)', ...panelBlockStyle }}>
+    <div
+      style={{ borderBottom: '1px solid var(--border)', ...panelBlockStyle }}
+    >
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
@@ -125,7 +127,8 @@ const ControlsPanel = ({
   const [localActiveMotionState, setLocalActiveMotionState] = useState('load');
   const activeMotionState =
     controlledActiveMotionState || localActiveMotionState;
-  const setActiveMotionState = onActiveMotionStateChange || setLocalActiveMotionState;
+  const setActiveMotionState =
+    onActiveMotionStateChange || setLocalActiveMotionState;
   const allowedMotionStates = useMemo(
     () =>
       ['load', 'hover', 'click'].filter((state) =>
@@ -138,7 +141,10 @@ const ControlsPanel = ({
     : allowedMotionStates[0] || 'load';
 
   useEffect(() => {
-    if (!allowedMotionStates.includes(activeMotionState) && currentMotionState) {
+    if (
+      !allowedMotionStates.includes(activeMotionState) &&
+      currentMotionState
+    ) {
       setActiveMotionState(currentMotionState);
     }
   }, [
@@ -203,7 +209,6 @@ const ControlsPanel = ({
   const getSupportedControls = () => {
     if (!hasPreset) return [];
     const paramsSet = new Set();
-
 
     let targetId = currentPresetVal;
     // Фізика - це окремий рушій, який замінює базові пресети
@@ -367,6 +372,8 @@ const ControlsPanel = ({
   const renderSettingField = (key, label, type, options = [], step = 1) => {
     const value = params.specificSettings[key];
     const onChange = (val) => onSpecificSettingChange(key, val);
+    const getSelectValue = (rawValue) =>
+      options.find((opt) => String(opt.value) === rawValue)?.value ?? rawValue;
 
     return (
       <div key={key} style={panelBlockStyle}>
@@ -374,7 +381,7 @@ const ControlsPanel = ({
         {type === 'select' && (
           <select
             value={value !== undefined ? value : ''}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => onChange(getSelectValue(e.target.value))}
             style={inputStyle}
           >
             {options.map((opt) => (
@@ -428,7 +435,11 @@ const ControlsPanel = ({
               type="checkbox"
               checked={value || false}
               onChange={(e) => onChange(e.target.checked)}
-              style={{ width: '16px', height: '16px', accentColor: 'var(--button-bg)' }}
+              style={{
+                width: '16px',
+                height: '16px',
+                accentColor: 'var(--button-bg)',
+              }}
             />{' '}
             Увімкнути
           </label>
@@ -523,7 +534,11 @@ const ControlsPanel = ({
             {params.specificSettings.backgroundMode === 'gradient' &&
               renderSettingField('backgroundGradient', 'Gradient CSS', 'text')}
             {params.specificSettings.backgroundMode === 'image' &&
-              renderSettingField('backgroundImage', 'Background Image URL', 'text')}
+              renderSettingField(
+                'backgroundImage',
+                'Background Image URL',
+                'text'
+              )}
           </>
         );
       case 'button':
@@ -569,6 +584,7 @@ const ControlsPanel = ({
                 { label: 'Normal', value: 400 },
                 { label: 'Semibold', value: 600 },
                 { label: 'Bold', value: 700 },
+                { label: 'Heavy', value: 850 },
               ])}
             </div>
             <div
@@ -886,7 +902,8 @@ const ControlsPanel = ({
               activeTab === 'design'
                 ? '2px solid var(--text-main)'
                 : '2px solid transparent',
-            color: activeTab === 'design' ? 'var(--text-main)' : 'var(--text-muted)',
+            color:
+              activeTab === 'design' ? 'var(--text-main)' : 'var(--text-muted)',
             fontWeight: activeTab === 'design' ? '800' : '600',
             cursor: 'pointer',
             display: 'flex',
@@ -908,7 +925,8 @@ const ControlsPanel = ({
               activeTab === 'motion'
                 ? '2px solid var(--text-main)'
                 : '2px solid transparent',
-            color: activeTab === 'motion' ? 'var(--text-main)' : 'var(--text-muted)',
+            color:
+              activeTab === 'motion' ? 'var(--text-main)' : 'var(--text-muted)',
             fontWeight: activeTab === 'motion' ? '800' : '600',
             cursor: 'pointer',
             display: 'flex',
@@ -948,7 +966,9 @@ const ControlsPanel = ({
                       border: 'none',
                       borderRadius: '12px',
                       background:
-                        params.type === el.id ? 'var(--button-bg)' : 'transparent',
+                        params.type === el.id
+                          ? 'var(--button-bg)'
+                          : 'transparent',
                       color:
                         params.type === el.id
                           ? 'var(--button-text)'
@@ -986,58 +1006,58 @@ const ControlsPanel = ({
                 </AccordionSection>
               )}
             {hasDimensionControls && (
-            <AccordionSection
-              title="Dimensions & Box Model"
-              defaultOpen={false}
-            >
-              {showWidthControl && (
-                <RangeSlider
-                  label="Width (px)"
-                  min={20}
-                  max={600}
-                  step={1}
-                  value={getNumericStyleValue('width')}
-                  unit=""
-                  onChange={(val) => onStyleChange('width', val)}
-                />
-              )}
-              {showHeightControl && (
-                <RangeSlider
-                  label="Height (px)"
-                  min={20}
-                  max={600}
-                  step={1}
-                  value={getNumericStyleValue(
-                    'height',
-                    params.type === 'textarea' ? 112 : 0
-                  )}
-                  unit=""
-                  onChange={(val) => onStyleChange('height', val)}
-                />
-              )}
-              {showPaddingControl && (
-                <RangeSlider
-                  label="Padding (px)"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={parseInt(params.styles.padding) || 0}
-                  unit=""
-                  onChange={(val) => onStyleChange('padding', `${val}px`)}
-                />
-              )}
-              {!isChoiceControl && (
-                <RangeSlider
-                  label="Margin (px)"
-                  min={0}
-                  max={120}
-                  step={1}
-                  value={getNumericStyleValue('margin')}
-                  unit=""
-                  onChange={(val) => onStyleChange('margin', val)}
-                />
-              )}
-            </AccordionSection>
+              <AccordionSection
+                title="Dimensions & Box Model"
+                defaultOpen={false}
+              >
+                {showWidthControl && (
+                  <RangeSlider
+                    label="Width (px)"
+                    min={20}
+                    max={600}
+                    step={1}
+                    value={getNumericStyleValue('width')}
+                    unit=""
+                    onChange={(val) => onStyleChange('width', val)}
+                  />
+                )}
+                {showHeightControl && (
+                  <RangeSlider
+                    label="Height (px)"
+                    min={20}
+                    max={600}
+                    step={1}
+                    value={getNumericStyleValue(
+                      'height',
+                      params.type === 'textarea' ? 112 : 0
+                    )}
+                    unit=""
+                    onChange={(val) => onStyleChange('height', val)}
+                  />
+                )}
+                {showPaddingControl && (
+                  <RangeSlider
+                    label="Padding (px)"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={parseInt(params.styles.padding) || 0}
+                    unit=""
+                    onChange={(val) => onStyleChange('padding', `${val}px`)}
+                  />
+                )}
+                {!isChoiceControl && (
+                  <RangeSlider
+                    label="Margin (px)"
+                    min={0}
+                    max={120}
+                    step={1}
+                    value={getNumericStyleValue('margin')}
+                    unit=""
+                    onChange={(val) => onStyleChange('margin', val)}
+                  />
+                )}
+              </AccordionSection>
             )}
             <AccordionSection title="Position & Layer" defaultOpen={false}>
               <div style={twoColumnGridStyle}>
@@ -1058,74 +1078,76 @@ const ControlsPanel = ({
                   <input
                     type="number"
                     value={params.styles.zIndex ?? 1}
-                    onChange={(e) => onStyleChange('zIndex', Number(e.target.value))}
+                    onChange={(e) =>
+                      onStyleChange('zIndex', Number(e.target.value))
+                    }
                     style={inputStyle}
                   />
                 </div>
               </div>
             </AccordionSection>
             {hasAppearanceControls && (
-            <AccordionSection title="Appearance" defaultOpen={false}>
-              {showBackgroundControl && (
-                <ColorPicker
-                  label="Background Fill"
-                  value={params.styles.backgroundColor || 'transparent'}
-                  onChange={(val) => onStyleChange('backgroundColor', val)}
-                />
-              )}
-              {showTextColorControl && (
-                <ColorPicker
-                  label="Text Color"
-                  value={params.styles.color || '#111827'}
-                  onChange={(val) => onStyleChange('color', val)}
-                />
-              )}
-              {showOpacityControl && (
-                <RangeSlider
-                  label="Opacity"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={
-                    params.styles.opacity !== undefined
-                      ? params.styles.opacity
-                      : 1
-                  }
-                  unit=""
-                  onChange={(val) => onStyleChange('opacity', val)}
-                />
-              )}
-              {showBorderControls && (
-                <>
-                  <RangeSlider
-                    label="Corner Radius (px)"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={params.styles.borderRadius || 0}
-                    unit=""
-                    onChange={(val) => onStyleChange('borderRadius', val)}
+              <AccordionSection title="Appearance" defaultOpen={false}>
+                {showBackgroundControl && (
+                  <ColorPicker
+                    label="Background Fill"
+                    value={params.styles.backgroundColor || 'transparent'}
+                    onChange={(val) => onStyleChange('backgroundColor', val)}
                   />
-                  <RangeSlider
-                    label="Border Width (px)"
-                    min={0}
-                    max={20}
-                    step={1}
-                    value={params.styles.borderWidth || 0}
-                    unit=""
-                    onChange={(val) => onStyleChange('borderWidth', val)}
+                )}
+                {showTextColorControl && (
+                  <ColorPicker
+                    label="Text Color"
+                    value={params.styles.color || '#111827'}
+                    onChange={(val) => onStyleChange('color', val)}
                   />
-                  {params.styles.borderWidth > 0 && (
-                    <ColorPicker
-                      label="Border Color"
-                      value={params.styles.borderColor || '#E5E7EB'}
-                      onChange={(val) => onStyleChange('borderColor', val)}
+                )}
+                {showOpacityControl && (
+                  <RangeSlider
+                    label="Opacity"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={
+                      params.styles.opacity !== undefined
+                        ? params.styles.opacity
+                        : 1
+                    }
+                    unit=""
+                    onChange={(val) => onStyleChange('opacity', val)}
+                  />
+                )}
+                {showBorderControls && (
+                  <>
+                    <RangeSlider
+                      label="Corner Radius (px)"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={params.styles.borderRadius || 0}
+                      unit=""
+                      onChange={(val) => onStyleChange('borderRadius', val)}
                     />
-                  )}
-                </>
-              )}
-              {renderShadowControls()}
-            </AccordionSection>
+                    <RangeSlider
+                      label="Border Width (px)"
+                      min={0}
+                      max={20}
+                      step={1}
+                      value={params.styles.borderWidth || 0}
+                      unit=""
+                      onChange={(val) => onStyleChange('borderWidth', val)}
+                    />
+                    {params.styles.borderWidth > 0 && (
+                      <ColorPicker
+                        label="Border Color"
+                        value={params.styles.borderColor || '#E5E7EB'}
+                        onChange={(val) => onStyleChange('borderColor', val)}
+                      />
+                    )}
+                  </>
+                )}
+                {renderShadowControls()}
+              </AccordionSection>
             )}
           </>
         )}
@@ -1677,7 +1699,11 @@ const ControlsPanel = ({
                 />
                 <Accessibility
                   size={16}
-                  color={currentAnimParams.reduceMotion ? 'var(--primary)' : 'currentColor'}
+                  color={
+                    currentAnimParams.reduceMotion
+                      ? 'var(--primary)'
+                      : 'currentColor'
+                  }
                 />
                 Reduced Motion (Safe Mode)
               </label>
@@ -1714,13 +1740,14 @@ const ControlsPanel = ({
           borderBottomRightRadius: '12px',
         }}
       >
-        <Button
-          onClick={onReplay}
-          style={{ flex: '1 1 120px' }}
-        >
+        <Button onClick={onReplay} style={{ flex: '1 1 120px' }}>
           Відтворити
         </Button>
-        <Button variant="secondary" onClick={onReset} style={{ flex: '1 1 120px' }}>
+        <Button
+          variant="secondary"
+          onClick={onReset}
+          style={{ flex: '1 1 120px' }}
+        >
           Скинути
         </Button>
       </div>

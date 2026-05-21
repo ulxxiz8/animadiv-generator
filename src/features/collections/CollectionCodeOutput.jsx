@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { generateHtml } from '../../utils/generateHtml';
 import DeveloperHandoffModal from '../../components/DeveloperHandoffModal';
+import { createDeveloperHandoffFromBundle } from '../../utils/developerHandoff';
 
 const TABS = [
   { id: 'html', label: 'HTML' },
@@ -8,44 +8,32 @@ const TABS = [
   { id: 'combined', label: 'Combined' },
 ];
 
-const CodeOutput = ({ params, code }) => {
+const copyText = async (value) => {
+  await navigator.clipboard.writeText(value);
+};
+
+const CollectionCodeOutput = ({ bundle, title }) => {
   const [activeTab, setActiveTab] = useState('html');
   const [copied, setCopied] = useState(false);
   const [isHandoffOpen, setIsHandoffOpen] = useState(false);
+  const [handoffId, setHandoffId] = useState('');
 
-  const htmlCode = useMemo(() => generateHtml(params), [params]);
-  const cleanCSS = useMemo(() => (code ? code.trim() : ''), [code]);
-  const cleanHTML = useMemo(
-    () => (htmlCode ? htmlCode.trim() : ''),
-    [htmlCode]
-  );
-
-  const renderedCode = useMemo(() => {
-    if (activeTab === 'html') return cleanHTML;
-    if (activeTab === 'css') return cleanCSS;
-    return `${cleanHTML}
-
-/* ========================= */
-/* CSS Animation and Styles */
-/* ========================= */
-${cleanCSS}`;
-  }, [activeTab, cleanCSS, cleanHTML]);
-
+  const renderedCode = bundle?.[activeTab] || '';
   const codeLines = useMemo(() => renderedCode.split('\n'), [renderedCode]);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(renderedCode);
+      await copyText(renderedCode);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
-    } catch (err) {
-      console.error('Copy failed', err);
+    } catch (error) {
+      console.error('Copy failed', error);
       setCopied(false);
     }
   };
 
-  const getTabStyle = (tabName) => {
-    const isActive = activeTab === tabName;
+  const getTabStyle = (tabId) => {
+    const isActive = activeTab === tabId;
     return {
       flex: 1,
       background: isActive ? 'var(--button-bg)' : 'transparent',
@@ -67,29 +55,22 @@ ${cleanCSS}`;
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '12px',
+        gap: 12,
         height: '100%',
         minHeight: 0,
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '12px',
-        }}
-      >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div
           role="tablist"
           aria-label="Export code format"
           style={{
             display: 'flex',
-            gap: '4px',
+            gap: 4,
             background: 'var(--surface-subtle)',
             border: '1px solid var(--border)',
-            padding: '4px',
-            borderRadius: '10px',
+            padding: 4,
+            borderRadius: 10,
             flex: 1,
           }}
         >
@@ -116,9 +97,9 @@ ${cleanCSS}`;
             border: '1px solid',
             borderColor: copied ? '#D6F854' : 'var(--button-bg)',
             padding: '9px 14px',
-            borderRadius: '8px',
+            borderRadius: 8,
             cursor: 'pointer',
-            fontSize: '12px',
+            fontSize: 12,
             fontWeight: 800,
             whiteSpace: 'nowrap',
             transition: 'all 0.15s ease',
@@ -133,11 +114,10 @@ ${cleanCSS}`;
           background: 'var(--code-bg)',
           color: 'var(--code-text)',
           border: '1px solid var(--border)',
-          borderRadius: '10px',
-          minHeight: '260px',
+          borderRadius: 10,
           flex: 1,
+          minHeight: 0,
           minWidth: 0,
-          minBlockSize: 0,
           overflow: 'hidden',
         }}
       >
@@ -148,8 +128,6 @@ ${cleanCSS}`;
           tabIndex={0}
           style={{
             height: '100%',
-            maxHeight: 'calc(100vh - 260px)',
-            minHeight: '260px',
             overflow: 'auto',
             padding: '16px 0',
             tabSize: 2,
@@ -168,7 +146,7 @@ ${cleanCSS}`;
                 gridTemplateColumns: '34px minmax(0, 1fr)',
                 alignItems: 'start',
                 minWidth: 0,
-                paddingRight: '12px',
+                paddingRight: 12,
               }}
             >
               <span
@@ -178,7 +156,7 @@ ${cleanCSS}`;
                   opacity: 0.7,
                   userSelect: 'none',
                   textAlign: 'right',
-                  paddingRight: '8px',
+                  paddingRight: 8,
                   borderRight: '1px solid rgba(148, 163, 184, 0.22)',
                 }}
               >
@@ -188,7 +166,7 @@ ${cleanCSS}`;
                 style={{
                   display: 'block',
                   minWidth: 0,
-                  paddingLeft: '8px',
+                  paddingLeft: 8,
                   whiteSpace: 'pre-wrap',
                   overflowWrap: 'anywhere',
                   wordBreak: 'break-word',
@@ -206,13 +184,17 @@ ${cleanCSS}`;
           flex: 'none',
           background: 'var(--surface)',
           border: '1px solid var(--border)',
-          borderRadius: '12px',
-          padding: '12px',
+          borderRadius: 12,
+          padding: 12,
         }}
       >
         <button
           type="button"
-          onClick={() => setIsHandoffOpen(true)}
+          onClick={() => {
+            const handoff = createDeveloperHandoffFromBundle({ bundle, title });
+            setHandoffId(handoff.id);
+            setIsHandoffOpen(true);
+          }}
           style={{
             width: '100%',
             minHeight: 42,
@@ -220,13 +202,12 @@ ${cleanCSS}`;
             color: 'var(--button-text)',
             border: '1px solid var(--button-bg)',
             padding: '10px 14px',
-            borderRadius: '12px',
+            borderRadius: 12,
             cursor: 'pointer',
-            fontSize: '13px',
+            fontSize: 13,
             fontWeight: 850,
             whiteSpace: 'normal',
             lineHeight: 1.2,
-            transition: 'opacity 0.15s ease',
           }}
         >
           Передати розробнику
@@ -236,12 +217,10 @@ ${cleanCSS}`;
       <DeveloperHandoffModal
         open={isHandoffOpen}
         onClose={() => setIsHandoffOpen(false)}
-        params={params}
-        css={cleanCSS}
-        title="Current generator element"
+        handoffId={handoffId}
       />
     </div>
   );
 };
 
-export default React.memo(CodeOutput);
+export default React.memo(CollectionCodeOutput);

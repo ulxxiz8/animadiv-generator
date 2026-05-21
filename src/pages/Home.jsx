@@ -128,7 +128,7 @@ const Home = () => {
           <span
             style={{
               background: 'var(--primary)',
-              color: 'var(--text-main)',
+              color: '#111827',
               padding: '2px 12px',
               borderRadius: '10px',
               display: 'inline-block',
@@ -411,8 +411,12 @@ const Home = () => {
                 : el.type === 'dark'
                   ? 'var(--border-strong)'
                   : 'var(--surface)';
-            let color = el.type === 'dark' ? 'var(--surface)' : 'var(--text-main)';
-            let border = el.type === 'dark' ? '1px solid var(--button-secondary-text)' : 'none';
+            let color =
+              el.type === 'dark' ? 'var(--surface)' : 'var(--text-main)';
+            let border =
+              el.type === 'dark'
+                ? '1px solid var(--button-secondary-text)'
+                : 'none';
 
             return (
               <div

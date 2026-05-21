@@ -1,8 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle, Copy, ExternalLink, Link as LinkIcon, X } from 'lucide-react';
+import {
+  CheckCircle,
+  Copy,
+  ExternalLink,
+  Link as LinkIcon,
+  X,
+} from 'lucide-react';
 import {
   createCodeBundle,
   createDeveloperHandoff,
+  createDeveloperHandoffUrl,
   readDeveloperHandoff,
 } from '../utils/developerHandoff';
 
@@ -11,6 +18,38 @@ const TABS = [
   { id: 'css', label: 'CSS' },
   { id: 'combined', label: 'Combined' },
 ];
+
+const modalButtonBase = {
+  height: 40,
+  borderRadius: 12,
+  padding: '0 14px',
+  cursor: 'pointer',
+  fontSize: 12,
+  fontWeight: 850,
+  lineHeight: 1,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 7,
+  whiteSpace: 'nowrap',
+  flex: '0 0 auto',
+};
+
+const getPrimaryButtonStyle = (active = false) => ({
+  ...modalButtonBase,
+  minWidth: 118,
+  border: '1px solid var(--button-bg, #111827)',
+  background: active ? '#D6F854' : 'var(--button-bg, #111827)',
+  color: active ? '#111827' : '#D6F854',
+});
+
+const secondaryButtonStyle = {
+  ...modalButtonBase,
+  minWidth: 94,
+  border: '1px solid var(--border, #E5E7EB)',
+  background: 'var(--surface, #FFFFFF)',
+  color: 'var(--text-main, #111827)',
+};
 
 const copyText = async (text) => {
   if (navigator.clipboard?.writeText) {
@@ -38,10 +77,10 @@ const CodeBlock = ({ value }) => {
         background: 'var(--code-bg, #111827)',
         color: 'var(--code-text, #F9FAFB)',
         border: '1px solid var(--border, #E5E7EB)',
-        borderRadius: 16,
-        height: 330,
+        borderRadius: 14,
+        height: 320,
         minHeight: 0,
-        maxHeight: 330,
+        maxHeight: 320,
         overflow: 'auto',
         padding: '14px 0',
         fontFamily:
@@ -88,92 +127,6 @@ const CodeBlock = ({ value }) => {
   );
 };
 
-const ElementPreview = ({ bundle }) => {
-  const srcDoc = `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <style>
-      * { box-sizing: border-box; }
-      html, body { width: 100%; height: 100%; margin: 0; }
-      body {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 220px;
-        padding: 32px;
-        background: #F9FAFB;
-        color: #111827;
-        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
-      ${bundle?.css || ''}
-    </style>
-  </head>
-  <body>
-    ${bundle?.html || ''}
-  </body>
-</html>`;
-
-  return (
-    <div
-      style={{
-        background: 'var(--surface-subtle, #F3F4F6)',
-        border: '1px solid var(--border, #E5E7EB)',
-        borderRadius: 24,
-        padding: 12,
-        minHeight: 0,
-        overflow: 'hidden',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-          marginBottom: 10,
-          padding: '0 4px',
-        }}
-      >
-        <strong
-          style={{
-            color: 'var(--text-main, #111827)',
-            fontSize: 13,
-            fontWeight: 900,
-            lineHeight: 1.1,
-            letterSpacing: '-0.01em',
-          }}
-        >
-          Preview
-        </strong>
-        <span
-          style={{
-            color: 'var(--text-muted, #6B7280)',
-            fontSize: 12,
-            fontWeight: 800,
-          }}
-        >
-          Rendered from generated HTML + CSS
-        </span>
-      </div>
-      <iframe
-        title="Developer handoff element preview"
-        sandbox=""
-        srcDoc={srcDoc}
-        style={{
-          width: '100%',
-          height: 330,
-          maxHeight: 330,
-          display: 'block',
-          border: '1px solid var(--border, #E5E7EB)',
-          borderRadius: 16,
-          background: '#F9FAFB',
-        }}
-      />
-    </div>
-  );
-};
-
 const DeveloperHandoffModal = ({
   open,
   onClose,
@@ -181,18 +134,29 @@ const DeveloperHandoffModal = ({
   css,
   title,
   handoffId,
+  bundle: bundleOverride,
 }) => {
   const [activeTab, setActiveTab] = useState('html');
   const [copied, setCopied] = useState('');
 
   const handoff = useMemo(() => {
     if (!open) return null;
+
     if (handoffId) {
       const saved = readDeveloperHandoff(handoffId);
       if (saved) {
-        const url = new URL(window.location.href);
-        return { ...saved, url: url.toString() };
+        return { ...saved, url: createDeveloperHandoffUrl(saved) };
       }
+    }
+
+    if (bundleOverride) {
+      const payload = {
+        id: 'inline-ui-kit-bundle',
+        title: title || 'AnimaDiv UI Kit section',
+        createdAt: '',
+        bundle: bundleOverride,
+      };
+      return { ...payload, url: createDeveloperHandoffUrl(payload) };
     }
 
     if (params) {
@@ -200,7 +164,7 @@ const DeveloperHandoffModal = ({
     }
 
     return null;
-  }, [css, handoffId, open, params, title]);
+  }, [bundleOverride, css, handoffId, open, params, title]);
 
   useEffect(() => {
     if (!open) return;
@@ -223,10 +187,11 @@ const DeveloperHandoffModal = ({
   }, [onClose, open]);
 
   const bundle = useMemo(() => {
+    if (bundleOverride) return bundleOverride;
     if (handoff?.bundle) return handoff.bundle;
     if (params) return createCodeBundle(params, css);
     return { html: '', css: '', combined: '' };
-  }, [css, handoff, params]);
+  }, [bundleOverride, css, handoff, params]);
 
   if (!open) return null;
 
@@ -260,12 +225,12 @@ const DeveloperHandoffModal = ({
     >
       <section
         style={{
-          width: 'min(1320px, 100%)',
+          width: 'min(1280px, 100%)',
           maxHeight: 'calc(100vh - 40px)',
           background: 'var(--surface, #FFFFFF)',
           color: 'var(--text-main, #111827)',
           border: '1px solid var(--border, #E5E7EB)',
-          borderRadius: 24,
+          borderRadius: 22,
           boxShadow: '0 30px 80px rgba(15, 23, 42, 0.28)',
           display: 'flex',
           flexDirection: 'column',
@@ -274,7 +239,7 @@ const DeveloperHandoffModal = ({
       >
         <header
           style={{
-            padding: '18px 20px',
+            padding: '18px 22px',
             borderBottom: '1px solid var(--border, #E5E7EB)',
             display: 'flex',
             alignItems: 'center',
@@ -333,7 +298,7 @@ const DeveloperHandoffModal = ({
             style={{
               display: 'grid',
               gridTemplateColumns: 'minmax(0, 1fr) auto auto',
-              gap: 10,
+              gap: 12,
               alignItems: 'center',
             }}
           >
@@ -341,59 +306,37 @@ const DeveloperHandoffModal = ({
               readOnly
               value={handoff?.url || ''}
               style={{
-                height: 40,
+                height: 42,
                 minWidth: 0,
                 border: '1px solid var(--border, #E5E7EB)',
                 borderRadius: 12,
-                padding: '0 12px',
+                padding: '0 14px',
                 background: 'var(--control-bg, #F9FAFB)',
                 color: 'var(--text-main, #111827)',
                 fontSize: 13,
+                outline: 'none',
               }}
             />
             <button
               type="button"
               onClick={() => handleCopy('link', handoff?.url || '')}
-              style={{
-                height: 40,
-                border: '1px solid var(--button-bg, #111827)',
-                borderRadius: 8,
-                background:
-                  copied === 'link' ? '#D6F854' : 'var(--button-bg, #111827)',
-                color: copied === 'link' ? '#111827' : '#D6F854',
-                padding: '0 12px',
-                cursor: 'pointer',
-                fontSize: 12,
-                fontWeight: 850,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                whiteSpace: 'nowrap',
-              }}
+              style={getPrimaryButtonStyle(copied === 'link')}
             >
-              {copied === 'link' ? <CheckCircle size={15} /> : <LinkIcon size={15} />}
+              {copied === 'link' ? (
+                <CheckCircle size={15} />
+              ) : (
+                <LinkIcon size={15} />
+              )}
               Copy link
             </button>
             <button
               type="button"
               onClick={() => {
-                if (handoff?.url) window.open(handoff.url, '_blank', 'noopener,noreferrer');
+                if (handoff?.url) {
+                  window.open(handoff.url, '_blank', 'noopener,noreferrer');
+                }
               }}
-              style={{
-                height: 40,
-                border: '1px solid var(--border, #E5E7EB)',
-                borderRadius: 12,
-                background: '#FFFFFF',
-                color: '#111827',
-                padding: '0 12px',
-                cursor: 'pointer',
-                fontSize: 12,
-                fontWeight: 850,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                whiteSpace: 'nowrap',
-              }}
+              style={secondaryButtonStyle}
             >
               <ExternalLink size={15} />
               Open
@@ -402,7 +345,7 @@ const DeveloperHandoffModal = ({
 
           <div
             style={{
-              background: '#F9FAFB',
+              background: 'var(--surface-alt, #F9FAFB)',
               border: '1px solid #E5E7EB',
               borderRadius: 16,
               padding: '14px 16px',
@@ -414,7 +357,7 @@ const DeveloperHandoffModal = ({
             <strong
               style={{
                 display: 'block',
-                color: '#111827',
+                color: 'var(--text-main, #111827)',
                 fontSize: 13,
                 fontWeight: 900,
                 lineHeight: 1.1,
@@ -424,109 +367,91 @@ const DeveloperHandoffModal = ({
             >
               Інструкція для розробника
             </strong>
-            Скопіюйте `Combined` і вставте його у потрібний HTML-файл. Якщо
-            HTML і CSS зберігаються окремо, скопіюйте вкладку `HTML` у
-            розмітку, а вкладку `CSS` у stylesheet. Посилання `Copy link`
-            відкриває цю саму модалку з кодом без додаткового експорту.
+            Скопіюйте `Combined` і вставте його у потрібний HTML-файл. Якщо HTML
+            і CSS зберігаються окремо, скопіюйте вкладку `HTML` у розмітку, а
+            вкладку `CSS` у stylesheet. Посилання `Copy link` відкриває цю саму
+            модалку з кодом без додаткового експорту.
           </div>
 
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
-              gap: 14,
-              alignItems: 'stretch',
+              minWidth: 0,
               minHeight: 0,
-              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
             }}
           >
-            <ElementPreview bundle={bundle} />
             <div
               style={{
-                minWidth: 0,
-                minHeight: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 1fr) auto',
+                gap: 12,
+                alignItems: 'center',
               }}
             >
               <div
+                role="tablist"
+                aria-label="Developer handoff code tabs"
                 style={{
                   display: 'flex',
-                  gap: 10,
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
+                  gap: 4,
+                  background: 'var(--surface-subtle, #F3F4F6)',
+                  border: '1px solid var(--border, #E5E7EB)',
+                  padding: 4,
+                  borderRadius: 12,
+                  width: 'fit-content',
+                  maxWidth: '100%',
                 }}
               >
-            <div
-              role="tablist"
-              aria-label="Developer handoff code tabs"
-              style={{
-                display: 'flex',
-                gap: 4,
-                background: 'var(--surface-subtle, #F3F4F6)',
-                border: '1px solid var(--border, #E5E7EB)',
-                padding: 4,
-                borderRadius: 12,
-              }}
-            >
-              {TABS.map((tab) => {
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={isActive}
-                    onClick={() => setActiveTab(tab.id)}
-                    style={{
-                      background: isActive
-                        ? 'var(--button-bg, #111827)'
-                        : 'transparent',
-                      color: isActive
-                        ? 'var(--button-text, #D6F854)'
-                        : 'var(--text-muted, #6B7280)',
-                      border: 'none',
-                      padding: '8px 12px',
-                      borderRadius: 7,
-                      cursor: 'pointer',
-                      fontSize: 12,
-                      fontWeight: 850,
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => handleCopy('code', currentCode)}
-              style={{
-                height: 38,
-                border: '1px solid var(--button-bg, #111827)',
-                borderRadius: 12,
-                background:
-                  copied === 'code' ? '#D6F854' : 'var(--button-bg, #111827)',
-                color: copied === 'code' ? '#111827' : '#D6F854',
-                padding: '0 12px',
-                cursor: 'pointer',
-                fontSize: 12,
-                fontWeight: 850,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              {copied === 'code' ? <CheckCircle size={15} /> : <Copy size={15} />}
-              Copy code
-            </button>
+                {TABS.map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => setActiveTab(tab.id)}
+                      style={{
+                        background: isActive
+                          ? 'var(--button-bg, #111827)'
+                          : 'transparent',
+                        color: isActive
+                          ? 'var(--button-text, #D6F854)'
+                          : 'var(--text-muted, #6B7280)',
+                        border: 'none',
+                        minWidth: 78,
+                        height: 32,
+                        padding: '0 12px',
+                        borderRadius: 7,
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        fontWeight: 850,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
               </div>
 
-              <CodeBlock value={currentCode} />
+              <button
+                type="button"
+                onClick={() => handleCopy('code', currentCode)}
+                style={getPrimaryButtonStyle(copied === 'code')}
+              >
+                {copied === 'code' ? (
+                  <CheckCircle size={15} />
+                ) : (
+                  <Copy size={15} />
+                )}
+                Copy code
+              </button>
             </div>
+
+            <CodeBlock value={currentCode} />
           </div>
         </div>
       </section>

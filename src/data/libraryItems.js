@@ -51,7 +51,12 @@ const withInteractionDefaults = (item) => {
       settings: {},
     },
     image: {
-      hover: { presetId: 'tilt', duration: 260, rotationAngle: 4, hoverDepth: 16 },
+      hover: {
+        presetId: 'tilt',
+        duration: 260,
+        rotationAngle: 4,
+        hoverDepth: 16,
+      },
       click: { presetId: 'expand', duration: 160, intensity: 42 },
       settings: {
         loading: 'lazy',
@@ -576,7 +581,14 @@ const rawLibraryItems = [
     previewBackground: '#fff1e8',
     previewAccent: '#ff6a88',
     previewEffect: 'slideUp',
-    motion: { load: { presetId: 'slide', duration: 430, direction: 'bottom', intensity: 30 } },
+    motion: {
+      load: {
+        presetId: 'slide',
+        duration: 430,
+        direction: 'bottom',
+        intensity: 30,
+      },
+    },
   }),
   buttonItem({
     id: 'button-fresh-fade',
@@ -608,7 +620,10 @@ const rawLibraryItems = [
     previewBackground: 'linear-gradient(135deg,#dbeafe,#fae8ff)',
     previewAccent: '#8b5cf6',
     previewEffect: 'pulse',
-    motion: { load: { presetId: 'scale', duration: 460, intensity: 26 } },
+    motion: {
+      load: { presetId: 'scale', duration: 460, intensity: 26 },
+      hover: { presetId: 'pulse', duration: 700, intensity: 52 },
+    },
   }),
   buttonItem({
     id: 'button-cyan-glow',
@@ -640,7 +655,14 @@ const rawLibraryItems = [
     previewBackground: '#efe4d3',
     previewAccent: '#111111',
     previewEffect: 'slideUp',
-    motion: { load: { presetId: 'slide', duration: 420, direction: 'left', intensity: 20 } },
+    motion: {
+      load: {
+        presetId: 'slide',
+        duration: 420,
+        direction: 'left',
+        intensity: 20,
+      },
+    },
   }),
 
   textItem({
@@ -737,7 +759,14 @@ const rawLibraryItems = [
     previewBackground: '#05101d',
     previewAccent: '#22d3ee',
     previewEffect: 'shadowGlow',
-    motion: { load: { presetId: 'slide', duration: 440, direction: 'right', intensity: 26 } },
+    motion: {
+      load: {
+        presetId: 'slide',
+        duration: 440,
+        direction: 'right',
+        intensity: 26,
+      },
+    },
   }),
   inputItem({
     id: 'input-pastel-name',
@@ -785,7 +814,9 @@ const rawLibraryItems = [
     previewBackground: '#15122e',
     previewAccent: '#a78bfa',
     previewEffect: 'imageZoom',
-    motion: { load: { presetId: 'zoomReveal', duration: 760, zoomIntensity: 50 } },
+    motion: {
+      load: { presetId: 'zoomReveal', duration: 760, zoomIntensity: 50 },
+    },
   }),
   imageItem({
     id: 'image-tilt-card',
@@ -801,7 +832,12 @@ const rawLibraryItems = [
     previewEffect: 'imageTilt',
     motion: {
       load: { presetId: 'fade', duration: 420 },
-      hover: { presetId: 'tiltHover', duration: 280, rotationAngle: 5, hoverDepth: 18 },
+      hover: {
+        presetId: 'tiltHover',
+        duration: 280,
+        rotationAngle: 5,
+        hoverDepth: 18,
+      },
     },
   }),
   imageItem({
@@ -816,7 +852,9 @@ const rawLibraryItems = [
     previewBackground: '#082231',
     previewAccent: '#22d3ee',
     previewEffect: 'float',
-    motion: { load: { presetId: 'floatingImage', duration: 1500, floatingAmount: 16 } },
+    motion: {
+      load: { presetId: 'floatingImage', duration: 1500, floatingAmount: 16 },
+    },
   }),
   imageItem({
     id: 'image-warm-fade',
@@ -895,7 +933,9 @@ const rawLibraryItems = [
     previewBackground: 'linear-gradient(135deg,#e0f2fe,#fae8ff)',
     previewAccent: '#8b5cf6',
     previewEffect: 'float',
-    motion: { load: { presetId: 'floatingSection', duration: 1400, floatingAmount: 14 } },
+    motion: {
+      load: { presetId: 'floatingSection', duration: 1400, floatingAmount: 14 },
+    },
   }),
   blockItem({
     id: 'block-neon-scale',

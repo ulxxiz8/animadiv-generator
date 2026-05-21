@@ -213,7 +213,10 @@ const TextContent = ({ item }) => {
     );
   }
 
-  if (item.previewEffect === 'wordFade' || item.previewEffect === 'blurReveal') {
+  if (
+    item.previewEffect === 'wordFade' ||
+    item.previewEffect === 'blurReveal'
+  ) {
     return <WordText>{text}</WordText>;
   }
 
@@ -257,10 +260,29 @@ const PreviewElement = ({ item, uid }) => {
       whiteSpace: 'pre-wrap',
     };
 
-    if (settings.tag === 'h1') return <h1 id={uid} style={textStyle}><TextContent item={item} /></h1>;
-    if (settings.tag === 'h3') return <h3 id={uid} style={textStyle}><TextContent item={item} /></h3>;
-    if (settings.tag === 'span') return <span id={uid} style={textStyle}><TextContent item={item} /></span>;
-    return <p id={uid} style={textStyle}><TextContent item={item} /></p>;
+    if (settings.tag === 'h1')
+      return (
+        <h1 id={uid} style={textStyle}>
+          <TextContent item={item} />
+        </h1>
+      );
+    if (settings.tag === 'h3')
+      return (
+        <h3 id={uid} style={textStyle}>
+          <TextContent item={item} />
+        </h3>
+      );
+    if (settings.tag === 'span')
+      return (
+        <span id={uid} style={textStyle}>
+          <TextContent item={item} />
+        </span>
+      );
+    return (
+      <p id={uid} style={textStyle}>
+        <TextContent item={item} />
+      </p>
+    );
   }
 
   if (item.type === 'input') {
@@ -318,7 +340,10 @@ const PreviewElement = ({ item, uid }) => {
           gap: 12,
           padding: '12px 14px',
           borderRadius: 16,
-          background: item.preview?.background === '#FFFFFF' ? '#F9FAFB' : 'rgba(255,255,255,.08)',
+          background:
+            item.preview?.background === '#FFFFFF'
+              ? '#F9FAFB'
+              : 'rgba(255,255,255,.08)',
           border: `1px solid ${colorToRgba(accent, 0.3)}`,
           color: item.styles?.color || '#111827',
         }}
@@ -334,7 +359,9 @@ const PreviewElement = ({ item, uid }) => {
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
-            boxShadow: checked ? `0 0 0 5px ${colorToRgba(accent, 0.16)}` : 'none',
+            boxShadow: checked
+              ? `0 0 0 5px ${colorToRgba(accent, 0.16)}`
+              : 'none',
           }}
         >
           {checked && isRadio && (
@@ -418,7 +445,11 @@ const PreviewElement = ({ item, uid }) => {
           textDecoration: 'none',
         }}
       >
-        {item.previewEffect === 'blurReveal' ? <WordText>{text}</WordText> : text}
+        {item.previewEffect === 'blurReveal' ? (
+          <WordText>{text}</WordText>
+        ) : (
+          text
+        )}
         <span
           data-underline
           style={{
@@ -499,7 +530,12 @@ const Preview = ({ item, replayKey, isHovered }) => {
   );
 };
 
-const ActionButton = ({ children, onClick, active = false, primary = false }) => (
+const ActionButton = ({
+  children,
+  onClick,
+  active = false,
+  primary = false,
+}) => (
   <button
     onClick={onClick}
     style={{
@@ -574,82 +610,87 @@ const Card = ({ item, mode = 'library', onSavedChange }) => {
       >
         <Preview item={item} replayKey={replayKey} isHovered={isHovered} />
 
-      <div style={{ padding: 18 }}>
-        <h3
-          style={{
-            fontSize: 18,
-            fontWeight: 850,
-            color: '#111827',
-            lineHeight: 1.12,
-            letterSpacing: 0,
-            margin: '0 0 10px',
-          }}
-        >
-          {item.name}
-        </h3>
+        <div style={{ padding: 18 }}>
+          <h3
+            style={{
+              fontSize: 18,
+              fontWeight: 850,
+              color: '#111827',
+              lineHeight: 1.12,
+              letterSpacing: 0,
+              margin: '0 0 10px',
+            }}
+          >
+            {item.name}
+          </h3>
 
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 7,
-            marginBottom: 16,
-          }}
-        >
-          {[item.category, getDisplayType(item), item.motionStyle].map((badge) => (
-            <span
-              key={badge}
-              style={{
-                fontSize: 11,
-                color: badge === item.category ? '#D6F854' : '#6B7280',
-                background: badge === item.category ? '#111827' : '#F9FAFB',
-                border:
-                  badge === item.category
-                    ? '1px solid #1F2937'
-                    : '1px solid #E5E7EB',
-                padding: '4px 8px',
-                borderRadius: 999,
-                fontWeight: 850,
-                display: 'inline-flex',
-                alignItems: 'center',
-              }}
-            >
-              {badge}
-            </span>
-          ))}
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 8,
-            alignItems: 'center',
-          }}
-        >
-          <ActionButton onClick={useInGenerator} primary>
-            <ExternalLink size={14} /> Edit
-          </ActionButton>
-
-          <ActionButton onClick={toggleSave} active={isSaved && mode !== 'mysets'}>
-            {mode === 'mysets' ? (
-              <>
-                <Trash2 size={14} /> Remove
-              </>
-            ) : (
-              <>
-                {isSaved ? <CheckCircle size={14} /> : <Bookmark size={14} />}
-                Save
-              </>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 7,
+              marginBottom: 16,
+            }}
+          >
+            {[item.category, getDisplayType(item), item.motionStyle].map(
+              (badge) => (
+                <span
+                  key={badge}
+                  style={{
+                    fontSize: 11,
+                    color: badge === item.category ? '#D6F854' : '#6B7280',
+                    background: badge === item.category ? '#111827' : '#F9FAFB',
+                    border:
+                      badge === item.category
+                        ? '1px solid #1F2937'
+                        : '1px solid #E5E7EB',
+                    padding: '4px 8px',
+                    borderRadius: 999,
+                    fontWeight: 850,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {badge}
+                </span>
+              )
             )}
-          </ActionButton>
+          </div>
 
-          <ActionButton onClick={() => setIsHandoffOpen(true)}>
-            <Code2 size={14} />
-            Code
-          </ActionButton>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 8,
+              alignItems: 'center',
+            }}
+          >
+            <ActionButton onClick={useInGenerator} primary>
+              <ExternalLink size={14} /> Edit
+            </ActionButton>
+
+            <ActionButton
+              onClick={toggleSave}
+              active={isSaved && mode !== 'mysets'}
+            >
+              {mode === 'mysets' ? (
+                <>
+                  <Trash2 size={14} /> Remove
+                </>
+              ) : (
+                <>
+                  {isSaved ? <CheckCircle size={14} /> : <Bookmark size={14} />}
+                  Save
+                </>
+              )}
+            </ActionButton>
+
+            <ActionButton onClick={() => setIsHandoffOpen(true)}>
+              <Code2 size={14} />
+              Code
+            </ActionButton>
+          </div>
         </div>
-      </div>
       </article>
 
       <DeveloperHandoffModal

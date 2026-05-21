@@ -18,12 +18,10 @@ const About = () => {
         justifyContent: 'center',
         maxWidth: '1100px',
         margin: '0 auto',
-        padding:
-          '60px 24px 80px 24px' /* Додав трохи місця знизу перед футером */,
+        padding: '60px 24px 80px 24px',
         fontFamily: 'Inter, system-ui, sans-serif',
       }}
     >
-      {/* HERO SECTION */}
       <div style={{ textAlign: 'center', marginBottom: '40px' }}>
         <h1
           style={{
@@ -58,12 +56,11 @@ const About = () => {
             fontWeight: '400',
           }}
         >
-          Animadiv — це візуальний генератор CSS-анімацій, створений для
+          Animadiv - це візуальний генератор CSS-анімацій, створений для
           подолання прірви між продуктовим дизайном та фронтенд-розробкою.
         </p>
       </div>
 
-      {/* BENTO GRID LAYOUT */}
       <div
         style={{
           display: 'grid',
@@ -72,7 +69,6 @@ const About = () => {
           width: '100%',
         }}
       >
-        {/* БЛОК 1: Місія */}
         <section
           style={{
             gridColumn: 'span 8',
@@ -118,7 +114,7 @@ const About = () => {
                 margin: 0,
               }}
             >
-              Проблема & Рішення
+              Проблема & рішення
             </h2>
           </div>
           <h3
@@ -143,11 +139,10 @@ const About = () => {
           >
             Дизайнери створюють ідеальні концепції, а розробники витрачають
             години на підбір таймінгів у коді. Animadiv генерує оптимізований
-            CSS та HTML код миттєво, дозволяючи вам фокусуватися на креативі.
+            CSS та HTML код миттєво, дозволяючи фокусуватися на креативі.
           </p>
         </section>
 
-        {/* БЛОК 2: Автор */}
         <section
           style={{
             gridColumn: 'span 4',
@@ -211,32 +206,7 @@ const About = () => {
               href="https://github.com"
               target="_blank"
               rel="noreferrer"
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                background: 'var(--surface-subtle)',
-                color: 'var(--button-secondary-text)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--text-main)';
-                e.currentTarget.style.color = 'var(--surface)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--surface-subtle)';
-                e.currentTarget.style.color = 'var(--button-secondary-text)';
-              }}
-            >
-              <Globe size={16} />
-            </a>
-            <a
-              href="https://linkedin.com"
-              target="_blank"
-              rel="noreferrer"
+              aria-label="Website"
               style={{
                 width: '36px',
                 height: '36px',
@@ -257,12 +227,38 @@ const About = () => {
                 e.currentTarget.style.color = 'var(--button-secondary-text)';
               }}
             >
+              <Globe size={16} />
+            </a>
+            <a
+              href="https://linkedin.com"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="LinkedIn"
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: 'var(--surface-subtle)',
+                color: 'var(--button-secondary-text)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--text-main)';
+                e.currentTarget.style.color = 'var(--surface)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--surface-subtle)';
+                e.currentTarget.style.color = 'var(--button-secondary-text)';
+              }}
+            >
               <Briefcase size={16} />
             </a>
           </div>
         </section>
 
-        {/* БЛОК 3: Технології */}
         <section
           style={{
             gridColumn: 'span 12',
@@ -414,8 +410,8 @@ const About = () => {
                 margin: 0,
               }}
             >
-              Власні JS-утиліти для розрахунку та ін'єкції CSS Keyframes у DOM у
-              реальному часі.
+              Власні JS-утиліти для розрахунку та ін'єкції CSS Keyframes у DOM
+              в реальному часі.
             </p>
           </div>
         </section>

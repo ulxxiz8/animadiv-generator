@@ -6,7 +6,9 @@ export const HANDOFF_STORAGE_PREFIX = 'animadiv-developer-handoff:';
 const encodePayload = (payload) => {
   const json = JSON.stringify(payload);
   const bytes = new TextEncoder().encode(json);
-  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
+  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join(
+    ''
+  );
   return btoa(binary)
     .replaceAll('+', '-')
     .replaceAll('/', '_')
@@ -28,6 +30,13 @@ const decodePayload = (value) => {
   } catch {
     return null;
   }
+};
+
+export const createDeveloperHandoffUrl = (payload) => {
+  const url = new URL(window.location.href);
+  url.searchParams.delete('handoff');
+  url.hash = `handoff=${encodePayload(payload)}`;
+  return url.toString();
 };
 
 export const createCodeBundle = (params, cssOverride) => {
@@ -56,15 +65,34 @@ export const createDeveloperHandoff = ({ params, css, title }) => {
     bundle,
   };
 
-  localStorage.setItem(`${HANDOFF_STORAGE_PREFIX}${id}`, JSON.stringify(payload));
-
-  const url = new URL(window.location.href);
-  url.searchParams.delete('handoff');
-  url.hash = `handoff=${encodePayload(payload)}`;
+  localStorage.setItem(
+    `${HANDOFF_STORAGE_PREFIX}${id}`,
+    JSON.stringify(payload)
+  );
 
   return {
     ...payload,
-    url: url.toString(),
+    url: createDeveloperHandoffUrl(payload),
+  };
+};
+
+export const createDeveloperHandoffFromBundle = ({ bundle, title }) => {
+  const id = `handoff_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const payload = {
+    id,
+    title: title || 'AnimaDiv UI Kit section',
+    createdAt: new Date().toISOString(),
+    bundle,
+  };
+
+  localStorage.setItem(
+    `${HANDOFF_STORAGE_PREFIX}${id}`,
+    JSON.stringify(payload)
+  );
+
+  return {
+    ...payload,
+    url: createDeveloperHandoffUrl(payload),
   };
 };
 

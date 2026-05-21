@@ -16,8 +16,9 @@ const Layout = () => {
   const navigate = useNavigate();
   const isGeneratorPage = location.pathname.startsWith('/generator');
   const getCurrentHandoffId = () =>
-    new URLSearchParams(window.location.hash.replace(/^#/, '')).get('handoff') ||
-    new URLSearchParams(window.location.search).get('handoff');
+    new URLSearchParams(window.location.hash.replace(/^#/, '')).get(
+      'handoff'
+    ) || new URLSearchParams(window.location.search).get('handoff');
   const handoffId =
     new URLSearchParams(location.hash.replace(/^#/, '')).get('handoff') ||
     new URLSearchParams(location.search).get('handoff') ||
@@ -68,7 +69,9 @@ const Layout = () => {
 
   return (
     <div
-      className={isGeneratorPage ? 'app-shell app-shell--generator' : 'app-shell'}
+      className={
+        isGeneratorPage ? 'app-shell app-shell--generator' : 'app-shell'
+      }
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -144,7 +147,9 @@ const Layout = () => {
           <button
             type="button"
             onClick={toggleTheme}
-            aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+            aria-label={
+              isDark ? 'Switch to light theme' : 'Switch to dark theme'
+            }
             title={isDark ? 'Light theme' : 'Dark theme'}
             style={{
               display: 'inline-flex',

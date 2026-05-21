@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { animationPresets } from '../../data/presets';
+import { customLayouts } from './collectionLayoutDefinitions';
 
-// Допоміжний компонент для елемента
+// Р”РѕРїРѕРјС–Р¶РЅРёР№ РєРѕРјРїРѕРЅРµРЅС‚ РґР»СЏ РµР»РµРјРµРЅС‚Р°
 const EditableElement = ({
   id,
   label,
@@ -13,7 +14,7 @@ const EditableElement = ({
   globalPreset,
   isPlaying,
 }) => {
-  // Вираховуємо затримку
+  // Р’РёСЂР°С…РѕРІСѓС”РјРѕ Р·Р°С‚СЂРёРјРєСѓ
   const delay = index * staggerDelay;
   const preset = animationPresets.find((p) => p.id === globalPreset);
   const animationName = preset ? `ag_${preset.id}` : 'none';
@@ -25,21 +26,24 @@ const EditableElement = ({
         onSelect(id);
       }}
       style={{
-        border: isSelected ? '2px solid #4F46E5' : '1px solid #D1D5DB',
-        borderRadius: '8px',
-        background: '#fff',
+        border: isSelected ? '2px solid #111827' : '1px solid #E5E7EB',
+        borderRadius: '16px',
+        background: '#FFFFFF',
         padding: '16px',
         color: isSelected ? '#111827' : '#6B7280',
         fontSize: '13px',
-        fontWeight: isSelected ? '700' : '500',
+        fontWeight: isSelected ? '900' : '750',
         display: 'flex',
         alignItems: 'center',
         cursor: 'pointer',
         position: 'relative',
-        transition: 'all 0.2s ease',
-        boxShadow: isSelected ? '0 4px 12px rgba(79, 70, 229, 0.15)' : 'none',
+        transition:
+          'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+        boxShadow: isSelected
+          ? '0 10px 15px -3px rgba(0, 0, 0, 0.05)'
+          : '0 1px 2px rgba(0, 0, 0, 0.03)',
 
-        // КАСКАДНА ЛОГІКА
+        // РљРђРЎРљРђР”РќРђ Р›РћР“Р†РљРђ
         animationName: isPlaying ? animationName : 'none',
         animationDuration: '600ms',
         animationDelay: `${delay}ms`,
@@ -50,45 +54,22 @@ const EditableElement = ({
       }}
     >
       {label}
-      {isSelected && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            console.log(`Видалити ${id}`);
-          }}
-          style={{
-            position: 'absolute',
-            top: '-10px',
-            right: '-10px',
-            width: '24px',
-            height: '24px',
-            background: 'var(--button-bg)',
-            color: '#fff',
-            borderRadius: '50%',
-            border: '2px solid #fff',
-            fontSize: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            zIndex: 10,
-          }}
-        >
-          ✕
-        </button>
-      )}
     </div>
   );
 };
 
-const CollectionEditor = ({ layoutId, onBack, globalPreset, staggerDelay }) => {
+const CollectionEditor = ({
+  layoutId,
+  onBack,
+  globalPreset,
+  staggerDelay,
+  isPlaying,
+  refreshKey,
+  onPlay,
+}) => {
   const [activeElementId, setActiveElementId] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  // 1. ДІСТАЄМО KEYFRAMES ДЛЯ ОБРАНОГО ПРЕСЕТУ
   const activePreset = animationPresets.find((p) => p.id === globalPreset);
-  // Передаємо дефолтні параметри для генерації keyframes (інтенсивність тощо)
   const keyframesContent =
     activePreset && typeof activePreset.keyframes === 'function'
       ? activePreset.keyframes({ intensity: 100 })
@@ -99,21 +80,12 @@ const CollectionEditor = ({ layoutId, onBack, globalPreset, staggerDelay }) => {
       ? `@keyframes ag_${activePreset.id} { \n${keyframesContent}\n }`
       : '';
 
-  // Функція запуску каскаду
-  const handlePlay = () => {
-    setIsPlaying(false);
-    // Даємо браузеру мілісекунду, щоб "забути" стару анімацію і запустити нову
-    setTimeout(() => {
-      setRefreshKey((prev) => prev + 1);
-      setIsPlaying(true);
-    }, 10);
-  };
-
-  // Автоматично запускаємо при першому відкритті макета або зміні пресету
+  // Р¤СѓРЅРєС†С–СЏ Р·Р°РїСѓСЃРєСѓ РєР°СЃРєР°РґСѓ
+  // РђРІС‚РѕРјР°С‚РёС‡РЅРѕ Р·Р°РїСѓСЃРєР°С”РјРѕ РїСЂРё РїРµСЂС€РѕРјСѓ РІС–РґРєСЂРёС‚С‚С– РјР°РєРµС‚Р° Р°Р±Рѕ Р·РјС–РЅС– РїСЂРµСЃРµС‚Сѓ
   useEffect(() => {
-    const timer = window.setTimeout(handlePlay, 0);
+    const timer = window.setTimeout(() => onPlay?.(), 0);
     return () => window.clearTimeout(timer);
-  }, [globalPreset]);
+  }, [globalPreset, onPlay]);
 
   const renderLayout = () => {
     const commonProps = {
@@ -123,6 +95,25 @@ const CollectionEditor = ({ layoutId, onBack, globalPreset, staggerDelay }) => {
       globalPreset,
       isPlaying,
     };
+    const customLayout = customLayouts[layoutId];
+
+    if (customLayout) {
+      return (
+        <div key={refreshKey} style={customLayout.container}>
+          {customLayout.items.map((item, index) => (
+            <EditableElement
+              {...commonProps}
+              key={item.id}
+              index={index}
+              id={item.id}
+              label={item.label}
+              isSelected={activeElementId === item.id}
+              style={item.style}
+            />
+          ))}
+        </div>
+      );
+    }
 
     switch (layoutId) {
       case 'hero':
@@ -263,66 +254,58 @@ const CollectionEditor = ({ layoutId, onBack, globalPreset, staggerDelay }) => {
           </div>
         );
       default:
-        return <div style={{ color: '#9CA3AF' }}>Макет у розробці</div>;
+        return null;
     }
   };
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-      {/* 2. ІН'ЄКЦІЯ СТИЛІВ */}
+    <div
+      style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        background: '#F9FAFB',
+        minHeight: 0,
+      }}
+    >
+      {/* 2. Р†Рќ'Р„РљР¦Р†РЇ РЎРўРР›Р†Р’ */}
       <style>{dynamicStyles}</style>
 
       <div
         style={{
-          padding: '12px 20px',
+          padding: '14px 18px',
           borderBottom: '1px solid #E5E7EB',
-          background: '#fff',
+          background: '#FFFFFF',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexShrink: 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
-            onClick={handlePlay}
-            style={{
-              padding: '8px 16px',
-              background: '#111827',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-            }}
-          >
-            ▶ Play Sequence
-          </button>
-          <button
-            onClick={() => setIsPlaying(false)}
-            style={{
-              padding: '8px',
-              background: 'transparent',
-              border: '1px solid #D1D5DB',
-              borderRadius: '8px',
-              color: '#6B7280',
-              cursor: 'pointer',
-            }}
-          >
-            🔄 Reset
-          </button>
+        <div
+          style={{
+            color: '#111827',
+            fontSize: 15,
+            fontWeight: 900,
+          }}
+        >
+          Canvas
         </div>
         <button
+          type="button"
           onClick={onBack}
           style={{
             color: '#6B7280',
             background: 'none',
-            border: 'none',
+            border: '1px solid transparent',
+            borderRadius: 12,
             cursor: 'pointer',
-            fontSize: '14px',
+            fontSize: 14,
+            fontWeight: 800,
+            padding: '9px 10px',
           }}
         >
-          ✕ Close
+          Close
         </button>
       </div>
 
@@ -335,6 +318,7 @@ const CollectionEditor = ({ layoutId, onBack, globalPreset, staggerDelay }) => {
           justifyContent: 'center',
           padding: '40px',
           background: '#F9FAFB',
+          minHeight: 0,
         }}
       >
         {renderLayout()}

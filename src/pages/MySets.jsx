@@ -60,7 +60,8 @@ const MySets = () => {
               activeTab === 'saved'
                 ? '2px solid var(--text-main)'
                 : '2px solid transparent',
-            color: activeTab === 'saved' ? 'var(--text-main)' : 'var(--text-muted)',
+            color:
+              activeTab === 'saved' ? 'var(--text-main)' : 'var(--text-muted)',
             fontWeight: activeTab === 'saved' ? 800 : 600,
             cursor: 'pointer',
           }}
@@ -77,7 +78,10 @@ const MySets = () => {
               activeTab === 'collections'
                 ? '2px solid var(--text-main)'
                 : '2px solid transparent',
-            color: activeTab === 'collections' ? 'var(--text-main)' : 'var(--text-muted)',
+            color:
+              activeTab === 'collections'
+                ? 'var(--text-main)'
+                : 'var(--text-muted)',
             fontWeight: activeTab === 'collections' ? 800 : 600,
             cursor: 'pointer',
           }}
@@ -147,7 +151,13 @@ const MySets = () => {
         ))}
 
       {activeTab === 'collections' && (
-        <div style={{ textAlign: 'center', padding: 80, color: 'var(--text-soft)' }}>
+        <div
+          style={{
+            textAlign: 'center',
+            padding: 80,
+            color: 'var(--text-soft)',
+          }}
+        >
           Collections are not available yet.
         </div>
       )}

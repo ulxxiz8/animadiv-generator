@@ -104,7 +104,11 @@ const Library = () => {
               <Search
                 size={16}
                 color="var(--text-muted)"
-                style={{ position: 'absolute', left: 14, pointerEvents: 'none' }}
+                style={{
+                  position: 'absolute',
+                  left: 14,
+                  pointerEvents: 'none',
+                }}
               />
               <input
                 type="text"
@@ -158,9 +162,15 @@ const Library = () => {
                       height: 34,
                       padding: '0 12px',
                       borderRadius: 999,
-                      border: isActive ? '1px solid var(--text-main)' : '1px solid var(--border)',
-                      background: isActive ? 'var(--text-main)' : 'var(--surface)',
-                      color: isActive ? 'var(--primary)' : 'var(--button-secondary-text)',
+                      border: isActive
+                        ? '1px solid var(--text-main)'
+                        : '1px solid var(--border)',
+                      background: isActive
+                        ? 'var(--text-main)'
+                        : 'var(--surface)',
+                      color: isActive
+                        ? 'var(--primary)'
+                        : 'var(--button-secondary-text)',
                       fontSize: 12,
                       fontWeight: 850,
                       cursor: 'pointer',
@@ -202,8 +212,18 @@ const Library = () => {
               color: 'var(--text-muted)',
             }}
           >
-            <SearchX size={28} color="var(--text-muted)" style={{ marginBottom: 12 }} />
-            <div style={{ fontSize: 18, fontWeight: 850, color: 'var(--text-main)' }}>
+            <SearchX
+              size={28}
+              color="var(--text-muted)"
+              style={{ marginBottom: 12 }}
+            />
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 850,
+                color: 'var(--text-main)',
+              }}
+            >
               No matching elements found
             </div>
           </div>
@@ -211,9 +231,10 @@ const Library = () => {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(292px, 330px))',
+              gridTemplateColumns:
+                'repeat(auto-fit, minmax(min(100%, 292px), 1fr))',
               gap: 22,
-              justifyContent: 'center',
+              justifyContent: 'stretch',
               alignItems: 'stretch',
               overflowX: 'hidden',
             }}
