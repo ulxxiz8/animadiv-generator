@@ -54,7 +54,12 @@ ${css}
   };
 };
 
-export const createDeveloperHandoff = ({ params, css, title }) => {
+export const createDeveloperHandoff = ({
+  params,
+  css,
+  title,
+  previewState,
+}) => {
   const id = `handoff_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const bundle = createCodeBundle(params, css);
   const payload = {
@@ -62,6 +67,7 @@ export const createDeveloperHandoff = ({ params, css, title }) => {
     title: title || params?.name || params?.type || 'AnimaDiv element',
     createdAt: new Date().toISOString(),
     params,
+    previewState,
     bundle,
   };
 

@@ -4,6 +4,7 @@ import PreviewArea from './PreviewArea';
 import CodeOutput from './CodeOutput';
 import { generateFullCSS } from '../../utils/generateCss';
 import { sanitizeAnimationsForType } from '../../utils/semanticMapping';
+import { getPreferredPreviewState } from '../../utils/previewState';
 import {
   createElement,
   DEFAULT_ANIMATION_CONFIG,
@@ -73,8 +74,11 @@ const getInitialState = () => {
 const GeneratorPage = () => {
   const [params, setParams] = useState(getInitialState);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activePreviewState, setActivePreviewState] = useState('load');
-  const [activeMotionState, setActiveMotionState] = useState('load');
+  const initialPreviewState = getPreferredPreviewState(params);
+  const [activePreviewState, setActivePreviewState] =
+    useState(initialPreviewState);
+  const [activeMotionState, setActiveMotionState] =
+    useState(initialPreviewState);
 
   // 1. ОНОВЛЕННЯ ТИПУ ЕЛЕМЕНТА (Зберігаємо поточні анімації, але повністю міняємо об'єкт)
   const handleTypeChange = (newType) => {
@@ -149,6 +153,22 @@ const GeneratorPage = () => {
     return () => window.clearTimeout(timer);
   }, [params.animations?.load?.presetId]);
 
+  useEffect(() => {
+    const preferredState = getPreferredPreviewState(params);
+
+    if (
+      activePreviewState !== preferredState &&
+      params.animations?.[activePreviewState]?.presetId === 'none'
+    ) {
+      const timer = window.setTimeout(() => {
+        setActivePreviewState(preferredState);
+        setActiveMotionState(preferredState);
+      }, 0);
+
+      return () => window.clearTimeout(timer);
+    }
+  }, [activePreviewState, params]);
+
   return (
     <main className="main-container">
       <div className="column settings-panel">
@@ -173,7 +193,11 @@ const GeneratorPage = () => {
         />
       </div>
       <div className="column code-panel">
-        <CodeOutput params={params} code={fullCss} />
+        <CodeOutput
+          params={params}
+          code={fullCss}
+          activePreviewState={activePreviewState}
+        />
       </div>
     </main>
   );

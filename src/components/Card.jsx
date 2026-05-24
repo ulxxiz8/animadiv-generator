@@ -33,23 +33,16 @@ const colorToRgba = (color = '#111827', opacity = 0.16) => {
   if (String(color).startsWith('rgb(')) {
     return String(color).replace('rgb(', 'rgba(').replace(')', `, ${opacity})`);
   }
-
   const hex = String(color).replace('#', '');
   if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(hex)) {
     return `rgba(17, 24, 39, ${opacity})`;
   }
-
   const normalized =
     hex.length === 3
-      ? hex
-          .split('')
-          .map((char) => char + char)
-          .join('')
+      ? hex.split('').map((char) => char + char).join('')
       : hex;
   const value = parseInt(normalized, 16);
-  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${
-    value & 255
-  }, ${opacity})`;
+  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${opacity})`;
 };
 
 const getShadowStyle = (settings = {}) => {
@@ -91,7 +84,6 @@ const getDisplayType = (item) => {
 const getBaseStyle = (item) => {
   const styles = item.styles || {};
   const settings = item.specificSettings || {};
-
   return {
     ...styles,
     width: px(styles.width),
@@ -124,13 +116,8 @@ ${target} {
   will-change: transform, opacity, filter, box-shadow;
   transition: transform 260ms cubic-bezier(.16,1,.3,1), filter 260ms ease, box-shadow 260ms ease, color 260ms ease;
 }
-${target} [data-word] {
-  display: inline-block;
-}
-${target} [data-underline] {
-  transform: scaleX(0);
-  transform-origin: left;
-}
+${target} [data-word] { display: inline-block; }
+${target} [data-underline] { transform: scaleX(0); transform-origin: left; }
 `;
 
   const keyframes = `
@@ -174,17 +161,11 @@ const WordText = ({ children }) =>
     .split(/(\s+)/)
     .map((part, index) =>
       part.trim() ? (
-        <span
-          data-word
-          key={`${part}-${index}`}
-          style={{ '--word-index': index, whiteSpace: 'pre' }}
-        >
+        <span data-word key={`${part}-${index}`} style={{ '--word-index': index, whiteSpace: 'pre' }}>
           {part}
         </span>
       ) : (
-        <span key={`space-${index}`} style={{ whiteSpace: 'pre' }}>
-          {part}
-        </span>
+        <span key={`space-${index}`} style={{ whiteSpace: 'pre' }}>{part}</span>
       )
     );
 
@@ -195,31 +176,16 @@ const TextContent = ({ item }) => {
   if (item.previewEffect === 'typewriter') {
     return (
       <>
-        <span
-          data-typewriter
-          style={{
-            display: 'inline-block',
-            overflow: 'hidden',
-            verticalAlign: 'bottom',
-            whiteSpace: 'nowrap',
-          }}
-        >
+        <span data-typewriter style={{ display: 'inline-block', overflow: 'hidden', verticalAlign: 'bottom', whiteSpace: 'nowrap' }}>
           {text}
         </span>
-        <span data-caret style={{ color: getAccent(item), marginLeft: 4 }}>
-          |
-        </span>
+        <span data-caret style={{ color: getAccent(item), marginLeft: 4 }}>|</span>
       </>
     );
   }
-
-  if (
-    item.previewEffect === 'wordFade' ||
-    item.previewEffect === 'blurReveal'
-  ) {
+  if (item.previewEffect === 'wordFade' || item.previewEffect === 'blurReveal') {
     return <WordText>{text}</WordText>;
   }
-
   return text;
 };
 
@@ -259,30 +225,10 @@ const PreviewElement = ({ item, uid }) => {
       textAlign: settings.textAlign || 'center',
       whiteSpace: 'pre-wrap',
     };
-
-    if (settings.tag === 'h1')
-      return (
-        <h1 id={uid} style={textStyle}>
-          <TextContent item={item} />
-        </h1>
-      );
-    if (settings.tag === 'h3')
-      return (
-        <h3 id={uid} style={textStyle}>
-          <TextContent item={item} />
-        </h3>
-      );
-    if (settings.tag === 'span')
-      return (
-        <span id={uid} style={textStyle}>
-          <TextContent item={item} />
-        </span>
-      );
-    return (
-      <p id={uid} style={textStyle}>
-        <TextContent item={item} />
-      </p>
-    );
+    if (settings.tag === 'h1') return <h1 id={uid} style={textStyle}><TextContent item={item} /></h1>;
+    if (settings.tag === 'h3') return <h3 id={uid} style={textStyle}><TextContent item={item} /></h3>;
+    if (settings.tag === 'span') return <span id={uid} style={textStyle}><TextContent item={item} /></span>;
+    return <p id={uid} style={textStyle}><TextContent item={item} /></p>;
   }
 
   if (item.type === 'input') {
@@ -359,41 +305,28 @@ const PreviewElement = ({ item, uid }) => {
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
-            boxShadow: checked
-              ? `0 0 0 5px ${colorToRgba(accent, 0.16)}`
-              : 'none',
+            boxShadow: checked ? `0 0 0 5px ${colorToRgba(accent, 0.16)}` : 'none',
           }}
         >
           {checked && isRadio && (
-            <span
-              style={{
-                width: size * 0.48,
-                height: size * 0.48,
-                borderRadius: '50%',
-                background: accent,
-              }}
-            />
+            <span style={{ width: size * 0.48, height: size * 0.48, borderRadius: '50%', background: accent }} />
           )}
           {checked && !isRadio && (
-            <span
-              style={{
-                width: size * 0.48,
-                height: size * 0.28,
-                borderLeft: '3px solid #111827',
-                borderBottom: '3px solid #111827',
-                transform: 'rotate(-45deg) translateY(-1px)',
-              }}
-            />
+            <span style={{
+              width: size * 0.48,
+              height: size * 0.28,
+              borderLeft: '3px solid #111827',
+              borderBottom: '3px solid #111827',
+              transform: 'rotate(-45deg) translateY(-1px)',
+            }} />
           )}
         </span>
-        <span
-          style={{
-            fontSize: px(settings.fontSize || 14),
-            fontWeight: settings.fontWeight || 850,
-            fontFamily: settings.fontFamily || 'Inter, system-ui, sans-serif',
-            color: item.styles?.color || '#111827',
-          }}
-        >
+        <span style={{
+          fontSize: px(settings.fontSize || 14),
+          fontWeight: settings.fontWeight || 850,
+          fontFamily: settings.fontFamily || 'Inter, system-ui, sans-serif',
+          color: item.styles?.color || '#111827',
+        }}>
           {settings.label}
         </span>
       </label>
@@ -445,11 +378,7 @@ const PreviewElement = ({ item, uid }) => {
           textDecoration: 'none',
         }}
       >
-        {item.previewEffect === 'blurReveal' ? (
-          <WordText>{text}</WordText>
-        ) : (
-          text
-        )}
+        {item.previewEffect === 'blurReveal' ? <WordText>{text}</WordText> : text}
         <span
           data-underline
           style={{
@@ -480,18 +409,16 @@ const PreviewElement = ({ item, uid }) => {
           overflow: settings.overflow || 'visible',
         }}
       >
-        <div
-          style={{
-            opacity: 0.42,
-            border: '1px dashed currentColor',
-            padding: '12px 14px',
-            borderRadius: 8,
-            color: item.styles?.color || '#111827',
-            fontSize: 13,
-            fontWeight: 850,
-            lineHeight: 1.2,
-          }}
-        >
+        <div style={{
+          opacity: 0.42,
+          border: '1px dashed currentColor',
+          padding: '12px 14px',
+          borderRadius: 8,
+          color: item.styles?.color || '#111827',
+          fontSize: 13,
+          fontWeight: 850,
+          lineHeight: 1.2,
+        }}>
           Inner Content
         </div>
       </div>
@@ -512,8 +439,8 @@ const Preview = ({ item, replayKey, isHovered }) => {
         minHeight: 232,
         background: getPreviewBackground(item),
         borderBottom: dark
-          ? '1px solid rgba(255, 255, 255, 0.12)'
-          : '1px solid #E5E7EB',
+          ? '1px solid rgba(255,255,255,0.12)'
+          : '1px solid var(--border)',
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         display: 'flex',
@@ -530,21 +457,16 @@ const Preview = ({ item, replayKey, isHovered }) => {
   );
 };
 
-const ActionButton = ({
-  children,
-  onClick,
-  active = false,
-  primary = false,
-}) => (
+const ActionButton = ({ children, onClick, active = false, primary = false }) => (
   <button
     onClick={onClick}
     style={{
       flex: 'none',
       width: 'auto',
       padding: '8px 12px',
-      background: primary || active ? '#111827' : '#F9FAFB',
-      color: primary || active ? '#D6F854' : '#374151',
-      border: primary ? '1px solid #1F2937' : '1px solid #E5E7EB',
+      background: primary || active ? 'var(--card-dark-bg)' : 'var(--surface-subtle)',
+      color: primary || active ? 'var(--primary)' : 'var(--button-secondary-text)',
+      border: primary || active ? '1px solid var(--card-dark-border)' : '1px solid var(--border)',
       borderRadius: 999,
       fontWeight: 850,
       fontSize: 13,
@@ -554,7 +476,10 @@ const ActionButton = ({
       justifyContent: 'center',
       gap: 6,
       whiteSpace: 'nowrap',
+      transition: 'opacity 0.15s',
     }}
+    onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.75'; }}
+    onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
   >
     {children}
   </button>
@@ -581,7 +506,6 @@ const Card = ({ item, mode = 'library', onSavedChange }) => {
       mode === 'mysets' || exists
         ? savedItems.filter((saved) => saved.id !== item.id)
         : [...savedItems, item];
-
     localStorage.setItem(SAVED_KEY, JSON.stringify(nextItems));
     setIsSaved(!exists && mode !== 'mysets');
     onSavedChange?.(nextItems);
@@ -591,21 +515,17 @@ const Card = ({ item, mode = 'library', onSavedChange }) => {
     <>
       <article
         style={{
-          background: '#fff',
+          background: 'var(--surface)',
           borderRadius: 24,
-          border: isHovered ? '1px solid #D1D5DB' : '1px solid #E5E7EB',
+          border: isHovered ? '1px solid var(--control-border)' : '1px solid var(--border)',
           overflow: 'hidden',
           transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
           boxShadow: isHovered
-            ? '0 16px 34px -14px rgba(17,24,39,0.2)'
+            ? '0 16px 34px -14px rgba(0,0,0,0.25)'
             : '0 1px 2px rgba(0,0,0,0.03)',
-          transition:
-            'transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease',
+          transition: 'transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease',
         }}
-        onMouseEnter={() => {
-          setIsHovered(true);
-          setReplayKey((key) => key + 1);
-        }}
+        onMouseEnter={() => { setIsHovered(true); setReplayKey((key) => key + 1); }}
         onMouseLeave={() => setIsHovered(false)}
       >
         <Preview item={item} replayKey={replayKey} isHovered={isHovered} />
@@ -615,7 +535,7 @@ const Card = ({ item, mode = 'library', onSavedChange }) => {
             style={{
               fontSize: 18,
               fontWeight: 850,
-              color: '#111827',
+              color: 'var(--text-main)',
               lineHeight: 1.12,
               letterSpacing: 0,
               margin: '0 0 10px',
@@ -624,70 +544,42 @@ const Card = ({ item, mode = 'library', onSavedChange }) => {
             {item.name}
           </h3>
 
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 7,
-              marginBottom: 16,
-            }}
-          >
-            {[item.category, getDisplayType(item), item.motionStyle].map(
-              (badge) => (
-                <span
-                  key={badge}
-                  style={{
-                    fontSize: 11,
-                    color: badge === item.category ? '#D6F854' : '#6B7280',
-                    background: badge === item.category ? '#111827' : '#F9FAFB',
-                    border:
-                      badge === item.category
-                        ? '1px solid #1F2937'
-                        : '1px solid #E5E7EB',
-                    padding: '4px 8px',
-                    borderRadius: 999,
-                    fontWeight: 850,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                  }}
-                >
-                  {badge}
-                </span>
-              )
-            )}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 16 }}>
+            {[item.category, getDisplayType(item), item.motionStyle].map((badge) => (
+              <span
+                key={badge}
+                style={{
+                  fontSize: 11,
+                  color: badge === item.category ? 'var(--primary)' : 'var(--text-muted)',
+                  background: badge === item.category ? 'var(--card-dark-bg)' : 'var(--surface-subtle)',
+                  border: badge === item.category ? '1px solid var(--card-dark-border)' : '1px solid var(--border)',
+                  padding: '4px 8px',
+                  borderRadius: 999,
+                  fontWeight: 850,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                }}
+              >
+                {badge}
+              </span>
+            ))}
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 8,
-              alignItems: 'center',
-            }}
-          >
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
             <ActionButton onClick={useInGenerator} primary>
               <ExternalLink size={14} /> Edit
             </ActionButton>
 
-            <ActionButton
-              onClick={toggleSave}
-              active={isSaved && mode !== 'mysets'}
-            >
+            <ActionButton onClick={toggleSave} active={isSaved && mode !== 'mysets'}>
               {mode === 'mysets' ? (
-                <>
-                  <Trash2 size={14} /> Remove
-                </>
+                <><Trash2 size={14} /> Remove</>
               ) : (
-                <>
-                  {isSaved ? <CheckCircle size={14} /> : <Bookmark size={14} />}
-                  Save
-                </>
+                <>{isSaved ? <CheckCircle size={14} /> : <Bookmark size={14} />} Save</>
               )}
             </ActionButton>
 
             <ActionButton onClick={() => setIsHandoffOpen(true)}>
-              <Code2 size={14} />
-              Code
+              <Code2 size={14} /> Code
             </ActionButton>
           </div>
         </div>

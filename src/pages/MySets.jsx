@@ -24,20 +24,64 @@ const MySets = () => {
         margin: '0 auto',
         padding: '40px 20px',
         paddingBottom: 100,
+        fontFamily:
+          'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
     >
+      <style>{`
+        .mysets-tab {
+          padding: 0 0 16px 0;
+          background: transparent;
+          border: none;
+          border-bottom: 2px solid transparent;
+          font-size: 14px;
+          font-family: inherit;
+          cursor: pointer;
+          transition: color 0.15s, border-color 0.15s;
+          color: var(--text-muted);
+          font-weight: 600;
+        }
+        .mysets-tab.active {
+          border-bottom-color: var(--text-main);
+          color: var(--text-main);
+          font-weight: 800;
+        }
+        .mysets-tab:hover { color: var(--text-main); }
+
+        .mysets-cta {
+          display: inline-block;
+          padding: 12px 24px;
+          background: var(--text-main);
+          color: var(--primary);
+          text-decoration: none;
+          border-radius: 10px;
+          font-weight: 800;
+          font-size: 14px;
+          transition: opacity 0.15s;
+        }
+        .mysets-cta:hover { opacity: 0.8; }
+
+        @media (max-width: 600px) {
+          .mysets-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .mysets-title { font-size: 26px !important; }
+        }
+      `}</style>
+
       <div style={{ marginBottom: 40 }}>
         <h1
+          className="mysets-title"
           style={{
             fontSize: 32,
             fontWeight: 900,
             color: 'var(--text-main)',
             marginBottom: 8,
+            letterSpacing: '-0.01em',
+            lineHeight: 1.1,
           }}
         >
           My Sets
         </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: 16 }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: 16, margin: 0 }}>
           Saved library elements that can be reopened in the generator.
         </p>
       </div>
@@ -52,39 +96,13 @@ const MySets = () => {
       >
         <button
           onClick={() => setActiveTab('saved')}
-          style={{
-            padding: '0 0 16px 0',
-            background: 'transparent',
-            border: 'none',
-            borderBottom:
-              activeTab === 'saved'
-                ? '2px solid var(--text-main)'
-                : '2px solid transparent',
-            color:
-              activeTab === 'saved' ? 'var(--text-main)' : 'var(--text-muted)',
-            fontWeight: activeTab === 'saved' ? 800 : 600,
-            cursor: 'pointer',
-          }}
+          className={`mysets-tab${activeTab === 'saved' ? ' active' : ''}`}
         >
           Saved presets ({savedItems.length})
         </button>
         <button
           onClick={() => setActiveTab('collections')}
-          style={{
-            padding: '0 0 16px 0',
-            background: 'transparent',
-            border: 'none',
-            borderBottom:
-              activeTab === 'collections'
-                ? '2px solid var(--text-main)'
-                : '2px solid transparent',
-            color:
-              activeTab === 'collections'
-                ? 'var(--text-main)'
-                : 'var(--text-muted)',
-            fontWeight: activeTab === 'collections' ? 800 : 600,
-            cursor: 'pointer',
-          }}
+          className={`mysets-tab${activeTab === 'collections' ? ' active' : ''}`}
         >
           Collections
         </button>
@@ -93,6 +111,7 @@ const MySets = () => {
       {activeTab === 'saved' &&
         (savedItems.length > 0 ? (
           <div
+            className="mysets-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
@@ -131,33 +150,17 @@ const MySets = () => {
             >
               Nothing saved yet
             </h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: 32 }}>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 32, margin: '0 0 32px' }}>
               Save a library element to keep it here.
             </p>
-            <Link
-              to="/library"
-              style={{
-                padding: '12px 24px',
-                background: 'var(--text-main)',
-                color: 'var(--primary)',
-                textDecoration: 'none',
-                borderRadius: 10,
-                fontWeight: 800,
-              }}
-            >
+            <Link to="/library" className="mysets-cta">
               Open Library
             </Link>
           </div>
         ))}
 
       {activeTab === 'collections' && (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: 80,
-            color: 'var(--text-soft)',
-          }}
-        >
+        <div style={{ textAlign: 'center', padding: 80, color: 'var(--text-soft)' }}>
           Collections are not available yet.
         </div>
       )}

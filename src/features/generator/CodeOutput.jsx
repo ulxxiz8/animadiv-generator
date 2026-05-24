@@ -8,7 +8,7 @@ const TABS = [
   { id: 'combined', label: 'Combined' },
 ];
 
-const CodeOutput = ({ params, code }) => {
+const CodeOutput = ({ params, code, activePreviewState }) => {
   const [activeTab, setActiveTab] = useState('html');
   const [copied, setCopied] = useState(false);
   const [isHandoffOpen, setIsHandoffOpen] = useState(false);
@@ -239,6 +239,7 @@ ${cleanCSS}`;
         params={params}
         css={cleanCSS}
         title="Current generator element"
+        previewState={activePreviewState}
       />
     </div>
   );

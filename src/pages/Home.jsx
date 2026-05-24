@@ -10,41 +10,11 @@ import {
 
 const Home = () => {
   const animatedElements = [
-    {
-      id: 1,
-      type: 'accent',
-      label: 'Hover Effect',
-      effect: 'pulse',
-      icon: <Zap size={16} />,
-    },
-    {
-      id: 2,
-      type: 'dark',
-      label: 'Slide Sequence',
-      effect: 'slideUp',
-      icon: null,
-    },
-    {
-      id: 3,
-      type: 'light',
-      label: 'Loading State',
-      effect: 'rotate',
-      icon: <PlaySquare size={16} />,
-    },
-    {
-      id: 4,
-      type: 'dark',
-      label: 'Fade Entrance',
-      effect: 'fadeIn',
-      icon: null,
-    },
-    {
-      id: 5,
-      type: 'accent',
-      label: 'Bounce Physics',
-      effect: 'bounce',
-      icon: null,
-    },
+    { id: 1, type: 'accent', label: 'Hover Effect',   effect: 'pulse',   icon: <Zap size={16} /> },
+    { id: 2, type: 'dark',   label: 'Slide Sequence', effect: 'slideUp', icon: null },
+    { id: 3, type: 'light',  label: 'Loading State',  effect: 'rotate',  icon: <PlaySquare size={16} /> },
+    { id: 4, type: 'dark',   label: 'Fade Entrance',  effect: 'fadeIn',  icon: null },
+    { id: 5, type: 'accent', label: 'Bounce Physics', effect: 'bounce',  icon: null },
   ];
 
   const marqueeList = [
@@ -55,7 +25,6 @@ const Home = () => {
   ];
 
   return (
-    // Використовуємо точний розрахунок (100vh мінус Header та Footer), щоб уникнути скролу
     <div
       style={{
         display: 'flex',
@@ -66,21 +35,77 @@ const Home = () => {
       }}
     >
       <style>{`
-        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-        @keyframes slideUp { 0% { transform: translateY(10px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-        @keyframes rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-        @keyframes fadeIn { 0% { opacity: 0.3; } 100% { opacity: 1; } }
-        
-        .demo-pulse { animation: pulse 3s infinite ease-in-out; }
+        @keyframes marquee  { 0%   { transform: translateX(0);      } 100% { transform: translateX(-50%);   } }
+        @keyframes pulse    { 0%, 100% { transform: scale(1);       } 50%  { transform: scale(1.05);        } }
+        @keyframes slideUp  { 0%   { transform: translateY(10px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        @keyframes rotate   { 0%   { transform: rotate(0deg);       } 100% { transform: rotate(360deg);     } }
+        @keyframes bounce   { 0%, 100% { transform: translateY(0);  } 50%  { transform: translateY(-8px);   } }
+        @keyframes fadeIn   { 0%   { opacity: 0.3;                  } 100% { opacity: 1;                    } }
+
+        .demo-pulse   { animation: pulse   3s infinite ease-in-out; }
         .demo-slideUp { animation: slideUp 2s infinite alternate ease-in-out; }
-        .demo-rotate { animation: rotate 6s infinite linear; }
-        .demo-bounce { animation: bounce 3s infinite ease-in-out; }
-        .demo-fadeIn { animation: fadeIn 2s infinite alternate ease-in-out; }
+        .demo-rotate  { animation: rotate  6s infinite linear; }
+        .demo-bounce  { animation: bounce  3s infinite ease-in-out; }
+        .demo-fadeIn  { animation: fadeIn  2s infinite alternate ease-in-out; }
+
+        /* ── Bento Grid ── */
+        .home-grid {
+          display: grid;
+          grid-template-columns: repeat(12, 1fr);
+          gap: 16px;
+          width: 100%;
+          text-align: left;
+        }
+        .hg-gen { grid-column: span 5; }
+        .hg-ui  { grid-column: span 4; }
+        .hg-lib { grid-column: span 3; }
+
+        @media (max-width: 900px) {
+          .hg-gen { grid-column: span 6; }
+          .hg-ui  { grid-column: span 6; }
+          .hg-lib { grid-column: span 12; }
+        }
+        @media (max-width: 580px) {
+          .home-grid { grid-template-columns: 1fr; gap: 12px; }
+          .hg-gen, .hg-ui, .hg-lib { grid-column: span 1; }
+        }
+
+        /* ── Cards ── */
+        .home-card {
+          padding: 24px;
+          border-radius: 24px;
+          text-decoration: none;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          min-height: 180px;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .home-card:hover { transform: translateY(-4px); }
+        .home-card--light:hover {
+          box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07);
+        }
+
+        /* ── Typography ── */
+        .home-h1 {
+          font-size: clamp(28px, 4.5vw, 48px);
+          font-weight: 900;
+          color: var(--text-main);
+          margin-bottom: 16px;
+          line-height: 1.1;
+          letter-spacing: -0.02em;
+        }
+        .home-sub {
+          font-size: clamp(14px, 2vw, 16px);
+          color: var(--text-muted);
+          margin-bottom: 40px;
+          max-width: 600px;
+          line-height: 1.5;
+          font-weight: 400;
+        }
       `}</style>
 
-      {/* ГОЛОВНИЙ БЛОК (HERO) - займає весь доступний простір, щоб притиснути Marquee донизу */}
+      {/* ── HERO ── */}
       <div
         style={{
           flex: 1,
@@ -93,14 +118,16 @@ const Home = () => {
           maxWidth: '1100px',
           margin: '0 auto',
           width: '100%',
+          boxSizing: 'border-box',
         }}
       >
+        {/* Badge */}
         <div
           style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
-            background: 'var(--text-main)',
+            background: 'var(--card-dark-bg)',
             color: 'var(--primary)',
             padding: '6px 16px',
             borderRadius: '100px',
@@ -114,16 +141,7 @@ const Home = () => {
           <Zap size={14} /> Animadiv v1.0
         </div>
 
-        <h1
-          style={{
-            fontSize: '48px',
-            fontWeight: '900',
-            color: 'var(--text-main)',
-            marginBottom: '16px',
-            lineHeight: '1.1',
-            letterSpacing: '-0.02em',
-          }}
-        >
+        <h1 className="home-h1">
           Анімація інтерфейсів <br />
           <span
             style={{
@@ -139,245 +157,93 @@ const Home = () => {
           </span>
         </h1>
 
-        <p
-          style={{
-            fontSize: '16px',
-            color: 'var(--text-muted)',
-            marginBottom: '40px',
-            maxWidth: '600px',
-            lineHeight: '1.5',
-            fontWeight: '400',
-          }}
-        >
+        <p className="home-sub">
           Візуальний інструмент для дизайнерів та розробників. Створюйте,
           налаштовуйте та експортуйте оптимізований CSS-код в один клік.
         </p>
 
-        {/* BENTO GRID (1 РЯДОК) - Зміна логіки розташування для економії висоти */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(12, 1fr)',
-            gap: '16px',
-            width: '100%',
-            textAlign: 'left',
-          }}
-        >
-          {/* КАРТКА 1: ГЕНЕРАТОР (span 5) */}
+        {/* ── BENTO GRID ── */}
+        <div className="home-grid">
+
+          {/* Генератор — завжди темна картка */}
           <Link
             to="/generator"
+            className="home-card hg-gen"
             style={{
-              gridColumn: 'span 5',
-              background: 'var(--text-main)',
-              padding: '24px',
-              borderRadius: '24px',
-              textDecoration: 'none',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              transition: 'transform 0.2s',
-              minHeight: '180px',
+              background: 'var(--card-dark-bg)',
+              border: '1px solid var(--card-dark-border)',
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.transform = 'translateY(-4px)')
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.transform = 'translateY(0)')
-            }
           >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: '16px',
-              }}
-            >
-              <div
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  background: 'var(--border-strong)',
-                  color: 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div style={{
+                width: '44px', height: '44px', borderRadius: '12px',
+                background: 'rgba(255,255,255,0.08)',
+                color: 'var(--primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
                 <PlaySquare size={22} strokeWidth={2} />
               </div>
               <ArrowUpRight size={22} color="#4B5563" />
             </div>
             <div>
-              <h3
-                style={{
-                  fontSize: '20px',
-                  fontWeight: '800',
-                  color: 'var(--surface)',
-                  marginBottom: '6px',
-                  letterSpacing: '-0.01em',
-                }}
-              >
+              <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--card-dark-text)', marginBottom: '6px', letterSpacing: '-0.01em' }}>
                 Генератор
               </h3>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: 'var(--text-soft)',
-                  lineHeight: '1.4',
-                  margin: 0,
-                }}
-              >
-                Створюйте складні CSS-анімації для окремих елементів за
-                допомогою візуальних контролерів.
+              <p style={{ fontSize: '13px', color: 'var(--card-dark-soft)', lineHeight: '1.4', margin: 0 }}>
+                Створюйте складні CSS-анімації для окремих елементів за допомогою візуальних контролерів.
               </p>
             </div>
           </Link>
 
-          {/* КАРТКА 2: UI НАБОРИ (span 4) */}
+          {/* UI Набори — поверхнева картка */}
           <Link
             to="/collections"
-            style={{
-              gridColumn: 'span 4',
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              padding: '24px',
-              borderRadius: '24px',
-              textDecoration: 'none',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              transition: 'box-shadow 0.2s, transform 0.2s',
-              minHeight: '180px',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow =
-                '0 10px 15px -3px rgba(0, 0, 0, 0.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
+            className="home-card home-card--light hg-ui"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
           >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: '16px',
-              }}
-            >
-              <div
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  background: 'var(--surface-subtle)',
-                  color: 'var(--text-main)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div style={{
+                width: '44px', height: '44px', borderRadius: '12px',
+                background: 'var(--surface-subtle)',
+                color: 'var(--text-main)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
                 <LayoutTemplate size={22} strokeWidth={2} />
               </div>
               <ArrowUpRight size={22} color="var(--control-border)" />
             </div>
             <div>
-              <h3
-                style={{
-                  fontSize: '20px',
-                  fontWeight: '800',
-                  color: 'var(--text-main)',
-                  marginBottom: '6px',
-                  letterSpacing: '-0.01em',
-                }}
-              >
+              <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '6px', letterSpacing: '-0.01em' }}>
                 UI Набори
               </h3>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: 'var(--text-muted)',
-                  lineHeight: '1.4',
-                  margin: 0,
-                }}
-              >
-                Оживляйте цілі блоки. Налаштовуйте каскадні затримки та
-                створюйте UI-патерни.
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.4', margin: 0 }}>
+                Оживляйте цілі блоки. Налаштовуйте каскадні затримки та створюйте UI-патерни.
               </p>
             </div>
           </Link>
 
-          {/* КАРТКА 3: БІБЛІОТЕКА (span 3) */}
+          {/* Бібліотека — акцентна картка */}
           <Link
             to="/library"
-            style={{
-              gridColumn: 'span 3',
-              background: 'var(--primary)',
-              padding: '24px',
-              borderRadius: '24px',
-              textDecoration: 'none',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              transition: 'transform 0.2s',
-              minHeight: '180px',
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.transform = 'translateY(-4px)')
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.transform = 'translateY(0)')
-            }
+            className="home-card hg-lib"
+            style={{ background: 'var(--primary)' }}
           >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: '16px',
-              }}
-            >
-              <div
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  background: 'var(--text-main)',
-                  color: 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div style={{
+                width: '44px', height: '44px', borderRadius: '12px',
+                background: '#111827',
+                color: 'var(--primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
                 <Library size={22} strokeWidth={2} />
               </div>
-              <ArrowUpRight size={22} color="var(--text-main)" opacity={0.3} />
+              <ArrowUpRight size={22} color="#111827" opacity={0.3} />
             </div>
             <div>
-              <h3
-                style={{
-                  fontSize: '20px',
-                  fontWeight: '800',
-                  color: 'var(--text-main)',
-                  marginBottom: '6px',
-                  letterSpacing: '-0.01em',
-                }}
-              >
+              <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#111827', marginBottom: '6px', letterSpacing: '-0.01em' }}>
                 Бібліотека
               </h3>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: 'var(--button-secondary-text)',
-                  lineHeight: '1.4',
-                  margin: 0,
-                  fontWeight: '500',
-                }}
-              >
+              <p style={{ fontSize: '13px', color: '#374151', lineHeight: '1.4', margin: 0, fontWeight: '500' }}>
                 Колекція пресетів для швидкого використання.
               </p>
             </div>
@@ -385,38 +251,30 @@ const Home = () => {
         </div>
       </div>
 
-      {/* АНІМОВАНА СТРІЧКА (MARQUEE) */}
+      {/* ── MARQUEE ── */}
       <div
         style={{
           width: '100%',
           overflow: 'hidden',
-          background: '#f1f1f1',
+          background: 'var(--marquee-bg)',
           padding: '16px 0',
-          borderTop: '1px solid #f1f1f1',
+          borderTop: '1px solid var(--marquee-border)',
           display: 'flex',
           alignItems: 'center',
         }}
       >
-        <div
-          style={{
-            display: 'inline-flex',
-            gap: '32px',
-            animation: 'marquee 40s linear infinite',
-          }}
-        >
+        <div style={{ display: 'inline-flex', gap: '32px', animation: 'marquee 40s linear infinite' }}>
           {marqueeList.map((el, index) => {
-            let bg =
-              el.type === 'accent'
-                ? 'var(--primary)'
-                : el.type === 'dark'
-                  ? 'var(--border-strong)'
-                  : 'var(--surface)';
-            let color =
-              el.type === 'dark' ? 'var(--surface)' : 'var(--text-main)';
-            let border =
-              el.type === 'dark'
-                ? '1px solid var(--button-secondary-text)'
-                : 'none';
+            const bg =
+              el.type === 'accent' ? 'var(--primary)'
+              : el.type === 'dark'  ? 'var(--card-dark-bg)'
+              : 'var(--surface)';
+            const color =
+              el.type === 'accent' ? '#111827'
+              : el.type === 'dark'  ? 'var(--card-dark-text)'
+              : 'var(--text-main)';
+            const border =
+              el.type === 'light' ? '1px solid var(--border)' : 'none';
 
             return (
               <div
@@ -425,9 +283,9 @@ const Home = () => {
                 style={{
                   padding: '10px 20px',
                   background: bg,
-                  color: color,
+                  color,
                   borderRadius: '12px',
-                  border: border,
+                  border,
                   fontWeight: '700',
                   fontSize: '13px',
                   display: 'flex',

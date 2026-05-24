@@ -27,7 +27,6 @@ const Library = () => {
         .join(' ')
         .toLowerCase()
         .includes(normalizedSearch);
-
     return matchesCategory && matchesSearch;
   });
 
@@ -40,6 +39,21 @@ const Library = () => {
           'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
     >
+      <style>{`
+        .lib-search::placeholder { color: var(--text-soft); }
+        .lib-search:focus { border-color: var(--text-main) !important; outline: none; }
+
+        .lib-filter-btn { transition: background 0.15s, color 0.15s, border-color 0.15s; }
+        .lib-filter-btn:hover { opacity: 0.8; }
+
+        @media (max-width: 600px) {
+          .lib-header-row { flex-direction: column !important; align-items: flex-start !important; }
+          .lib-search-wrap { width: 100% !important; }
+          .lib-grid { grid-template-columns: 1fr !important; }
+          .lib-filter-row { flex-direction: column !important; align-items: flex-start !important; }
+        }
+      `}</style>
+
       <div
         style={{
           maxWidth: 1180,
@@ -59,6 +73,7 @@ const Library = () => {
           }}
         >
           <div
+            className="lib-header-row"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -94,6 +109,7 @@ const Library = () => {
             </div>
 
             <label
+              className="lib-search-wrap"
               style={{
                 position: 'relative',
                 display: 'flex',
@@ -104,17 +120,14 @@ const Library = () => {
               <Search
                 size={16}
                 color="var(--text-muted)"
-                style={{
-                  position: 'absolute',
-                  left: 14,
-                  pointerEvents: 'none',
-                }}
+                style={{ position: 'absolute', left: 14, pointerEvents: 'none' }}
               />
               <input
                 type="text"
                 value={searchTerm}
                 placeholder="Search elements"
-                onChange={(event) => setSearchTerm(event.target.value)}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="lib-search"
                 style={{
                   width: '100%',
                   height: 42,
@@ -126,12 +139,14 @@ const Library = () => {
                   padding: '0 16px 0 40px',
                   fontSize: 14,
                   boxSizing: 'border-box',
+                  transition: 'border-color 0.15s',
                 }}
               />
             </label>
           </div>
 
           <div
+            className="lib-filter-row"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -140,24 +155,18 @@ const Library = () => {
               flexWrap: 'wrap',
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 8,
-              }}
-            >
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {categoryFilters.map((filter) => {
                 const isActive = activeCategory === filter.value;
                 return (
                   <button
                     key={filter.value}
                     onClick={() => setActiveCategory(filter.value)}
+                    className="lib-filter-btn"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      width: 'auto',
                       flex: 'none',
                       height: 34,
                       padding: '0 12px',
@@ -165,12 +174,8 @@ const Library = () => {
                       border: isActive
                         ? '1px solid var(--text-main)'
                         : '1px solid var(--border)',
-                      background: isActive
-                        ? 'var(--text-main)'
-                        : 'var(--surface)',
-                      color: isActive
-                        ? 'var(--primary)'
-                        : 'var(--button-secondary-text)',
+                      background: isActive ? 'var(--text-main)' : 'var(--surface)',
+                      color: isActive ? 'var(--primary)' : 'var(--button-secondary-text)',
                       fontSize: 12,
                       fontWeight: 850,
                       cursor: 'pointer',
@@ -209,30 +214,19 @@ const Library = () => {
               borderRadius: 24,
               padding: '64px 20px',
               textAlign: 'center',
-              color: 'var(--text-muted)',
             }}
           >
-            <SearchX
-              size={28}
-              color="var(--text-muted)"
-              style={{ marginBottom: 12 }}
-            />
-            <div
-              style={{
-                fontSize: 18,
-                fontWeight: 850,
-                color: 'var(--text-main)',
-              }}
-            >
+            <SearchX size={28} color="var(--text-muted)" style={{ marginBottom: 12 }} />
+            <div style={{ fontSize: 18, fontWeight: 850, color: 'var(--text-main)' }}>
               No matching elements found
             </div>
           </div>
         ) : (
           <div
+            className="lib-grid"
             style={{
               display: 'grid',
-              gridTemplateColumns:
-                'repeat(auto-fit, minmax(min(100%, 292px), 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 292px), 1fr))',
               gap: 22,
               justifyContent: 'stretch',
               alignItems: 'stretch',
