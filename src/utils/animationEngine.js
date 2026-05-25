@@ -9,6 +9,10 @@ import { generateDisneyCSS } from './disneyMotion';
 import { generatePhysicsCSS } from './physicsMotion';
 import { applyAccessibilityFilters } from './accessibilityMotion';
 import { compileNormalizedMotion } from './transformBuilder';
+import {
+  SUPPORTED_MOTION_PRESETS,
+  generateMotionCSS,
+} from './motionSystem';
 
 export const getConfigHash = (config) => {
   const str = JSON.stringify(config || {});
@@ -147,6 +151,10 @@ export const generateAnimationCSS = (
 ) => {
   if (!presetId || presetId === 'none') {
     return { keyframes: '', animationStr: 'none', transitionStyles: null };
+  }
+
+  if (SUPPORTED_MOTION_PRESETS.has(presetId)) {
+    return generateMotionCSS(presetId, rawConfig, uniqueId, triggerState);
   }
 
   const PRESET_ALIASES = {

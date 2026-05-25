@@ -1,6 +1,7 @@
 import React from 'react';
 import { animationPresets } from '../../data/presets';
 import { Button } from '../../components/UIElements';
+import { useTranslation } from '../../i18n/useTranslation';
 
 const CollectionControls = ({
   globalPreset,
@@ -10,6 +11,8 @@ const CollectionControls = ({
   onPlay,
   onReset,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div
       style={{
@@ -43,7 +46,7 @@ const CollectionControls = ({
               lineHeight: 1.1,
             }}
           >
-            Global Animation
+            {t('collections.globalAnimation')}
             <span
               style={{
                 display: 'block',
@@ -55,7 +58,7 @@ const CollectionControls = ({
                 fontWeight: 700,
               }}
             >
-              For the whole section
+              {t('collections.wholeSection')}
             </span>
           </div>
 
@@ -68,7 +71,7 @@ const CollectionControls = ({
               marginBottom: 8,
             }}
           >
-            Preset
+            {t('controls.labels.primaryEffect')}
           </label>
           <select
             value={globalPreset}
@@ -86,10 +89,10 @@ const CollectionControls = ({
               boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
             }}
           >
-            <option value="none">No animation</option>
+            <option value="none">{t('options.none')}</option>
             {animationPresets.map((preset) => (
               <option key={preset.id} value={preset.id}>
-                {preset.name}
+                {t(preset.nameKey, { defaultValue: preset.name })}
               </option>
             ))}
           </select>
@@ -112,7 +115,7 @@ const CollectionControls = ({
                 color: '#374151',
               }}
             >
-              Stagger delay
+              {t('collections.staggerDelay')}
             </label>
             <span
               style={{
@@ -149,7 +152,7 @@ const CollectionControls = ({
               lineHeight: 1.45,
             }}
           >
-            Delay between children during cascade playback.
+            {t('collections.staggerHelp')}
           </p>
         </div>
       </div>
@@ -172,14 +175,14 @@ const CollectionControls = ({
           onClick={onPlay}
           style={{ width: 'auto', flex: '1 1 0', minWidth: 0 }}
         >
-          Відтворити
+          {t('common.play')}
         </Button>
         <Button
           variant="secondary"
           onClick={onReset}
           style={{ width: 'auto', flex: '1 1 0', minWidth: 0 }}
         >
-          Скинути
+          {t('common.reset')}
         </Button>
       </div>
     </div>

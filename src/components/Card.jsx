@@ -1,22 +1,84 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Bookmark,
+  Check,
   CheckCircle,
   Code2,
   ExternalLink,
+  MousePointer2,
+  Pointer,
   Trash2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { generateFullCSS } from '../utils/generateCss';
 import DeveloperHandoffModal from './DeveloperHandoffModal';
+import { useTranslation } from '../i18n/useTranslation';
+import { generateAnimationCSS } from '../utils/animationEngine';
+import { renderSplitText } from '../utils/typographyMotion';
+import {
+  sanitizeAnimationConfigForType,
+  sanitizeAnimationsForType,
+} from '../utils/semanticMapping';
+import {
+  getBaseTransform,
+  getBoxShadow,
+  getResolvedBackground,
+} from '../utils/motionSystem';
+import {
+  createElement,
+  DEFAULT_ANIMATION_CONFIG,
+} from '../utils/elementSystem';
+import { getPreferredPreviewState } from '../utils/previewState';
 
 const PARAMS_KEY = 'animadiv-params';
 const SAVED_KEY = 'animadiv-saved-items';
 
-const px = (value) => {
-  if (value === undefined || value === null) return undefined;
-  if (value === 'auto') return 'auto';
-  return typeof value === 'number' ? `${value}px` : value;
+const EMPTY_MOTION = {
+  keyframes: '',
+  animationStr: 'none',
+  transitionStyles: null,
+  presetId: 'none',
+  config: null,
+};
+
+const LEGACY_PRESET_MAP = {
+  popIn: 'scaleIn',
+  slideUp: 'slideInUp',
+  slide: 'slideInUp',
+  slideIn: 'slideInUp',
+  slideUpReveal: 'revealUp',
+  zoom: 'zoomIn',
+  zoomReveal: 'zoomIn',
+  blurReveal: 'blurIn',
+  glowAppear: 'blurIn',
+  floatingSection: 'float',
+  floatingImage: 'float',
+  staggerReveal: 'revealUp',
+  kenBurns: 'zoomIn',
+  magneticHover: 'lift',
+  shadowLift: 'lift',
+  shadowIncrease: 'shadowGrow',
+  borderGlow: 'shadowGrow',
+  borderHighlight: 'borderColorChange',
+  borderSlide: 'borderAnimation',
+  glowHover: 'shadowGrow',
+  hoverBrightness: 'opacityChange',
+  parallaxHover: 'tilt',
+  tiltHover: 'tilt',
+  colorTransition: 'backgroundChange',
+  focusGlow: 'shadowGrow',
+  autoExpand: 'scaleUp',
+  expand: 'scaleUp',
+  expandWidth: 'scaleUp',
+  expandHeight: 'scaleUp',
+  textShift: 'lift',
+  arrowMove: 'lift',
+  pressEffect: 'pressDown',
+  rotateTap: 'rotateClick',
+  bounceCheck: 'elasticBounce',
+  radioPulse: 'elasticBounce',
+  smoothCheck: 'scaleDown',
+  dotExpand: 'scaleUp',
 };
 
 const readSavedItems = () => {
@@ -28,33 +90,130 @@ const readSavedItems = () => {
   }
 };
 
-const colorToRgba = (color = '#111827', opacity = 0.16) => {
-  if (String(color).startsWith('rgba(')) return color;
-  if (String(color).startsWith('rgb(')) {
-    return String(color).replace('rgb(', 'rgba(').replace(')', `, ${opacity})`);
-  }
-  const hex = String(color).replace('#', '');
-  if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(hex)) {
-    return `rgba(17, 24, 39, ${opacity})`;
-  }
-  const normalized =
-    hex.length === 3
-      ? hex.split('').map((char) => char + char).join('')
-      : hex;
-  const value = parseInt(normalized, 16);
-  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${opacity})`;
+const clampNumber = (value, min, max, fallback) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(max, Math.max(min, numeric));
 };
 
-const getShadowStyle = (settings = {}) => {
-  if (!settings.shadowEnabled) return undefined;
-  return `0 ${settings.shadowOffsetY ?? 6}px ${settings.shadowBlur ?? 18}px ${colorToRgba(
-    settings.shadowColor,
-    settings.shadowOpacity ?? 0.16
-  )}`;
+const getOpacity = (value, fallback = 1) =>
+  clampNumber(value, 0, 1, fallback);
+
+const px = (value) => {
+  if (value === undefined || value === null) return undefined;
+  if (value === 'auto') return 'auto';
+  if (typeof value === 'number') return `${value}px`;
+  return value;
+};
+
+const resolveCursor = (settings = {}, state = 'load') => {
+  if (settings.disabled) return 'not-allowed';
+  if (settings.cursor) return settings.cursor;
+  return state === 'hover' || state === 'click' ? 'pointer' : 'default';
+};
+
+const createPlaceholderCSS = (id, params) => {
+  if (!['input', 'textarea'].includes(params?.type)) return '';
+  const color = params.styles?.color || '#111827';
+  const disabledBackground = params.styles?.backgroundColor || '#F3F4F6';
+
+  return `
+#${id}::placeholder {
+  color: ${color};
+  opacity: 1;
+}
+#${id}:disabled {
+  cursor: not-allowed;
+  background: ${disabledBackground};
+  filter: grayscale(0.18);
+}
+`;
+};
+
+const normalizeAnimationConfig = (config = {}) => {
+  const { effectPreset, presetId, ...rest } = config || {};
+  const mappedPreset = LEGACY_PRESET_MAP[presetId || effectPreset] || presetId || effectPreset || 'none';
+  return {
+    ...DEFAULT_ANIMATION_CONFIG,
+    ...rest,
+    presetId: mappedPreset,
+  };
+};
+
+const normalizeLibraryItemForGenerator = (item) => {
+  const type = item?.type || 'button';
+  const defaults = createElement(type) || createElement('button');
+  const styles = {
+    ...defaults.styles,
+    ...(item.styles || {}),
+  };
+  const settings = {
+    ...defaults.specificSettings,
+    ...(item.specificSettings || {}),
+  };
+
+  if (styles.background && !settings.gradientCss) {
+    settings.backgroundType = 'gradient';
+    settings.gradientCss = styles.background;
+    settings.backgroundGradient = styles.background;
+  } else if (!settings.backgroundType && !settings.backgroundMode) {
+    settings.backgroundType = 'solid';
+  }
+
+  if (styles.backgroundColor && !settings.backgroundColor) {
+    settings.backgroundColor = styles.backgroundColor;
+  }
+
+  const animations = sanitizeAnimationsForType(type, {
+    load: normalizeAnimationConfig(item.animations?.load),
+    static: normalizeAnimationConfig(item.animations?.static),
+    hover: normalizeAnimationConfig(item.animations?.hover),
+    click: normalizeAnimationConfig(item.animations?.click),
+  });
+
+  return {
+    ...defaults,
+    ...item,
+    type,
+    tag: item.tag || defaults.tag,
+    styles,
+    specificSettings: settings,
+    animations,
+  };
 };
 
 const getPreviewBackground = (item) => item.preview?.background || '#F9FAFB';
-const getAccent = (item) => item.preview?.accent || '#D6F854';
+
+const hasAnimation = (params, state) => {
+  const presetId = params?.animations?.[state]?.presetId;
+  return Boolean(presetId && presetId !== 'none');
+};
+
+const getStateFromMotionStyle = (motionStyle = '') => {
+  const value = String(motionStyle).toLowerCase();
+  if (value.includes('hover')) return 'hover';
+  if (value.includes('click')) return 'click';
+  if (value.includes('load')) return 'load';
+  if (value.includes('static')) return 'static';
+  return null;
+};
+
+const getLibraryPreferredState = (params, item) => {
+  const explicitState = item?.previewState || item?.initialPreviewState;
+  if (explicitState && (explicitState === 'static' || hasAnimation(params, explicitState))) {
+    return explicitState;
+  }
+
+  const motionState = getStateFromMotionStyle(item?.motionStyle);
+  if (motionState && (motionState === 'static' || hasAnimation(params, motionState))) {
+    return motionState;
+  }
+
+  if (hasAnimation(params, 'hover')) return 'hover';
+  if (hasAnimation(params, 'click')) return 'click';
+  if (hasAnimation(params, 'load')) return 'load';
+  return 'load';
+};
 
 const isDarkPreview = (item) => {
   const background = String(getPreviewBackground(item)).toLowerCase();
@@ -68,373 +227,634 @@ const isDarkPreview = (item) => {
   );
 };
 
-const getDisplayType = (item) => {
-  if (item.type === 'button') return 'Button';
-  if (item.type === 'text') return 'Typography';
-  if (item.type === 'input') return 'Input';
-  if (item.type === 'textarea') return 'Textarea';
-  if (item.type === 'checkbox') return 'Checkbox';
-  if (item.type === 'radio') return 'Radio';
-  if (item.type === 'image') return 'Image';
-  if (item.type === 'link') return 'Link';
-  if (item.type === 'block') return 'Block';
-  return item.type;
+const getMotionConfig = (params, state) => {
+  const settings = params.specificSettings || {};
+  const styles = params.styles || {};
+  const config = params.animations?.[state];
+
+  if (!config) return config;
+
+  return {
+    ...config,
+    shadowColor: settings.shadowColor,
+    shadowOpacity: settings.shadowOpacity,
+    shadowOffsetX: settings.shadowOffsetX,
+    shadowOffsetY: settings.shadowOffsetY,
+    shadowBlur: settings.shadowBlur,
+    shadowSpread: settings.shadowSpread,
+    shadowEnabled: settings.shadowEnabled,
+    hoverBackgroundColor: settings.hoverBackground || config.hoverBackgroundColor,
+    hoverBorderColor: config.hoverBorderColor || styles.borderColor,
+    borderColor: styles.borderColor,
+    borderWidth: styles.borderWidth,
+    borderStyle: styles.borderStyle,
+    borderRadius: styles.borderRadius,
+    accentColor:
+      settings.color ||
+      settings.checkColor ||
+      styles.backgroundColor ||
+      styles.color ||
+      styles.borderColor,
+    backgroundColor: styles.backgroundColor,
+    color: styles.color,
+  };
 };
 
-const getBaseStyle = (item) => {
-  const styles = item.styles || {};
-  const settings = item.specificSettings || {};
+const usePreviewStyle = (styleId, keyframes) => {
+  useEffect(() => {
+    if (!keyframes) return;
+
+    let styleEl = document.getElementById(styleId);
+
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+
+    styleEl.innerHTML = keyframes;
+
+    return () => {
+      const el = document.getElementById(styleId);
+      if (el) el.remove();
+    };
+  }, [styleId, keyframes]);
+};
+
+const getMotion = (params, state) => {
+  if (!params) return EMPTY_MOTION;
+
+  const config = sanitizeAnimationConfigForType(
+    params.type,
+    state,
+    getMotionConfig(params, state)
+  );
+
+  if (!config || !config.presetId || config.presetId === 'none') {
+    return {
+      ...EMPTY_MOTION,
+      config,
+    };
+  }
+
+  const result = generateAnimationCSS(
+    config.presetId,
+    config,
+    `${params.id}_${state}`,
+    state
+  );
+
   return {
+    ...EMPTY_MOTION,
+    ...result,
+    presetId: config.presetId,
+    config,
+  };
+};
+
+const getTag = (params) => {
+  if (params.type === 'button' && params.specificSettings?.actionType === 'link') {
+    return 'a';
+  }
+  if (params.type === 'text') return params.specificSettings?.tag || 'p';
+  if (params.type === 'checkbox' || params.type === 'radio') return 'label';
+  return params.tag || 'div';
+};
+
+const getBaseElementStyles = (params, state) => {
+  const s = params.specificSettings || {};
+  const styles = params.styles || {};
+  const staticConfig = params.animations?.static || {};
+  const background =
+    s.backgroundMode === 'image' && s.backgroundImage
+      ? `url("${s.backgroundImage}")`
+      : getResolvedBackground(s, styles);
+  const baseTransform = getBaseTransform(staticConfig);
+
+  const base = {
     ...styles,
+    '--base-transform': baseTransform,
+    background,
+    backgroundSize: s.backgroundMode === 'image' ? 'cover' : undefined,
+    backgroundPosition: s.backgroundMode === 'image' ? 'center' : undefined,
     width: px(styles.width),
     height: px(styles.height),
     minHeight: px(styles.minHeight),
     padding: px(styles.padding),
+    margin: px(styles.margin),
     borderRadius: px(styles.borderRadius),
     boxSizing: 'border-box',
-    border:
-      styles.borderWidth > 0
-        ? `${styles.borderWidth}px solid ${styles.borderColor || '#E5E7EB'}`
-        : 'none',
-    boxShadow: getShadowStyle(settings),
-    opacity: styles.opacity ?? 1,
-    visibility: 'visible',
-    fontFamily: settings.fontFamily || 'Inter, system-ui, sans-serif',
-  };
-};
-
-const getPreviewCss = (uid, item) => {
-  const accent = getAccent(item);
-  const shadow = colorToRgba(accent, 0.34);
-  const effect = item.previewEffect || 'fadeIn';
-  const target = `#${uid}`;
-  const active = `.is-preview-hovered ${target}`;
-
-  const common = `
-${target} {
-  transform-origin: center;
-  will-change: transform, opacity, filter, box-shadow;
-  transition: transform 260ms cubic-bezier(.16,1,.3,1), filter 260ms ease, box-shadow 260ms ease, color 260ms ease;
-}
-${target} [data-word] { display: inline-block; }
-${target} [data-underline] { transform: scaleX(0); transform-origin: left; }
-`;
-
-  const keyframes = `
-@keyframes ${uid}-fade { from { opacity: .35; } to { opacity: 1; } }
-@keyframes ${uid}-slide { from { opacity: .45; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes ${uid}-scale { 0% { transform: scale(.94); opacity: .8; } 62% { transform: scale(1.045); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
-@keyframes ${uid}-pulse { 0% { transform: scale(1); } 48% { transform: scale(1.045); } 100% { transform: scale(1); } }
-@keyframes ${uid}-float { 0% { transform: translateY(0); } 48% { transform: translateY(-9px); } 100% { transform: translateY(0); } }
-@keyframes ${uid}-blur { from { opacity: .35; filter: blur(8px); transform: translateY(8px); } to { opacity: 1; filter: blur(0); transform: translateY(0); } }
-@keyframes ${uid}-word { from { opacity: 0; transform: translateY(12px); filter: blur(5px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
-@keyframes ${uid}-type { from { max-width: 0; } to { max-width: 32ch; } }
-@keyframes ${uid}-caret { 0%, 48% { opacity: 1; } 49%, 100% { opacity: 0; } }
-@keyframes ${uid}-underline { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-@keyframes ${uid}-zoom { from { transform: scale(1); } to { transform: scale(1.08); } }
-@keyframes ${uid}-tilt { from { transform: perspective(720px) rotateX(0) rotateY(0) translateY(0); } to { transform: perspective(720px) rotateX(5deg) rotateY(-5deg) translateY(-6px); } }
-`;
-
-  const effects = {
-    fadeIn: `${active} { animation: ${uid}-fade 440ms ease-out both; }`,
-    slideUp: `${active} { animation: ${uid}-slide 520ms cubic-bezier(.16,1,.3,1) both; }`,
-    softScale: `${active} { animation: ${uid}-scale 520ms cubic-bezier(.16,1,.3,1) both; box-shadow: 0 18px 44px ${shadow}; }`,
-    float: `${active} { animation: ${uid}-float 900ms ease-in-out both; box-shadow: 0 18px 44px ${shadow}; }`,
-    pulse: `${active} { animation: ${uid}-pulse 700ms ease-in-out both; box-shadow: 0 0 0 8px ${colorToRgba(accent, 0.16)}, 0 18px 44px ${shadow}; }`,
-    shadowGlow: `${active} { transform: translateY(-5px); box-shadow: 0 0 0 1px ${colorToRgba(accent, 0.28)}, 0 22px 52px ${shadow}; }`,
-    blurReveal: `${active} { animation: ${uid}-blur 560ms cubic-bezier(.16,1,.3,1) both; }`,
-    wordFade: `${active} [data-word] { animation: ${uid}-word 520ms cubic-bezier(.16,1,.3,1) both; animation-delay: calc(var(--word-index) * 52ms); }`,
-    typewriter: `${active} [data-typewriter] { animation: ${uid}-type 920ms steps(24,end) both; }
-${active} [data-caret] { animation: ${uid}-caret 760ms steps(1,end) infinite; }`,
-    underlineDraw: `${active} { transform: translateY(-4px); }
-${active} [data-underline] { animation: ${uid}-underline 340ms cubic-bezier(.16,1,.3,1) both; }`,
-    imageZoom: `${active} img { animation: ${uid}-zoom 680ms cubic-bezier(.16,1,.3,1) both; }
-${active} { transform: translateY(-5px); box-shadow: 0 22px 52px ${shadow}; }`,
-    imageTilt: `${active} { animation: ${uid}-tilt 520ms cubic-bezier(.16,1,.3,1) both; box-shadow: 0 22px 52px ${shadow}; }`,
+    position: styles.position || 'relative',
+    transform: 'var(--base-transform)',
+    transformOrigin: staticConfig.transformOrigin || 'center',
+    animation: 'none',
+    transition: 'none',
+    cursor: resolveCursor(s, state),
   };
 
-  return `${common}\n${keyframes}\n${effects[effect] || effects.fadeIn}`;
+  if (styles.borderWidth > 0) {
+    base.border = `${styles.borderWidth}px ${styles.borderStyle || 'solid'} ${
+      styles.borderColor || '#E5E7EB'
+    }`;
+  }
+
+  if (styles.opacity !== undefined) {
+    base.opacity = styles.opacity;
+  }
+
+  if (s.validationState === 'error' && s.errorBorderColor) {
+    base.borderColor = s.errorBorderColor;
+  }
+
+  const shadow = getBoxShadow(s);
+  if (shadow) {
+    base.boxShadow = shadow;
+  }
+
+  if (params.type === 'block') {
+    base.display = 'flex';
+    base.flexDirection = 'column';
+    base.justifyContent = s.alignY || 'center';
+    base.alignItems = s.alignX || 'center';
+    base.gap = `${s.gap || 0}px`;
+    base.overflow = s.overflow || 'visible';
+  }
+
+  if (params.type === 'button') {
+    base.display = 'flex';
+    base.alignItems = 'center';
+    base.justifyContent = 'center';
+    base.fontSize = `${s.fontSize || 14}px`;
+    base.fontWeight = s.fontWeight || 600;
+    base.fontFamily = s.fontFamily || 'inherit';
+    base.fontStyle = s.fontStyle || 'normal';
+    base.whiteSpace = 'pre-wrap';
+    base.textAlign = 'center';
+  }
+
+  if (params.type === 'input') {
+    base.fontSize = `${s.fontSize || 14}px`;
+    base.fontWeight = s.fontWeight || 400;
+    base.fontFamily = s.fontFamily || 'inherit';
+    base.fontStyle = s.fontStyle || 'normal';
+    base.padding = styles.padding || '0 16px';
+    base.display = 'block';
+    base.whiteSpace = 'nowrap';
+    base.overflow = 'hidden';
+    base.textOverflow = 'ellipsis';
+    base.outline = 'none';
+    if (s.disabled) base.opacity = getOpacity(styles.opacity, 1) * 0.5;
+  }
+
+  if (params.type === 'textarea') {
+    const rows = Math.max(Number(s.rows) || 4, 1);
+    const hasManualHeight =
+      styles.height !== undefined &&
+      styles.height !== null &&
+      styles.height !== '' &&
+      styles.height !== 'auto' &&
+      styles.height !== 100;
+
+    base.fontSize = `${s.fontSize || 14}px`;
+    base.fontWeight = s.fontWeight || 400;
+    base.fontFamily = s.fontFamily || 'inherit';
+    base.fontStyle = s.fontStyle || 'normal';
+    base.padding = styles.padding || '12px 16px';
+    base.resize = s.resize || 'vertical';
+    base.outline = 'none';
+    if (s.disabled) base.opacity = getOpacity(styles.opacity, 1) * 0.5;
+
+    if (!hasManualHeight) {
+      delete base.height;
+      base.minHeight = px(styles.minHeight) || `${rows * 24 + 24}px`;
+    }
+  }
+
+  if (params.type === 'text') {
+    base.fontSize = `${s.fontSize || 24}px`;
+    base.fontWeight = s.fontWeight || 800;
+    base.fontFamily = s.fontFamily || 'inherit';
+    base.fontStyle = s.fontStyle || 'normal';
+    base.textAlign = s.textAlign || 'center';
+    base.lineHeight = s.lineHeight || 1.5;
+    base.letterSpacing = `${s.letterSpacing || 0}px`;
+    base.textTransform = s.textTransform || 'none';
+    base.whiteSpace = 'pre-wrap';
+  }
+
+  if (params.type === 'image') {
+    base.objectFit = s.objectFit || 'cover';
+    base.objectPosition = s.objectPosition || 'center';
+    base.display = 'block';
+    base.padding = 0;
+  }
+
+  if (params.type === 'link') {
+    base.fontSize = `${s.fontSize || 14}px`;
+    base.fontWeight = s.fontWeight || 500;
+    base.fontFamily = s.fontFamily || 'inherit';
+    base.fontStyle = s.fontStyle || 'normal';
+    base.display = 'inline-flex';
+    base.textDecoration = s.underline === 'always' ? 'underline' : 'none';
+    base.backgroundColor = 'transparent';
+    base.border = 'none';
+  }
+
+  if (params.type === 'checkbox' || params.type === 'radio') {
+    base.display = 'inline-flex';
+    base.alignItems = 'center';
+    base.gap = '12px';
+    base.background = 'transparent';
+    base.backgroundColor = 'transparent';
+    base.border = 'none';
+    base.boxShadow = 'none';
+    base.width = 'auto';
+    base.height = 'auto';
+    base.padding = 0;
+    if (s.disabled) base.opacity = getOpacity(styles.opacity, 1) * 0.45;
+  }
+
+  if (['button', 'input', 'textarea', 'text', 'image', 'link'].includes(params.type)) {
+    base.opacity = getOpacity(styles.opacity, 1);
+  }
+
+  if (['input', 'textarea'].includes(params.type) && s.disabled) {
+    base.opacity = getOpacity(styles.opacity, 1) * 0.45;
+    base.cursor = 'not-allowed';
+    base.filter = 'grayscale(0.18)';
+  }
+
+  return base;
 };
 
-const WordText = ({ children }) =>
-  String(children)
-    .split(/(\s+)/)
-    .map((part, index) =>
-      part.trim() ? (
-        <span data-word key={`${part}-${index}`} style={{ '--word-index': index, whiteSpace: 'pre' }}>
-          {part}
-        </span>
-      ) : (
-        <span key={`space-${index}`} style={{ whiteSpace: 'pre' }}>{part}</span>
-      )
+const renderContent = (params, textPreset, previewChecked) => {
+  const s = params.specificSettings || {};
+  const styles = params.styles || {};
+
+  if (params.type === 'button') return renderSplitText(s.text, textPreset);
+  if (params.type === 'text') return renderSplitText(s.content, textPreset);
+  if (params.type === 'link') return renderSplitText(s.text, textPreset);
+
+  if (params.type === 'block') {
+    return (
+      <div
+        style={{
+          opacity: 0.4,
+          border: '1px dashed currentColor',
+          padding: 12,
+          borderRadius: 8,
+        }}
+      >
+        Inner Content
+      </div>
     );
+  }
 
-const TextContent = ({ item }) => {
-  const settings = item.specificSettings || {};
-  const text = settings.content || item.content || item.name;
+  if (params.type === 'checkbox') {
+    const iconSize = s.size || 24;
 
-  if (item.previewEffect === 'typewriter') {
     return (
       <>
-        <span data-typewriter style={{ display: 'inline-block', overflow: 'hidden', verticalAlign: 'bottom', whiteSpace: 'nowrap' }}>
-          {text}
+        <div
+          style={{
+            width: `${iconSize}px`,
+            height: `${iconSize}px`,
+            flexShrink: 0,
+            backgroundColor: previewChecked ? s.color || '#111827' : '#fff',
+            border: `2px solid ${s.color || '#111827'}`,
+            borderRadius: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'background-color 180ms ease, border-color 180ms ease',
+          }}
+        >
+          {previewChecked && (
+            <Check
+              size={iconSize * 0.7}
+              color={s.checkColor || '#fff'}
+              strokeWidth={3}
+            />
+          )}
+        </div>
+        <span
+          style={{
+            fontSize: `${s.fontSize || 14}px`,
+            fontWeight: s.fontWeight || 500,
+            fontFamily: s.fontFamily || 'inherit',
+            fontStyle: s.fontStyle || 'normal',
+            color: styles.color,
+            background: 'transparent',
+          }}
+        >
+          {s.label}
         </span>
-        <span data-caret style={{ color: getAccent(item), marginLeft: 4 }}>|</span>
       </>
     );
   }
-  if (item.previewEffect === 'wordFade' || item.previewEffect === 'blurReveal') {
-    return <WordText>{text}</WordText>;
-  }
-  return text;
-};
 
-const PreviewElement = ({ item, uid }) => {
-  const settings = item.specificSettings || {};
-  const baseStyle = getBaseStyle(item);
-
-  if (item.type === 'button') {
-    return (
-      <button
-        id={uid}
-        type="button"
-        style={{
-          ...baseStyle,
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: px(settings.fontSize || 14),
-          fontWeight: settings.fontWeight || 850,
-        }}
-      >
-        {settings.text || item.content}
-      </button>
-    );
-  }
-
-  if (item.type === 'text') {
-    const textStyle = {
-      ...baseStyle,
-      margin: 0,
-      backgroundColor: 'transparent',
-      border: 'none',
-      color: item.styles?.color,
-      fontSize: px(settings.fontSize || 30),
-      fontWeight: settings.fontWeight || 900,
-      lineHeight: settings.lineHeight || 1.1,
-      textAlign: settings.textAlign || 'center',
-      whiteSpace: 'pre-wrap',
-    };
-    if (settings.tag === 'h1') return <h1 id={uid} style={textStyle}><TextContent item={item} /></h1>;
-    if (settings.tag === 'h3') return <h3 id={uid} style={textStyle}><TextContent item={item} /></h3>;
-    if (settings.tag === 'span') return <span id={uid} style={textStyle}><TextContent item={item} /></span>;
-    return <p id={uid} style={textStyle}><TextContent item={item} /></p>;
-  }
-
-  if (item.type === 'input') {
-    return (
-      <input
-        id={uid}
-        type={settings.inputType || 'text'}
-        placeholder={settings.placeholder || ''}
-        readOnly
-        style={{
-          ...baseStyle,
-          display: 'block',
-          fontSize: px(settings.fontSize || 14),
-          fontWeight: settings.fontWeight || 700,
-          outline: 'none',
-        }}
-      />
-    );
-  }
-
-  if (item.type === 'textarea') {
-    return (
-      <textarea
-        id={uid}
-        rows={settings.rows || 4}
-        placeholder={settings.placeholder || ''}
-        readOnly
-        style={{
-          ...baseStyle,
-          display: 'block',
-          fontSize: px(settings.fontSize || 14),
-          fontWeight: settings.fontWeight || 700,
-          resize: settings.resize || 'vertical',
-          outline: 'none',
-        }}
-      />
-    );
-  }
-
-  if (item.type === 'checkbox' || item.type === 'radio') {
-    const size = settings.size || 24;
-    const checked = Boolean(settings.checked);
-    const accent = settings.color || getAccent(item);
-    const isRadio = item.type === 'radio';
+  if (params.type === 'radio') {
+    const iconSize = s.size || 24;
 
     return (
-      <label
-        id={uid}
-        style={{
-          ...baseStyle,
-          width: 'auto',
-          height: 'auto',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 12,
-          padding: '12px 14px',
-          borderRadius: 16,
-          background:
-            item.preview?.background === '#FFFFFF'
-              ? '#F9FAFB'
-              : 'rgba(255,255,255,.08)',
-          border: `1px solid ${colorToRgba(accent, 0.3)}`,
-          color: item.styles?.color || '#111827',
-        }}
-      >
-        <span
+      <>
+        <div
           style={{
-            width: size,
-            height: size,
-            borderRadius: isRadio ? '50%' : 8,
-            border: `2px solid ${accent}`,
-            background: checked && !isRadio ? accent : '#FFFFFF',
-            display: 'inline-flex',
+            width: `${iconSize}px`,
+            height: `${iconSize}px`,
+            flexShrink: 0,
+            backgroundColor: '#fff',
+            border: `2px solid ${s.color || '#4F46E5'}`,
+            borderRadius: '50%',
+            display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            flexShrink: 0,
-            boxShadow: checked ? `0 0 0 5px ${colorToRgba(accent, 0.16)}` : 'none',
+            transition: 'background-color 180ms ease, border-color 180ms ease',
           }}
         >
-          {checked && isRadio && (
-            <span style={{ width: size * 0.48, height: size * 0.48, borderRadius: '50%', background: accent }} />
+          {previewChecked && (
+            <div
+              style={{
+                width: '50%',
+                height: '50%',
+                backgroundColor: s.color || '#4F46E5',
+                borderRadius: '50%',
+              }}
+            />
           )}
-          {checked && !isRadio && (
-            <span style={{
-              width: size * 0.48,
-              height: size * 0.28,
-              borderLeft: '3px solid #111827',
-              borderBottom: '3px solid #111827',
-              transform: 'rotate(-45deg) translateY(-1px)',
-            }} />
-          )}
-        </span>
-        <span style={{
-          fontSize: px(settings.fontSize || 14),
-          fontWeight: settings.fontWeight || 850,
-          fontFamily: settings.fontFamily || 'Inter, system-ui, sans-serif',
-          color: item.styles?.color || '#111827',
-        }}>
-          {settings.label}
-        </span>
-      </label>
-    );
-  }
-
-  if (item.type === 'image') {
-    return (
-      <div
-        id={uid}
-        style={{
-          width: px(item.styles?.width || 292),
-          height: px(item.styles?.height || 188),
-          borderRadius: px(item.styles?.borderRadius || 24),
-          overflow: 'hidden',
-          boxShadow: getShadowStyle(settings),
-        }}
-      >
-        <img
-          src={settings.src}
-          alt={settings.alt || item.name}
-          style={{
-            width: '100%',
-            height: '100%',
-            display: 'block',
-            objectFit: settings.objectFit || 'cover',
-            objectPosition: settings.objectPosition || 'center',
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (item.type === 'link') {
-    const text = settings.text || item.content;
-    return (
-      <a
-        id={uid}
-        href={settings.href || '#'}
-        onClick={(event) => event.preventDefault()}
-        style={{
-          ...baseStyle,
-          position: 'relative',
-          display: 'inline-flex',
-          paddingBottom: 8,
-          color: item.styles?.color || '#111827',
-          fontSize: px(settings.fontSize || 16),
-          fontWeight: settings.fontWeight || 850,
-          textDecoration: 'none',
-        }}
-      >
-        {item.previewEffect === 'blurReveal' ? <WordText>{text}</WordText> : text}
-        <span
-          data-underline
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 3,
-            borderRadius: 999,
-            background: getAccent(item),
-          }}
-        />
-      </a>
-    );
-  }
-
-  if (item.type === 'block') {
-    return (
-      <div
-        id={uid}
-        style={{
-          ...baseStyle,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: settings.alignX || 'center',
-          justifyContent: settings.alignY || 'center',
-          gap: px(settings.gap || 10),
-          overflow: settings.overflow || 'visible',
-        }}
-      >
-        <div style={{
-          opacity: 0.42,
-          border: '1px dashed currentColor',
-          padding: '12px 14px',
-          borderRadius: 8,
-          color: item.styles?.color || '#111827',
-          fontSize: 13,
-          fontWeight: 850,
-          lineHeight: 1.2,
-        }}>
-          Inner Content
         </div>
-      </div>
+        <span
+          style={{
+            fontSize: `${s.fontSize || 14}px`,
+            fontWeight: s.fontWeight || 500,
+            fontFamily: s.fontFamily || 'inherit',
+            fontStyle: s.fontStyle || 'normal',
+            color: styles.color,
+            background: 'transparent',
+          }}
+        >
+          {s.label}
+        </span>
+      </>
     );
   }
 
   return null;
 };
 
-const Preview = ({ item, replayKey, isHovered }) => {
-  const uid = `library_${String(item.id).replace(/[^a-zA-Z0-9]/g, '_')}_${replayKey}`;
+const LibraryPreviewElement = ({ params, state, replayKey, forceHovered = false, forceClicked = false }) => {
+  const [clicked, setClicked] = useState(false);
+  const [clickKey, setClickKey] = useState(0);
+  const [previewChecked, setPreviewChecked] = useState(
+    Boolean(params.specificSettings?.checked)
+  );
+
+  const motion = useMemo(() => getMotion(params, state), [params, state]);
+  const staticMotion = useMemo(() => getMotion(params, 'static'), [params]);
+  const elementId = `${params.id}_${state}`;
+  const hovered = forceHovered;
+  const isClicked = clicked || forceClicked;
+
+  usePreviewStyle(
+    `animadiv-library-preview-${params.id}-${state}`,
+    [
+      staticMotion.keyframes,
+      staticMotion.css,
+      motion.keyframes,
+      motion.css,
+      createPlaceholderCSS(elementId, params),
+    ]
+      .filter(Boolean)
+      .join('\n')
+  );
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setClicked(false);
+      setClickKey(0);
+      setPreviewChecked(Boolean(params.specificSettings?.checked));
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [state, motion.presetId, params.type, params.specificSettings?.checked]);
+
+  const Tag = getTag(params);
+  const s = params.specificSettings || {};
+  const isVoidElement = Tag === 'input' || Tag === 'img' || Tag === 'textarea';
+
+  let elementStyles = getBaseElementStyles(params, state);
+
+  if (state === 'static') {
+    elementStyles = {
+      ...elementStyles,
+      animation: staticMotion.animationStr || 'none',
+      transition: 'none',
+      cursor: 'default',
+    };
+  }
+
+  if (state === 'load') {
+    elementStyles = {
+      ...elementStyles,
+      animation:
+        motion.animationStr && motion.animationStr !== 'none'
+          ? motion.animationStr
+          : staticMotion.animationStr || 'none',
+      transition: 'none',
+      cursor: 'default',
+    };
+  }
+
+  if (state === 'hover') {
+    const fallbackHoverTransition =
+      'transform 240ms ease-out, filter 240ms ease-out, opacity 240ms ease-out, box-shadow 240ms ease-out, background-color 240ms ease-out, color 240ms ease-out, border-color 240ms ease-out';
+
+    elementStyles = {
+      ...elementStyles,
+      transition:
+        motion.transitionStyles?.transition || fallbackHoverTransition,
+      cursor: 'pointer',
+    };
+
+    if (hovered && motion.transitionStyles) {
+      const hoverOnlyStyles = { ...motion.transitionStyles };
+      delete hoverOnlyStyles.transition;
+      elementStyles = {
+        ...elementStyles,
+        ...hoverOnlyStyles,
+      };
+    }
+
+    if (hovered && motion.animationStr && motion.animationStr !== 'none') {
+      elementStyles.animation = motion.animationStr;
+    }
+
+    if (hovered && params.type === 'button') {
+      if (s.hoverBackground) elementStyles.backgroundColor = s.hoverBackground;
+      if (s.hoverColor) elementStyles.color = s.hoverColor;
+    }
+
+    if (hovered && params.type === 'link') {
+      if (s.hoverColor) elementStyles.color = s.hoverColor;
+      if (s.underline === 'hover') elementStyles.textDecoration = 'underline';
+    }
+  }
+
+  if (state === 'click') {
+    const clickTransition = motion.transitionStyles?.transition || 'none';
+    elementStyles = {
+      ...elementStyles,
+      animation:
+        isClicked && motion.animationStr && motion.animationStr !== 'none'
+          ? motion.animationStr
+          : 'none',
+      transition: clickTransition,
+      cursor: 'pointer',
+    };
+
+    if (isClicked && motion.transitionStyles) {
+      const activeOnlyStyles = { ...motion.transitionStyles };
+      delete activeOnlyStyles.transition;
+      elementStyles = {
+        ...elementStyles,
+        ...activeOnlyStyles,
+      };
+    }
+  }
+
+  const elementProps = {
+    id: elementId,
+    style: elementStyles,
+    className: `animadiv-element${state === 'click' && isClicked ? ' is-clicked' : ''}${state === 'hover' && hovered ? ' is-hovered' : ''}`,
+  };
+
+  if (state === 'load') {
+    elementProps.key = `load-${replayKey}`;
+  }
+
+  if (state === 'click') {
+    elementProps['data-click-key'] = clickKey;
+    elementProps.onMouseDown = (event) => {
+      event.preventDefault();
+      if (params.type === 'checkbox') setPreviewChecked((value) => !value);
+      if (params.type === 'radio') setPreviewChecked(true);
+      setClicked(false);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setClickKey((value) => value + 1);
+          setClicked(true);
+          const duration = Number(motion.config?.duration) || 180;
+          const delay = Number(motion.config?.delay) || 0;
+          window.setTimeout(() => setClicked(false), duration + delay + 120);
+        });
+      });
+    };
+  }
+
+  if (params.type === 'input') {
+    elementProps.type = s.inputType || 'text';
+    elementProps.placeholder = s.placeholder || '';
+    elementProps.readOnly = true;
+    elementProps.disabled = Boolean(s.disabled);
+    elementProps['aria-invalid'] = s.validationState === 'error';
+  }
+
+  if (params.type === 'textarea') {
+    elementProps.placeholder = s.placeholder || '';
+    elementProps.rows = s.rows || 4;
+    elementProps.readOnly = true;
+    elementProps.disabled = Boolean(s.disabled);
+    elementProps['aria-invalid'] = s.validationState === 'error';
+  }
+
+  if (params.type === 'image') {
+    elementProps.src = s.src;
+    elementProps.alt = s.alt || 'image';
+    elementProps.loading = s.loading || 'lazy';
+    elementProps.draggable = false;
+  }
+
+  if (params.type === 'link') {
+    elementProps.href = s.href || '#';
+    elementProps.target = s.target || '_self';
+    elementProps.onClick = (e) => e.preventDefault();
+  }
+
+  if (params.type === 'button' && Tag === 'a') {
+    elementProps.href = s.href || '#';
+    elementProps.target = s.target || '_self';
+    elementProps.role = 'button';
+    elementProps.onClick = (e) => e.preventDefault();
+  }
+
+  const textPreset =
+    state === 'click' || state === 'static' ? 'none' : motion.presetId;
+
+  return React.createElement(
+    Tag,
+    elementProps,
+    isVoidElement ? undefined : renderContent(params, textPreset, previewChecked)
+  );
+};
+
+
+const InteractionHint = ({ state, visible }) => {
+  if (!visible) return null;
+
+  const isClick = state === 'click';
+  const Icon = isClick ? Pointer : MousePointer2;
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'absolute',
+        right: 18,
+        bottom: 18,
+        width: 34,
+        height: 34,
+        borderRadius: 999,
+        background: 'rgba(17,24,39,0.88)',
+        color: '#D6F854',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: '0 12px 26px rgba(15,23,42,0.22)',
+        pointerEvents: 'none',
+        zIndex: 5,
+        animation: isClick
+          ? 'animadiv-library-hint-click 1.8s infinite ease-in-out'
+          : 'animadiv-library-hint-hover 2.2s infinite ease-in-out',
+      }}
+    >
+      <Icon size={18} />
+      <style>{`
+        @keyframes animadiv-library-hint-hover {
+          0%, 100% { transform: translate(0, 0); opacity: 0.78; }
+          50% { transform: translate(-5px, -5px); opacity: 1; }
+        }
+        @keyframes animadiv-library-hint-click {
+          0%, 100% { transform: translateY(0) scale(1); opacity: 0.78; }
+          50% { transform: translateY(3px) scale(0.9); opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+const Preview = ({ item, replayKey, isHovered, isPressed }) => {
+  const params = useMemo(() => normalizeLibraryItemForGenerator(item), [item]);
+  const baseState = getLibraryPreferredState(params, item) || getPreferredPreviewState(params);
+  const state =
+    isPressed && hasAnimation(params, 'click')
+      ? 'click'
+      : isHovered && hasAnimation(params, 'hover')
+        ? 'hover'
+        : baseState;
   const dark = isDarkPreview(item);
 
   return (
     <div
-      className={isHovered ? 'is-preview-hovered' : undefined}
       style={{
         minHeight: 232,
         background: getPreviewBackground(item),
@@ -451,15 +871,29 @@ const Preview = ({ item, replayKey, isHovered }) => {
         position: 'relative',
       }}
     >
-      <style>{getPreviewCss(uid, item)}</style>
-      <PreviewElement item={item} uid={uid} />
+      <LibraryPreviewElement
+        params={params}
+        state={state}
+        replayKey={replayKey}
+        forceHovered={isHovered && state === 'hover'}
+        forceClicked={isPressed && state === 'click'}
+      />
+
+      <InteractionHint
+        state={state}
+        visible={!isHovered && !isPressed && (state === 'hover' || state === 'click')}
+      />
     </div>
   );
 };
 
 const ActionButton = ({ children, onClick, active = false, primary = false }) => (
   <button
-    onClick={onClick}
+    type="button"
+    onClick={(event) => {
+      event.stopPropagation();
+      onClick?.(event);
+    }}
     style={{
       flex: 'none',
       width: 'auto',
@@ -486,16 +920,30 @@ const ActionButton = ({ children, onClick, active = false, primary = false }) =>
 );
 
 const Card = ({ item, mode = 'library', onSavedChange }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [isSaved, setIsSaved] = useState(() =>
     readSavedItems().some((saved) => saved.id === item.id)
   );
   const [isHovered, setIsHovered] = useState(false);
+  const [isPressed, setIsPressed] = useState(false);
   const [replayKey, setReplayKey] = useState(0);
   const [isHandoffOpen, setIsHandoffOpen] = useState(false);
+  const itemName = t(item.nameKey, { defaultValue: item.name });
+  const itemCategory = t(item.categoryKey, { defaultValue: item.category });
+  const itemMotionStyle = t(item.motionStyleKey, { defaultValue: item.motionStyle });
 
   const useInGenerator = () => {
-    localStorage.setItem(PARAMS_KEY, JSON.stringify(item));
+    const generatorItem = normalizeLibraryItemForGenerator(item);
+    const initialPreviewState = getLibraryPreferredState(generatorItem, item);
+    localStorage.setItem(
+      PARAMS_KEY,
+      JSON.stringify({
+        ...generatorItem,
+        initialPreviewState,
+        initialMotionState: initialPreviewState,
+      })
+    );
     navigate('/generator');
   };
 
@@ -526,9 +974,16 @@ const Card = ({ item, mode = 'library', onSavedChange }) => {
           transition: 'transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease',
         }}
         onMouseEnter={() => { setIsHovered(true); setReplayKey((key) => key + 1); }}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseLeave={() => { setIsHovered(false); setIsPressed(false); }}
+        onMouseDown={() => { setIsPressed(true); setReplayKey((key) => key + 1); }}
+        onMouseUp={() => setIsPressed(false)}
       >
-        <Preview item={item} replayKey={replayKey} isHovered={isHovered} />
+        <Preview
+          item={item}
+          replayKey={replayKey}
+          isHovered={isHovered}
+          isPressed={isPressed}
+        />
 
         <div style={{ padding: 18 }}>
           <h3
@@ -541,18 +996,18 @@ const Card = ({ item, mode = 'library', onSavedChange }) => {
               margin: '0 0 10px',
             }}
           >
-            {item.name}
+            {itemName}
           </h3>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 16 }}>
-            {[item.category, getDisplayType(item), item.motionStyle].map((badge) => (
+            {[itemCategory, itemMotionStyle].filter(Boolean).map((badge) => (
               <span
                 key={badge}
                 style={{
                   fontSize: 11,
-                  color: badge === item.category ? 'var(--primary)' : 'var(--text-muted)',
-                  background: badge === item.category ? 'var(--card-dark-bg)' : 'var(--surface-subtle)',
-                  border: badge === item.category ? '1px solid var(--card-dark-border)' : '1px solid var(--border)',
+                  color: badge === itemCategory ? 'var(--primary)' : 'var(--text-muted)',
+                  background: badge === itemCategory ? 'var(--card-dark-bg)' : 'var(--surface-subtle)',
+                  border: badge === itemCategory ? '1px solid var(--card-dark-border)' : '1px solid var(--border)',
                   padding: '4px 8px',
                   borderRadius: 999,
                   fontWeight: 850,
@@ -567,19 +1022,19 @@ const Card = ({ item, mode = 'library', onSavedChange }) => {
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
             <ActionButton onClick={useInGenerator} primary>
-              <ExternalLink size={14} /> Edit
+              <ExternalLink size={14} /> {t('common.edit')}
             </ActionButton>
 
             <ActionButton onClick={toggleSave} active={isSaved && mode !== 'mysets'}>
               {mode === 'mysets' ? (
-                <><Trash2 size={14} /> Remove</>
+                <><Trash2 size={14} /> {t('common.remove')}</>
               ) : (
-                <>{isSaved ? <CheckCircle size={14} /> : <Bookmark size={14} />} Save</>
+                <>{isSaved ? <CheckCircle size={14} /> : <Bookmark size={14} />} {t('common.save')}</>
               )}
             </ActionButton>
 
             <ActionButton onClick={() => setIsHandoffOpen(true)}>
-              <Code2 size={14} /> Code
+              <Code2 size={14} /> {t('common.code')}
             </ActionButton>
           </div>
         </div>
@@ -588,9 +1043,9 @@ const Card = ({ item, mode = 'library', onSavedChange }) => {
       <DeveloperHandoffModal
         open={isHandoffOpen}
         onClose={() => setIsHandoffOpen(false)}
-        params={item}
-        css={generateFullCSS(item)}
-        title={item.name}
+        params={normalizeLibraryItemForGenerator(item)}
+        css={generateFullCSS(normalizeLibraryItemForGenerator(item))}
+        title={itemName}
       />
     </>
   );

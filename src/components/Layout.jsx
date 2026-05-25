@@ -13,8 +13,57 @@ import {
   X,
   MonitorSmartphone,
 } from 'lucide-react';
+import { useTranslation } from '../i18n/useTranslation';
 
-const MobileBlock = ({ pageName }) => (
+const LanguageSwitcher = () => {
+  const { language, setLanguage, t } = useTranslation();
+
+  return (
+    <div
+      role="group"
+      aria-label={t('language.switcherLabel')}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: 3,
+        border: '1px solid var(--border)',
+        borderRadius: 10,
+        background: 'var(--surface)',
+        gap: 2,
+      }}
+    >
+      {['en', 'ua'].map((lang) => {
+        const active = language === lang;
+        return (
+          <button
+            key={lang}
+            type="button"
+            onClick={() => setLanguage(lang)}
+            style={{
+              height: 32,
+              minWidth: 36,
+              border: 'none',
+              borderRadius: 7,
+              background: active ? 'var(--text-main)' : 'transparent',
+              color: active ? 'var(--primary)' : 'var(--text-muted)',
+              fontSize: 12,
+              fontWeight: 900,
+              cursor: 'pointer',
+              transition: 'background 0.15s, color 0.15s',
+            }}
+          >
+            {t(`language.${lang}`)}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+const MobileBlock = ({ pageName }) => {
+  const { t } = useTranslation();
+
+  return (
   <div
     style={{
       minHeight: 'calc(100vh - 72px)',
@@ -68,7 +117,7 @@ const MobileBlock = ({ pageName }) => (
           letterSpacing: '-0.01em',
         }}
       >
-        {pageName} недоступний на мобільному
+        {t('mobileBlock.title', { pageName })}
       </h2>
 
       <p
@@ -79,8 +128,7 @@ const MobileBlock = ({ pageName }) => (
           margin: '0 0 32px',
         }}
       >
-        Ця сторінка потребує більшого екрана. Відкрийте її на комп'ютері для
-        повноцінної роботи.
+        {t('mobileBlock.body')}
       </p>
 
       <Link
@@ -107,13 +155,15 @@ const MobileBlock = ({ pageName }) => (
           event.currentTarget.style.opacity = '1';
         }}
       >
-        На головну
+        {t('mobileBlock.home')}
       </Link>
     </div>
   </div>
-);
+  );
+};
 
 const Layout = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const isGeneratorPage = location.pathname.startsWith('/generator');
@@ -145,11 +195,11 @@ const Layout = () => {
   const isDark = theme === 'dark';
 
   const navItems = [
-    { name: 'About',     path: '/about',       icon: Info },
-    { name: 'Generator', path: '/generator',   icon: PlaySquare },
-    { name: 'Library',   path: '/library',     icon: Library },
-    { name: 'UI Kit',    path: '/collections', icon: LayoutTemplate },
-    { name: 'My Sets',   path: '/mysets',      icon: Layers },
+    { labelKey: 'nav.about',       path: '/about',       icon: Info },
+    { labelKey: 'nav.generator',   path: '/generator',   icon: PlaySquare },
+    { labelKey: 'nav.library',     path: '/library',     icon: Library },
+    { labelKey: 'nav.collections', path: '/collections', icon: LayoutTemplate },
+    { labelKey: 'nav.mysets',      path: '/mysets',      icon: Layers },
   ];
 
   useEffect(() => {
@@ -208,7 +258,7 @@ const Layout = () => {
     );
   };
 
-  const mobileBlockName = isGeneratorPage ? 'Генератор' : 'UI Kit';
+  const mobileBlockName = isGeneratorPage ? t('nav.generator') : t('nav.collections');
 
   return (
     <div
@@ -390,7 +440,7 @@ const Layout = () => {
             const isActive = location.pathname === item.path;
             return (
               <Link
-                key={item.name}
+                key={item.path}
                 to={item.path}
                 className="nav-link"
                 style={{
@@ -399,7 +449,7 @@ const Layout = () => {
                 }}
               >
                 <Icon size={15} strokeWidth={isActive ? 2.5 : 2} />
-                {item.name}
+                {t(item.labelKey)}
               </Link>
             );
           })}
@@ -407,11 +457,13 @@ const Layout = () => {
 
         {/* Right side */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+          <LanguageSwitcher />
+
           <button
             type="button"
             onClick={toggleTheme}
             className="theme-btn"
-            aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+            aria-label={isDark ? t('aria.switchToLight') : t('aria.switchToDark')}
           >
             {isDark ? <Sun size={17} /> : <Moon size={17} />}
           </button>
@@ -421,7 +473,7 @@ const Layout = () => {
             type="button"
             className="header-burger theme-btn"
             onClick={openMobileMenu}
-            aria-label="Open menu"
+            aria-label={t('aria.openMenu')}
           >
             <Menu size={18} />
           </button>
@@ -444,11 +496,15 @@ const Layout = () => {
                 type="button"
                 className="theme-btn"
                 onClick={closeMobileMenu}
-                aria-label="Close menu"
+                aria-label={t('aria.closeMenu')}
                 style={{ width: '36px', height: '36px' }}
               >
                 <X size={18} />
               </button>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <LanguageSwitcher />
             </div>
 
             {navItems.map((item) => {
@@ -459,7 +515,7 @@ const Layout = () => {
                 (item.path === '/generator' || item.path === '/collections');
               return (
                 <Link
-                  key={item.name}
+                  key={item.path}
                   to={item.path}
                   className={`mobile-nav-item${isActive ? ' active' : ''}${
                     isBlocked ? ' mobile-nav-item--disabled' : ''
@@ -474,7 +530,7 @@ const Layout = () => {
                   }}
                 >
                   <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-                  {item.name}
+                  {t(item.labelKey)}
                   {isBlocked && (
                     <span
                       style={{
@@ -487,7 +543,7 @@ const Layout = () => {
                         borderRadius: 999,
                       }}
                     >
-                      ПК
+                      {t('common.pc')}
                     </span>
                   )}
                 </Link>
@@ -526,7 +582,7 @@ const Layout = () => {
             transition: 'background-color 0.2s ease, border-color 0.2s ease',
           }}
         >
-          Created by Yuliia Riabych | 2026
+          {t('common.createdBy')}
         </footer>
       )}
 

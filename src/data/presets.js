@@ -1,7 +1,8 @@
 export const animationPresets = [
   {
     id: 'fade-in',
-    name: 'Плавна поява (Fade)',
+    name: 'Fade',
+    nameKey: 'data.presets.fade',
     supportsIntensity: false,
     // ✅ НОВИЙ КОНТРАКТ: Вказує UI, що тут немає повзунка інтенсивності
     supportedParams: ['duration', 'delay', 'easing'],
@@ -14,7 +15,8 @@ export const animationPresets = [
   },
   {
     id: 'slide-up',
-    name: 'Виліт (Slide Up)',
+    name: 'Slide Up',
+    nameKey: 'data.presets.slideUp',
     supportsIntensity: true,
     // ✅ НОВИЙ КОНТРАКТ: Додано 'intensity', бо supportsIntensity === true
     supportedParams: ['duration', 'delay', 'easing', 'intensity'],
@@ -28,7 +30,8 @@ export const animationPresets = [
   },
   {
     id: 'pop',
-    name: 'Поява зі збільшенням (Pop)',
+    name: 'Pop',
+    nameKey: 'data.presets.pop',
     supportsIntensity: true,
     // ✅ НОВИЙ КОНТРАКТ
     supportedParams: ['duration', 'delay', 'easing', 'intensity'],
@@ -43,7 +46,8 @@ export const animationPresets = [
   },
   {
     id: 'bounce',
-    name: 'Стрибок (Bounce)',
+    name: 'Bounce',
+    nameKey: 'data.presets.bounce',
     supportsIntensity: false,
     // ✅ НОВИЙ КОНТРАКТ
     supportedParams: ['duration', 'delay', 'easing'],
@@ -56,7 +60,8 @@ export const animationPresets = [
   },
   {
     id: 'shake',
-    name: 'Трясіння (Shake)',
+    name: 'Shake',
+    nameKey: 'data.presets.shake',
     supportsIntensity: true,
     // ✅ НОВИЙ КОНТРАКТ
     supportedParams: ['duration', 'delay', 'easing', 'intensity'],
@@ -69,7 +74,8 @@ export const animationPresets = [
   },
   {
     id: 'rotate-in',
-    name: 'Поява з обертом (Rotate)',
+    name: 'Rotate',
+    nameKey: 'data.presets.rotate',
     supportsIntensity: false,
     // ✅ НОВИЙ КОНТРАКТ
     supportedParams: ['duration', 'delay', 'easing'],

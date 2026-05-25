@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Card from '../components/Card';
 import { Link } from 'react-router-dom';
+import { useTranslation } from '../i18n/useTranslation';
 
 const SAVED_KEY = 'animadiv-saved-items';
 
@@ -14,6 +15,7 @@ const readSavedItems = () => {
 };
 
 const MySets = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('saved');
   const [savedItems, setSavedItems] = useState(readSavedItems);
 
@@ -79,10 +81,10 @@ const MySets = () => {
             lineHeight: 1.1,
           }}
         >
-          My Sets
+          {t('mysets.title')}
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: 16, margin: 0 }}>
-          Saved library elements that can be reopened in the generator.
+          {t('mysets.subtitle')}
         </p>
       </div>
 
@@ -98,13 +100,13 @@ const MySets = () => {
           onClick={() => setActiveTab('saved')}
           className={`mysets-tab${activeTab === 'saved' ? ' active' : ''}`}
         >
-          Saved presets ({savedItems.length})
+          {t('mysets.savedPresets', { count: savedItems.length })}
         </button>
         <button
           onClick={() => setActiveTab('collections')}
           className={`mysets-tab${activeTab === 'collections' ? ' active' : ''}`}
         >
-          Collections
+          {t('mysets.collections')}
         </button>
       </div>
 
@@ -148,20 +150,20 @@ const MySets = () => {
                 color: 'var(--text-main)',
               }}
             >
-              Nothing saved yet
+              {t('mysets.emptyTitle')}
             </h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: 32, margin: '0 0 32px' }}>
-              Save a library element to keep it here.
+              {t('mysets.emptyText')}
             </p>
             <Link to="/library" className="mysets-cta">
-              Open Library
+              {t('mysets.openLibrary')}
             </Link>
           </div>
         ))}
 
       {activeTab === 'collections' && (
         <div style={{ textAlign: 'center', padding: 80, color: 'var(--text-soft)' }}>
-          Collections are not available yet.
+          {t('mysets.collectionsUnavailable')}
         </div>
       )}
     </div>

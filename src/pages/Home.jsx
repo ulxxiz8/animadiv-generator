@@ -7,14 +7,16 @@ import {
   Zap,
   ArrowUpRight,
 } from 'lucide-react';
+import { useTranslation } from '../i18n/useTranslation';
 
 const Home = () => {
+  const { t } = useTranslation();
   const animatedElements = [
-    { id: 1, type: 'accent', label: 'Hover Effect',   effect: 'pulse',   icon: <Zap size={16} /> },
-    { id: 2, type: 'dark',   label: 'Slide Sequence', effect: 'slideUp', icon: null },
-    { id: 3, type: 'light',  label: 'Loading State',  effect: 'rotate',  icon: <PlaySquare size={16} /> },
-    { id: 4, type: 'dark',   label: 'Fade Entrance',  effect: 'fadeIn',  icon: null },
-    { id: 5, type: 'accent', label: 'Bounce Physics', effect: 'bounce',  icon: null },
+    { id: 1, type: 'accent', labelKey: 'home.marqueeHoverEffect', effect: 'pulse', icon: <Zap size={16} /> },
+    { id: 2, type: 'dark', labelKey: 'home.marqueeSlideSequence', effect: 'slideUp', icon: null },
+    { id: 3, type: 'light', labelKey: 'home.marqueeLoadingState', effect: 'rotate', icon: <PlaySquare size={16} /> },
+    { id: 4, type: 'dark', labelKey: 'home.marqueeFadeEntrance', effect: 'fadeIn', icon: null },
+    { id: 5, type: 'accent', labelKey: 'home.marqueeBouncePhysics', effect: 'bounce', icon: null },
   ];
 
   const marqueeList = [
@@ -48,7 +50,6 @@ const Home = () => {
         .demo-bounce  { animation: bounce  3s infinite ease-in-out; }
         .demo-fadeIn  { animation: fadeIn  2s infinite alternate ease-in-out; }
 
-        /* ── Bento Grid ── */
         .home-grid {
           display: grid;
           grid-template-columns: repeat(12, 1fr);
@@ -70,7 +71,6 @@ const Home = () => {
           .hg-gen, .hg-ui, .hg-lib { grid-column: span 1; }
         }
 
-        /* ── Cards ── */
         .home-card {
           padding: 24px;
           border-radius: 24px;
@@ -86,7 +86,6 @@ const Home = () => {
           box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07);
         }
 
-        /* ── Typography ── */
         .home-h1 {
           font-size: clamp(28px, 4.5vw, 48px);
           font-weight: 900;
@@ -105,7 +104,6 @@ const Home = () => {
         }
       `}</style>
 
-      {/* ── HERO ── */}
       <div
         style={{
           flex: 1,
@@ -121,7 +119,6 @@ const Home = () => {
           boxSizing: 'border-box',
         }}
       >
-        {/* Badge */}
         <div
           style={{
             display: 'inline-flex',
@@ -142,7 +139,7 @@ const Home = () => {
         </div>
 
         <h1 className="home-h1">
-          Анімація інтерфейсів <br />
+          {t('home.heroTitle')} <br />
           <span
             style={{
               background: 'var(--primary)',
@@ -153,19 +150,13 @@ const Home = () => {
               transform: 'rotate(-2deg)',
             }}
           >
-            без написання коду.
+            {t('home.heroHighlight')}
           </span>
         </h1>
 
-        <p className="home-sub">
-          Візуальний інструмент для дизайнерів та розробників. Створюйте,
-          налаштовуйте та експортуйте оптимізований CSS-код в один клік.
-        </p>
+        <p className="home-sub">{t('home.subtitle')}</p>
 
-        {/* ── BENTO GRID ── */}
         <div className="home-grid">
-
-          {/* Генератор — завжди темна картка */}
           <Link
             to="/generator"
             className="home-card hg-gen"
@@ -187,15 +178,14 @@ const Home = () => {
             </div>
             <div>
               <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--card-dark-text)', marginBottom: '6px', letterSpacing: '-0.01em' }}>
-                Генератор
+                {t('home.generatorTitle')}
               </h3>
               <p style={{ fontSize: '13px', color: 'var(--card-dark-soft)', lineHeight: '1.4', margin: 0 }}>
-                Створюйте складні CSS-анімації для окремих елементів за допомогою візуальних контролерів.
+                {t('home.generatorText')}
               </p>
             </div>
           </Link>
 
-          {/* UI Набори — поверхнева картка */}
           <Link
             to="/collections"
             className="home-card home-card--light hg-ui"
@@ -214,15 +204,14 @@ const Home = () => {
             </div>
             <div>
               <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '6px', letterSpacing: '-0.01em' }}>
-                UI Набори
+                {t('home.collectionsTitle')}
               </h3>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.4', margin: 0 }}>
-                Оживляйте цілі блоки. Налаштовуйте каскадні затримки та створюйте UI-патерни.
+                {t('home.collectionsText')}
               </p>
             </div>
           </Link>
 
-          {/* Бібліотека — акцентна картка */}
           <Link
             to="/library"
             className="home-card hg-lib"
@@ -241,17 +230,16 @@ const Home = () => {
             </div>
             <div>
               <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#111827', marginBottom: '6px', letterSpacing: '-0.01em' }}>
-                Бібліотека
+                {t('home.libraryTitle')}
               </h3>
               <p style={{ fontSize: '13px', color: '#374151', lineHeight: '1.4', margin: 0, fontWeight: '500' }}>
-                Колекція пресетів для швидкого використання.
+                {t('home.libraryText')}
               </p>
             </div>
           </Link>
         </div>
       </div>
 
-      {/* ── MARQUEE ── */}
       <div
         style={{
           width: '100%',
@@ -267,11 +255,11 @@ const Home = () => {
           {marqueeList.map((el, index) => {
             const bg =
               el.type === 'accent' ? 'var(--primary)'
-              : el.type === 'dark'  ? 'var(--card-dark-bg)'
+              : el.type === 'dark' ? 'var(--card-dark-bg)'
               : 'var(--surface)';
             const color =
               el.type === 'accent' ? '#111827'
-              : el.type === 'dark'  ? 'var(--card-dark-text)'
+              : el.type === 'dark' ? 'var(--card-dark-text)'
               : 'var(--text-main)';
             const border =
               el.type === 'light' ? '1px solid var(--border)' : 'none';
@@ -295,7 +283,7 @@ const Home = () => {
                 }}
               >
                 {el.icon}
-                {el.label}
+                {t(el.labelKey)}
               </div>
             );
           })}

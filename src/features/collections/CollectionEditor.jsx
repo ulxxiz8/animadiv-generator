@@ -1,8 +1,9 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { animationPresets } from '../../data/presets';
 import { customLayouts } from './collectionLayoutDefinitions';
+import { useTranslation } from '../../i18n/useTranslation';
 
-// Р”РѕРїРѕРјС–Р¶РЅРёР№ РєРѕРјРїРѕРЅРµРЅС‚ РґР»СЏ РµР»РµРјРµРЅС‚Р°
+// Допоміжний компонент для елемента
 const EditableElement = ({
   id,
   label,
@@ -14,7 +15,7 @@ const EditableElement = ({
   globalPreset,
   isPlaying,
 }) => {
-  // Р’РёСЂР°С…РѕРІСѓС”РјРѕ Р·Р°С‚СЂРёРјРєСѓ
+  // Вираховуємо затримку
   const delay = index * staggerDelay;
   const preset = animationPresets.find((p) => p.id === globalPreset);
   const animationName = preset ? `ag_${preset.id}` : 'none';
@@ -43,7 +44,7 @@ const EditableElement = ({
           ? '0 10px 15px -3px rgba(0, 0, 0, 0.05)'
           : '0 1px 2px rgba(0, 0, 0, 0.03)',
 
-        // РљРђРЎРљРђР”РќРђ Р›РћР“Р†РљРђ
+        // КАСКАДНА ЛОГІКА
         animationName: isPlaying ? animationName : 'none',
         animationDuration: '600ms',
         animationDelay: `${delay}ms`,
@@ -67,6 +68,7 @@ const CollectionEditor = ({
   refreshKey,
   onPlay,
 }) => {
+  const { t } = useTranslation();
   const [activeElementId, setActiveElementId] = useState(null);
 
   const activePreset = animationPresets.find((p) => p.id === globalPreset);
@@ -80,8 +82,8 @@ const CollectionEditor = ({
       ? `@keyframes ag_${activePreset.id} { \n${keyframesContent}\n }`
       : '';
 
-  // Р¤СѓРЅРєС†С–СЏ Р·Р°РїСѓСЃРєСѓ РєР°СЃРєР°РґСѓ
-  // РђРІС‚РѕРјР°С‚РёС‡РЅРѕ Р·Р°РїСѓСЃРєР°С”РјРѕ РїСЂРё РїРµСЂС€РѕРјСѓ РІС–РґРєСЂРёС‚С‚С– РјР°РєРµС‚Р° Р°Р±Рѕ Р·РјС–РЅС– РїСЂРµСЃРµС‚Сѓ
+  // Функція запуску каскаду
+  // Автоматично запускаємо при першому відкритті макета або зміні пресету
   useEffect(() => {
     const timer = window.setTimeout(() => onPlay?.(), 0);
     return () => window.clearTimeout(timer);
@@ -133,7 +135,7 @@ const CollectionEditor = ({
               {...commonProps}
               index={0}
               id="hero-h1"
-              label="Heading (Заголовок)"
+              label={t('collections.labels.heading')}
               isSelected={activeElementId === 'hero-h1'}
               style={{
                 width: '100%',
@@ -145,7 +147,7 @@ const CollectionEditor = ({
               {...commonProps}
               index={1}
               id="hero-p"
-              label="Text (Опис)"
+              label={t('collections.labels.text')}
               isSelected={activeElementId === 'hero-p'}
               style={{ width: '85%', height: '40px', justifyContent: 'center' }}
             />
@@ -153,7 +155,7 @@ const CollectionEditor = ({
               {...commonProps}
               index={2}
               id="hero-btn"
-              label="Button (Кнопка)"
+              label={t('collections.labels.button')}
               isSelected={activeElementId === 'hero-btn'}
               style={{
                 width: '140px',
@@ -179,7 +181,7 @@ const CollectionEditor = ({
               {...commonProps}
               index={0}
               id="art-img"
-              label="Image"
+              label={t('templates.image')}
               isSelected={activeElementId === 'art-img'}
               style={{
                 width: '120px',
@@ -200,7 +202,7 @@ const CollectionEditor = ({
                 {...commonProps}
                 index={1}
                 id="art-t1"
-                label="Title"
+                label={t('templates.title')}
                 isSelected={activeElementId === 'art-t1'}
                 style={{ width: '100%' }}
               />
@@ -208,7 +210,7 @@ const CollectionEditor = ({
                 {...commonProps}
                 index={2}
                 id="art-p"
-                label="Paragraph"
+                label={t('templates.paragraph')}
                 isSelected={activeElementId === 'art-p'}
                 style={{ width: '100%', height: '60px' }}
               />
@@ -231,7 +233,7 @@ const CollectionEditor = ({
               {...commonProps}
               index={0}
               id="grid-1"
-              label="Card 1"
+              label={t('templates.card', { count: 1 })}
               isSelected={activeElementId === 'grid-1'}
               style={{ height: '100px', justifyContent: 'center' }}
             />
@@ -239,7 +241,7 @@ const CollectionEditor = ({
               {...commonProps}
               index={1}
               id="grid-2"
-              label="Card 2"
+              label={t('templates.card', { count: 2 })}
               isSelected={activeElementId === 'grid-2'}
               style={{ height: '100px', justifyContent: 'center' }}
             />
@@ -247,7 +249,7 @@ const CollectionEditor = ({
               {...commonProps}
               index={2}
               id="grid-3"
-              label="Card 3"
+              label={t('templates.card', { count: 3 })}
               isSelected={activeElementId === 'grid-3'}
               style={{ height: '100px', justifyContent: 'center' }}
             />
@@ -268,7 +270,7 @@ const CollectionEditor = ({
         minHeight: 0,
       }}
     >
-      {/* 2. Р†Рќ'Р„РљР¦Р†РЇ РЎРўРР›Р†Р’ */}
+      {/* 2. ІН'ЄКЦІЯ СТИЛІВ */}
       <style>{dynamicStyles}</style>
 
       <div
@@ -288,9 +290,7 @@ const CollectionEditor = ({
             fontSize: 15,
             fontWeight: 900,
           }}
-        >
-          Canvas
-        </div>
+        >{t('collections.canvas')}</div>
         <button
           type="button"
           onClick={onBack}
@@ -304,9 +304,7 @@ const CollectionEditor = ({
             fontWeight: 800,
             padding: '9px 10px',
           }}
-        >
-          Close
-        </button>
+        >{t('common.close')}</button>
       </div>
 
       <div
@@ -328,3 +326,4 @@ const CollectionEditor = ({
 };
 
 export default CollectionEditor;
+

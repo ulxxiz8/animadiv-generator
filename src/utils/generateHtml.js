@@ -15,6 +15,100 @@ const renderContent = (value, fallback = '') => {
   return escapeHtml(text);
 };
 
+const TYPOGRAPHY_PRESETS = new Set([
+  'fadeByLine',
+  'slideUpReveal',
+  'fadeByWord',
+  'blurReveal',
+  'underlineDraw',
+  'fadeByLetter',
+  'typewriter',
+]);
+
+const getTypographyPreset = (params = {}) => {
+  const animations = params.animations || {};
+  const states = ['load', 'hover', 'click'];
+  return (
+    states
+      .map((state) => animations[state]?.presetId)
+      .find((presetId) => TYPOGRAPHY_PRESETS.has(presetId)) || 'none'
+  );
+};
+
+const splitTextByLine = (text) =>
+  String(text)
+    .split('\n')
+    .map(
+      (line, index) =>
+        `<span class="anim-line" style="display: block; --line-index: ${index};"><span class="anim-inner" style="display: block;">${line ? escapeHtml(line) : '&nbsp;'}</span></span>`
+    )
+    .join('');
+
+const splitTextByWord = (text) => {
+  let wordIndex = 0;
+
+  return String(text)
+    .split(/(\s+)/)
+    .map((part) => {
+      if (!part.trim()) {
+        return `<span style="white-space: pre;">${escapeHtml(part)}</span>`;
+      }
+
+      const currentIndex = wordIndex;
+      wordIndex += 1;
+
+      return `<span class="anim-word" style="display: inline-block; vertical-align: bottom;"><span class="anim-inner" style="display: inline-block; --word-index: ${currentIndex};">${escapeHtml(part)}</span></span>`;
+    })
+    .join('');
+};
+
+const splitTextByLetter = (text) => {
+  let charIndex = 0;
+
+  return String(text)
+    .split(/(\s+)/)
+    .map((part) => {
+      if (!part.trim()) {
+        return `<span style="white-space: pre;">${escapeHtml(part)}</span>`;
+      }
+
+      const letters = Array.from(part)
+        .map((char) => {
+          const currentIndex = charIndex;
+          charIndex += 1;
+
+          return `<span class="anim-char" style="display: inline-block; --char-index: ${currentIndex};">${escapeHtml(char)}</span>`;
+        })
+        .join('');
+
+      return `<span class="anim-word" style="display: inline-block; white-space: nowrap; vertical-align: bottom;">${letters}</span>`;
+    })
+    .join('');
+};
+
+const renderAnimatedContent = (params, value, fallback = '') => {
+  const text = value || fallback;
+  const presetId = getTypographyPreset(params);
+
+  if (presetId === 'fadeByLine' || presetId === 'slideUpReveal') {
+    return splitTextByLine(text);
+  }
+
+  if (
+    presetId === 'fadeByWord' ||
+    presetId === 'blurReveal' ||
+    presetId === 'underlineDraw'
+  ) {
+    return splitTextByWord(text);
+  }
+
+  if (presetId === 'fadeByLetter' || presetId === 'typewriter') {
+    return splitTextByLetter(text);
+  }
+
+  return renderContent(text);
+};
+
 const getTextTag = (tag) => {
   const allowedTags = new Set(['p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
   return allowedTags.has(tag) ? tag : 'p';
@@ -31,11 +125,11 @@ export const generateHtml = (params = {}) => {
     case 'button':
       if (settings.actionType === 'link') {
         return `<a ${classAttr} href="${escapeAttr(settings.href || '#')}" target="${escapeAttr(settings.target || '_self')}" role="button">
-  ${renderContent(settings.text || content, 'Button')}
+  ${renderAnimatedContent(params, settings.text || content, 'Button')}
 </a>`;
       }
       return `<button ${classAttr}>
-  ${renderContent(settings.text || content, 'Button')}
+  ${renderAnimatedContent(params, settings.text || content, 'Button')}
 </button>`;
 
     case 'input':
@@ -47,7 +141,7 @@ export const generateHtml = (params = {}) => {
     case 'text': {
       const textTag = getTextTag(settings.tag || tag);
       return `<${textTag} ${classAttr}>
-  ${renderContent(settings.content || content, 'Text')}
+  ${renderAnimatedContent(params, settings.content || content, 'Text')}
 </${textTag}>`;
     }
 
@@ -56,7 +150,7 @@ export const generateHtml = (params = {}) => {
 
     case 'link':
       return `<a ${classAttr} href="${escapeAttr(settings.href || '#')}" target="${escapeAttr(settings.target || '_self')}">
-  ${renderContent(settings.text || content, 'Link')}
+  ${renderAnimatedContent(params, settings.text || content, 'Link')}
 </a>`;
 
     case 'checkbox':

@@ -4,6 +4,7 @@ import CollectionControls from '../features/collections/CollectionControls';
 import CollectionCodeOutput from '../features/collections/CollectionCodeOutput';
 import { customLayouts } from '../features/collections/collectionLayoutDefinitions';
 import { animationPresets } from '../data/presets';
+import { useTranslation } from '../i18n/useTranslation';
 
 /* ─── Skeleton icon primitives ────────────────────────────────────────────── */
 
@@ -312,17 +313,17 @@ const MobileHeroIcon = () => (
 /* ─── Layout template definitions ──────────────────────────────────────────── */
 
 const layoutTemplates = [
-  { id: 'hero',          name: 'Hero Section',    subtitle: '', layoutId: 'hero',          icon: <HeroIcon /> },
-  { id: 'article',       name: 'Article',         subtitle: '', layoutId: 'article',       icon: <ArticleIcon /> },
-  { id: 'grid',          name: 'Card Grid',       subtitle: '', layoutId: 'grid',          icon: <CardGridIcon /> },
-  { id: 'feature-grid',  name: 'Feature Grid',    subtitle: '', layoutId: 'feature-grid',  icon: <FeatureGridIcon /> },
-  { id: 'pricing-cards', name: 'Pricing Cards',   subtitle: '', layoutId: 'pricing-cards', icon: <PricingCardsIcon /> },
-  { id: 'login-form',    name: 'Login Form',      subtitle: '', layoutId: 'login-form',    icon: <LoginFormIcon /> },
-  { id: 'dashboard',     name: 'Dashboard',       subtitle: '', layoutId: 'dashboard',     icon: <DashboardIcon /> },
-  { id: 'faq-section',   name: 'FAQ Section',     subtitle: '', layoutId: 'faq-section',   icon: <FAQIcon /> },
-  { id: 'product-card',  name: 'Product Card',    subtitle: '', layoutId: 'product-card',  icon: <ProductCardIcon /> },
-  { id: 'newsletter',    name: 'Newsletter',      subtitle: '', layoutId: 'newsletter',    icon: <NewsletterIcon /> },
-  { id: 'sidebar-layout',name: 'Sidebar Layout',  subtitle: '', layoutId: 'sidebar-layout',icon: <SidebarLayoutIcon /> },
+  { id: 'hero', titleKey: 'templates.heroSection', subtitleKey: '', layoutId: 'hero', icon: <HeroIcon /> },
+  { id: 'article', titleKey: 'templates.article', subtitleKey: '', layoutId: 'article', icon: <ArticleIcon /> },
+  { id: 'grid', titleKey: 'templates.cardGrid', subtitleKey: '', layoutId: 'grid', icon: <CardGridIcon /> },
+  { id: 'feature-grid', titleKey: 'templates.featureGrid', subtitleKey: '', layoutId: 'feature-grid', icon: <FeatureGridIcon /> },
+  { id: 'pricing-cards', titleKey: 'templates.pricingCards', subtitleKey: '', layoutId: 'pricing-cards', icon: <PricingCardsIcon /> },
+  { id: 'login-form', titleKey: 'templates.loginForm', subtitleKey: '', layoutId: 'login-form', icon: <LoginFormIcon /> },
+  { id: 'dashboard', titleKey: 'templates.dashboard', subtitleKey: '', layoutId: 'dashboard', icon: <DashboardIcon /> },
+  { id: 'faq-section', titleKey: 'templates.faqSection', subtitleKey: '', layoutId: 'faq-section', icon: <FAQIcon /> },
+  { id: 'product-card', titleKey: 'templates.productCard', subtitleKey: '', layoutId: 'product-card', icon: <ProductCardIcon /> },
+  { id: 'newsletter', titleKey: 'templates.newsletter', subtitleKey: '', layoutId: 'newsletter', icon: <NewsletterIcon /> },
+  { id: 'sidebar-layout', titleKey: 'templates.sidebarLayout', subtitleKey: '', layoutId: 'sidebar-layout', icon: <SidebarLayoutIcon /> },
 ];
 
 /* ─── Fallback layout definitions ──────────────────────────────────────────── */
@@ -338,9 +339,9 @@ const fallbackLayouts = {
       maxWidth: '450px',
     },
     items: [
-      { id: 'hero-h1', label: 'Heading (Заголовок)', style: { width: '100%', height: '50px', justifyContent: 'center' } },
-      { id: 'hero-p',  label: 'Text (Опис)',         style: { width: '85%', height: '40px', justifyContent: 'center' } },
-      { id: 'hero-btn',label: 'Button (Кнопка)',     style: { width: '140px', height: '40px', justifyContent: 'center' } },
+      { id: 'hero-h1', labelKey: 'collections.labels.heading', label: 'Heading', style: { width: '100%', height: '50px', justifyContent: 'center' } },
+      { id: 'hero-p', labelKey: 'collections.labels.text', label: 'Text', style: { width: '85%', height: '40px', justifyContent: 'center' } },
+      { id: 'hero-btn', labelKey: 'collections.labels.button', label: 'Button', style: { width: '140px', height: '40px', justifyContent: 'center' } },
     ],
   },
   article: {
@@ -352,9 +353,9 @@ const fallbackLayouts = {
       alignItems: 'center',
     },
     items: [
-      { id: 'art-img', label: 'Image',     style: { width: '120px', height: '120px', flexShrink: 0, justifyContent: 'center' } },
-      { id: 'art-t1',  label: 'Title',     style: { width: '100%' } },
-      { id: 'art-p',   label: 'Paragraph', style: { width: '100%', height: '60px' } },
+      { id: 'art-img', labelKey: 'templates.image', label: 'Image', style: { width: '120px', height: '120px', flexShrink: 0, justifyContent: 'center' } },
+      { id: 'art-t1', labelKey: 'templates.title', label: 'Title', style: { width: '100%' } },
+      { id: 'art-p', labelKey: 'templates.paragraph', label: 'Paragraph', style: { width: '100%', height: '60px' } },
     ],
   },
   grid: {
@@ -367,6 +368,8 @@ const fallbackLayouts = {
     },
     items: [1, 2, 3].map((item) => ({
       id: `grid-${item}`,
+      labelKey: 'templates.card',
+      labelParams: { count: item },
       label: `Card ${item}`,
       style: { height: '100px', justifyContent: 'center' },
     })),
@@ -389,7 +392,7 @@ const styleToCss = (styles = {}, indent = '  ') =>
 const getLayoutDefinition = (layoutId) =>
   customLayouts[layoutId] || fallbackLayouts[layoutId] || fallbackLayouts.hero;
 
-const createCollectionBundle = (layoutId, globalPreset, staggerDelay) => {
+const createCollectionBundle = (layoutId, globalPreset, staggerDelay, t) => {
   const definition = getLayoutDefinition(layoutId);
   const preset = animationPresets.find((item) => item.id === globalPreset);
   const animationName = preset && preset.id !== 'none' ? `ag_${preset.id}` : '';
@@ -401,7 +404,9 @@ const createCollectionBundle = (layoutId, globalPreset, staggerDelay) => {
   const itemMarkup = definition.items
     .map(
       (item) =>
-        `  <div class="animadiv-item" data-block="${item.id}">${item.label}</div>`
+        `  <div class="animadiv-item" data-block="${item.id}">${
+          item.labelKey ? t(item.labelKey, item.labelParams || {}) : item.label
+        }</div>`
     )
     .join('\n');
   const html = `<section class="animadiv-ui-kit ${className}">\n${itemMarkup}\n</section>`;
@@ -425,7 +430,11 @@ const createCollectionBundle = (layoutId, globalPreset, staggerDelay) => {
 
 /* ─── TemplateCard ─────────────────────────────────────────────────────────── */
 
-const TemplateCard = ({ template, onSelect }) => (
+const TemplateCard = ({ template, onSelect }) => {
+  const { t } = useTranslation();
+  const title = t(template.titleKey);
+
+  return (
   <article
     onClick={() => onSelect(template.layoutId)}
     className="coll-template-card"
@@ -477,19 +486,21 @@ const TemplateCard = ({ template, onSelect }) => (
         margin: '0 0 6px',
       }}
     >
-      {template.name}
+      {title}
     </h3>
-    {template.subtitle && (
+    {template.subtitleKey && (
       <span style={{ fontSize: 16, color: 'var(--text-muted)', lineHeight: 1.35 }}>
-        {template.subtitle}
+        {t(template.subtitleKey)}
       </span>
     )}
   </article>
-);
+  );
+};
 
 /* ─── Collections page ─────────────────────────────────────────────────────── */
 
 const Collections = () => {
+  const { t } = useTranslation();
   const [selectedLayoutId, setSelectedLayoutId] = useState(null);
   const [globalPreset, setGlobalPreset] = useState('fade');
   const [staggerDelay, setStaggerDelay] = useState(100);
@@ -516,9 +527,10 @@ const Collections = () => {
       createCollectionBundle(
         selectedLayoutId || 'hero',
         globalPreset,
-        staggerDelay
+        staggerDelay,
+        t
       ),
-    [globalPreset, selectedLayoutId, staggerDelay]
+    [globalPreset, selectedLayoutId, staggerDelay, t]
   );
 
   useEffect(() => {
@@ -614,8 +626,7 @@ const Collections = () => {
                 letterSpacing: '-0.01em',
               }}
             >
-              З чого почнемо?
-            </h2>
+              {t('collections.startTitle')}</h2>
             <p
               style={{
                 color: 'var(--text-muted)',
@@ -625,8 +636,7 @@ const Collections = () => {
                 lineHeight: 1.5,
               }}
             >
-              Оберіть базовий макет для каскадної анімації або почніть з чистого аркуша
-            </p>
+              {t('collections.startSubtitle')}</p>
           </header>
 
           <div className="coll-template-grid">
@@ -726,7 +736,7 @@ const Collections = () => {
       >
         <CollectionCodeOutput
           bundle={codeBundle}
-          title={selectedTemplate?.name || 'UI Kit section'}
+          title={selectedTemplate?.titleKey ? t(selectedTemplate.titleKey) : t('templates.uiKitSection')}
         />
       </div>
     </main>
@@ -734,3 +744,5 @@ const Collections = () => {
 };
 
 export default Collections;
+
+

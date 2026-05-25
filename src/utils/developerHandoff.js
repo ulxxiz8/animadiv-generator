@@ -39,6 +39,21 @@ export const createDeveloperHandoffUrl = (payload) => {
   return url.toString();
 };
 
+export const createCombinedDocument = (html = '', css = '') => `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AnimaDiv export</title>
+  <style>
+${String(css || '').trim()}
+  </style>
+</head>
+<body>
+${String(html || '').trim()}
+</body>
+</html>`;
+
 export const createCodeBundle = (params, cssOverride) => {
   const html = generateHtml(params).trim();
   const css = (cssOverride || generateFullCSS(params)).trim();
@@ -46,11 +61,7 @@ export const createCodeBundle = (params, cssOverride) => {
   return {
     html,
     css,
-    combined: `${html}
-
-<style>
-${css}
-</style>`,
+    combined: createCombinedDocument(html, css),
   };
 };
 

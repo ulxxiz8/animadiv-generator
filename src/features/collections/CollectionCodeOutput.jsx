@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import DeveloperHandoffModal from '../../components/DeveloperHandoffModal';
 import { createDeveloperHandoffFromBundle } from '../../utils/developerHandoff';
+import { useTranslation } from '../../i18n/useTranslation';
 
 const TABS = [
   { id: 'html', label: 'HTML' },
   { id: 'css', label: 'CSS' },
-  { id: 'combined', label: 'Combined' },
+  { id: 'combined', labelKey: 'codeOutput.combined', label: 'Combined' },
 ];
 
 const copyText = async (value) => {
@@ -13,6 +14,7 @@ const copyText = async (value) => {
 };
 
 const CollectionCodeOutput = ({ bundle, title }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('html');
   const [copied, setCopied] = useState(false);
   const [isHandoffOpen, setIsHandoffOpen] = useState(false);
@@ -63,7 +65,7 @@ const CollectionCodeOutput = ({ bundle, title }) => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div
           role="tablist"
-          aria-label="Export code format"
+          aria-label={t('aria.exportCodeFormat')}
           style={{
             display: 'flex',
             gap: 4,
@@ -83,7 +85,7 @@ const CollectionCodeOutput = ({ bundle, title }) => {
               onClick={() => setActiveTab(tab.id)}
               style={getTabStyle(tab.id)}
             >
-              {tab.label}
+              {tab.labelKey ? t(tab.labelKey) : tab.label}
             </button>
           ))}
         </div>
@@ -105,7 +107,7 @@ const CollectionCodeOutput = ({ bundle, title }) => {
             transition: 'all 0.15s ease',
           }}
         >
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? t('common.copied') : t('common.copy')}
         </button>
       </div>
 
@@ -123,7 +125,7 @@ const CollectionCodeOutput = ({ bundle, title }) => {
       >
         <div
           role="textbox"
-          aria-label="Generated code"
+          aria-label={t('aria.generatedCode')}
           aria-multiline="true"
           tabIndex={0}
           style={{
@@ -210,7 +212,7 @@ const CollectionCodeOutput = ({ bundle, title }) => {
             lineHeight: 1.2,
           }}
         >
-          Передати розробнику
+          {t('codeOutput.developerHandoff')}
         </button>
       </div>
 

@@ -12,6 +12,12 @@ import {
   isStateAllowedForType,
   sanitizeAnimationConfigForType,
 } from '../../utils/semanticMapping';
+import {
+  getBaseTransform,
+  getBoxShadow,
+  getResolvedBackground,
+} from '../../utils/motionSystem';
+import { useTranslation } from '../../i18n/useTranslation';
 
 const EMPTY_MOTION = {
   keyframes: '',
@@ -21,45 +27,45 @@ const EMPTY_MOTION = {
   config: null,
 };
 
+
+const clampNumber = (value, min, max, fallback) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(max, Math.max(min, numeric));
+};
+
+const getOpacity = (value, fallback = 1) =>
+  clampNumber(value, 0, 1, fallback);
+
+const resolveCursor = (settings = {}, state = 'load') => {
+  if (settings.disabled) return 'not-allowed';
+  if (settings.cursor) return settings.cursor;
+  return state === 'hover' || state === 'click' ? 'pointer' : 'default';
+};
+
+const createPlaceholderCSS = (id, params) => {
+  if (!['input', 'textarea'].includes(params?.type)) return '';
+  const color = params.styles?.color || '#111827';
+  const disabledBackground = params.styles?.backgroundColor || '#F3F4F6';
+
+  return `
+#${id}::placeholder {
+  color: ${color};
+  opacity: 1;
+}
+#${id}:disabled {
+  cursor: not-allowed;
+  background: ${disabledBackground};
+  filter: grayscale(0.18);
+}
+`;
+};
+
 const px = (value) => {
   if (value === undefined || value === null) return undefined;
   if (value === 'auto') return 'auto';
   if (typeof value === 'number') return `${value}px`;
   return value;
-};
-
-const colorToRgba = (color = '#111827', opacity = 0.16) => {
-  if (String(color).startsWith('rgba(')) return color;
-  if (String(color).startsWith('rgb(')) {
-    return String(color).replace('rgb(', 'rgba(').replace(')', `, ${opacity})`);
-  }
-
-  const hex = String(color).replace('#', '');
-  if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(hex)) {
-    return `rgba(17, 24, 39, ${opacity})`;
-  }
-
-  const normalized =
-    hex.length === 3
-      ? hex
-          .split('')
-          .map((char) => char + char)
-          .join('')
-      : hex;
-  const value = parseInt(normalized, 16);
-  const r = (value >> 16) & 255;
-  const g = (value >> 8) & 255;
-  const b = value & 255;
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-};
-
-const getShadowStyle = (settings = {}) => {
-  if (!settings.shadowEnabled) return null;
-
-  return `0 ${settings.shadowOffsetY ?? 6}px ${settings.shadowBlur ?? 18}px ${colorToRgba(
-    settings.shadowColor,
-    settings.shadowOpacity ?? 0.16
-  )}`;
 };
 
 const getMotionConfig = (params, state) => {
@@ -73,6 +79,17 @@ const getMotionConfig = (params, state) => {
     ...config,
     shadowColor: settings.shadowColor,
     shadowOpacity: settings.shadowOpacity,
+    shadowOffsetX: settings.shadowOffsetX,
+    shadowOffsetY: settings.shadowOffsetY,
+    shadowBlur: settings.shadowBlur,
+    shadowSpread: settings.shadowSpread,
+    shadowEnabled: settings.shadowEnabled,
+    hoverBackgroundColor: settings.hoverBackground || config.hoverBackgroundColor,
+    hoverBorderColor: config.hoverBorderColor || styles.borderColor,
+    borderColor: styles.borderColor,
+    borderWidth: styles.borderWidth,
+    borderStyle: styles.borderStyle,
+    borderRadius: styles.borderRadius,
     accentColor:
       settings.color ||
       settings.checkColor ||
@@ -81,7 +98,6 @@ const getMotionConfig = (params, state) => {
       styles.borderColor,
     backgroundColor: styles.backgroundColor,
     color: styles.color,
-    borderColor: styles.borderColor,
   };
 };
 
@@ -146,7 +162,7 @@ const HintCursor = ({ type, visible }) => {
 };
 
 const getMotion = (params, state) => {
-  if (!params || state === 'static') return EMPTY_MOTION;
+  if (!params) return EMPTY_MOTION;
 
   const config = sanitizeAnimationConfigForType(
     params.type,
@@ -188,15 +204,16 @@ const getTag = (params) => {
 const getBaseElementStyles = (params, state) => {
   const s = params.specificSettings || {};
   const styles = params.styles || {};
+  const staticConfig = params.animations?.static || {};
   const background =
-    s.backgroundMode === 'gradient'
-      ? s.backgroundGradient
-      : s.backgroundMode === 'image' && s.backgroundImage
-        ? `url("${s.backgroundImage}")`
-        : styles.backgroundColor;
+    s.backgroundMode === 'image' && s.backgroundImage
+      ? `url("${s.backgroundImage}")`
+      : getResolvedBackground(s, styles);
+  const baseTransform = getBaseTransform(staticConfig);
 
   const base = {
     ...styles,
+    '--base-transform': baseTransform,
     background,
     backgroundSize: s.backgroundMode === 'image' ? 'cover' : undefined,
     backgroundPosition: s.backgroundMode === 'image' ? 'center' : undefined,
@@ -208,16 +225,15 @@ const getBaseElementStyles = (params, state) => {
     borderRadius: px(styles.borderRadius),
     boxSizing: 'border-box',
     position: styles.position || 'relative',
+    transform: 'var(--base-transform)',
+    transformOrigin: staticConfig.transformOrigin || 'center',
     animation: 'none',
     transition: 'none',
-    cursor:
-      state === 'static' || state === 'load'
-        ? 'default'
-        : s.cursor || 'pointer',
+    cursor: resolveCursor(s, state),
   };
 
   if (styles.borderWidth > 0) {
-    base.border = `${styles.borderWidth}px solid ${
+    base.border = `${styles.borderWidth}px ${styles.borderStyle || 'solid'} ${
       styles.borderColor || '#E5E7EB'
     }`;
   }
@@ -230,7 +246,7 @@ const getBaseElementStyles = (params, state) => {
     base.borderColor = s.errorBorderColor;
   }
 
-  const shadow = getShadowStyle(s);
+  const shadow = getBoxShadow(s);
   if (shadow) {
     base.boxShadow = shadow;
   }
@@ -251,6 +267,7 @@ const getBaseElementStyles = (params, state) => {
     base.fontSize = `${s.fontSize || 14}px`;
     base.fontWeight = s.fontWeight || 600;
     base.fontFamily = s.fontFamily || 'inherit';
+    base.fontStyle = s.fontStyle || 'normal';
     base.whiteSpace = 'pre-wrap';
     base.textAlign = 'center';
   }
@@ -259,13 +276,14 @@ const getBaseElementStyles = (params, state) => {
     base.fontSize = `${s.fontSize || 14}px`;
     base.fontWeight = s.fontWeight || 400;
     base.fontFamily = s.fontFamily || 'inherit';
+    base.fontStyle = s.fontStyle || 'normal';
     base.padding = styles.padding || '0 16px';
     base.display = 'block';
     base.whiteSpace = 'nowrap';
     base.overflow = 'hidden';
     base.textOverflow = 'ellipsis';
     base.outline = 'none';
-    if (s.disabled) base.opacity = 0.5;
+    if (s.disabled) base.opacity = getOpacity(styles.opacity, 1) * 0.5;
   }
 
   if (params.type === 'textarea') {
@@ -280,10 +298,11 @@ const getBaseElementStyles = (params, state) => {
     base.fontSize = `${s.fontSize || 14}px`;
     base.fontWeight = s.fontWeight || 400;
     base.fontFamily = s.fontFamily || 'inherit';
+    base.fontStyle = s.fontStyle || 'normal';
     base.padding = styles.padding || '12px 16px';
     base.resize = s.resize || 'vertical';
     base.outline = 'none';
-    if (s.disabled) base.opacity = 0.5;
+    if (s.disabled) base.opacity = getOpacity(styles.opacity, 1) * 0.5;
 
     if (!hasManualHeight) {
       delete base.height;
@@ -295,6 +314,7 @@ const getBaseElementStyles = (params, state) => {
     base.fontSize = `${s.fontSize || 24}px`;
     base.fontWeight = s.fontWeight || 800;
     base.fontFamily = s.fontFamily || 'inherit';
+    base.fontStyle = s.fontStyle || 'normal';
     base.textAlign = s.textAlign || 'center';
     base.lineHeight = s.lineHeight || 1.5;
     base.letterSpacing = `${s.letterSpacing || 0}px`;
@@ -313,6 +333,7 @@ const getBaseElementStyles = (params, state) => {
     base.fontSize = `${s.fontSize || 14}px`;
     base.fontWeight = s.fontWeight || 500;
     base.fontFamily = s.fontFamily || 'inherit';
+    base.fontStyle = s.fontStyle || 'normal';
     base.display = 'inline-flex';
     base.textDecoration = s.underline === 'always' ? 'underline' : 'none';
     base.backgroundColor = 'transparent';
@@ -320,14 +341,27 @@ const getBaseElementStyles = (params, state) => {
   }
 
   if (params.type === 'checkbox' || params.type === 'radio') {
-    base.display = 'flex';
+    base.display = 'inline-flex';
     base.alignItems = 'center';
     base.gap = '12px';
+    base.background = 'transparent';
     base.backgroundColor = 'transparent';
     base.border = 'none';
+    base.boxShadow = 'none';
     base.width = 'auto';
     base.height = 'auto';
-    if (s.disabled) base.opacity = 0.5;
+    base.padding = 0;
+    if (s.disabled) base.opacity = getOpacity(styles.opacity, 1) * 0.45;
+  }
+
+  if (['button', 'input', 'textarea', 'text', 'image', 'link'].includes(params.type)) {
+    base.opacity = getOpacity(styles.opacity, 1);
+  }
+
+  if (['input', 'textarea'].includes(params.type) && s.disabled) {
+    base.opacity = getOpacity(styles.opacity, 1) * 0.45;
+    base.cursor = 'not-allowed';
+    base.filter = 'grayscale(0.18)';
   }
 
   return base;
@@ -388,7 +422,9 @@ const renderContent = (params, textPreset, previewChecked) => {
             fontSize: `${s.fontSize || 14}px`,
             fontWeight: s.fontWeight || 500,
             fontFamily: s.fontFamily || 'inherit',
+            fontStyle: s.fontStyle || 'normal',
             color: styles.color,
+            background: 'transparent',
           }}
         >
           {s.label}
@@ -432,7 +468,9 @@ const renderContent = (params, textPreset, previewChecked) => {
             fontSize: `${s.fontSize || 14}px`,
             fontWeight: s.fontWeight || 500,
             fontFamily: s.fontFamily || 'inherit',
+            fontStyle: s.fontStyle || 'normal',
             color: styles.color,
+            background: 'transparent',
           }}
         >
           {s.label}
@@ -453,10 +491,21 @@ const PreviewElement = ({ params, state, replayKey }) => {
   );
 
   const motion = useMemo(() => getMotion(params, state), [params, state]);
+  const staticMotion = useMemo(() => getMotion(params, 'static'), [params]);
+
+  const elementId = `${params.id}_${state}`;
 
   usePreviewStyle(
     `animadiv-preview-${params.id}-${state}`,
-    state !== 'static' ? motion.keyframes : ''
+    [
+      staticMotion.keyframes,
+      staticMotion.css,
+      motion.keyframes,
+      motion.css,
+      createPlaceholderCSS(elementId, params),
+    ]
+      .filter(Boolean)
+      .join('\n')
   );
 
   useEffect(() => {
@@ -479,7 +528,7 @@ const PreviewElement = ({ params, state, replayKey }) => {
   if (state === 'static') {
     elementStyles = {
       ...elementStyles,
-      animation: 'none',
+      animation: staticMotion.animationStr || 'none',
       transition: 'none',
       cursor: 'default',
     };
@@ -488,7 +537,10 @@ const PreviewElement = ({ params, state, replayKey }) => {
   if (state === 'load') {
     elementStyles = {
       ...elementStyles,
-      animation: motion.animationStr || 'none',
+      animation:
+        motion.animationStr && motion.animationStr !== 'none'
+          ? motion.animationStr
+          : staticMotion.animationStr || 'none',
       transition: 'none',
       cursor: 'default',
     };
@@ -555,10 +607,11 @@ const PreviewElement = ({ params, state, replayKey }) => {
     }
   }
 
+
   const elementProps = {
-    id: `${params.id}_${state}`,
+    id: elementId,
     style: elementStyles,
-    className: 'animadiv-element',
+    className: `animadiv-element${state === 'click' && clicked ? ' is-clicked' : ''}${state === 'hover' && hovered ? ' is-hovered' : ''}`,
   };
 
   if (state === 'load') {
@@ -566,8 +619,7 @@ const PreviewElement = ({ params, state, replayKey }) => {
   }
 
   if (state === 'click') {
-    elementProps.key = `click-${clickKey}`;
-    elementProps.onAnimationEnd = () => setClicked(false);
+    elementProps['data-click-key'] = clickKey;
   }
 
   if (state === 'hover') {
@@ -576,8 +628,8 @@ const PreviewElement = ({ params, state, replayKey }) => {
   }
 
   if (state === 'click') {
-    elementProps.onMouseDown = () => {
-      setClicked(false);
+    elementProps.onMouseDown = (event) => {
+      event.preventDefault();
 
       if (params.type === 'checkbox') {
         setPreviewChecked((value) => !value);
@@ -587,18 +639,20 @@ const PreviewElement = ({ params, state, replayKey }) => {
         setPreviewChecked(true);
       }
 
-      requestAnimationFrame(() => {
-        setClickKey((value) => value + 1);
-        setClicked(true);
+      setClicked(false);
 
-        const duration = Number(motion.config?.duration) || 180;
-        const delay = Number(motion.config?.delay) || 0;
-        window.setTimeout(
-          () => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setClickKey((value) => value + 1);
+          setClicked(true);
+
+          const duration = Number(motion.config?.duration) || 180;
+          const delay = Number(motion.config?.delay) || 0;
+
+          window.setTimeout(() => {
             setClicked(false);
-          },
-          duration + delay + 80
-        );
+          }, duration + delay + 120);
+        });
       });
     };
   }
@@ -626,17 +680,28 @@ const PreviewElement = ({ params, state, replayKey }) => {
     elementProps.draggable = false;
   }
 
+  const handlePreviewLinkClick = (e) => {
+    const href = s.href || '#';
+    if (!href || href === '#') {
+      e.preventDefault();
+      return;
+    }
+
+    e.preventDefault();
+    window.open(href, s.target || '_self', s.target === '_blank' ? 'noopener,noreferrer' : undefined);
+  };
+
   if (params.type === 'link') {
     elementProps.href = s.href || '#';
     elementProps.target = s.target || '_self';
-    elementProps.onClick = (e) => e.preventDefault();
+    elementProps.onClick = handlePreviewLinkClick;
   }
 
   if (params.type === 'button' && Tag === 'a') {
     elementProps.href = s.href || '#';
     elementProps.target = s.target || '_self';
     elementProps.role = 'button';
-    elementProps.onClick = (e) => e.preventDefault();
+    elementProps.onClick = handlePreviewLinkClick;
   }
 
   const textPreset =
@@ -673,29 +738,34 @@ const PreviewElement = ({ params, state, replayKey }) => {
 
 const PreviewArea = ({
   params,
+  refreshKey = 0,
   activeState: controlledActiveState,
   onActiveStateChange,
 }) => {
-  const [localActiveState, setLocalActiveState] = useState('load');
-  const activeState = controlledActiveState || localActiveState;
-  const setActiveState = onActiveStateChange || setLocalActiveState;
+  const { t } = useTranslation();
+  const [localActiveState, setLocalActiveState] = useState('static');
+  const isControlled =
+    controlledActiveState !== undefined &&
+    typeof onActiveStateChange === 'function';
+  const activeState = isControlled ? controlledActiveState : localActiveState;
+  const setActiveState = isControlled ? onActiveStateChange : setLocalActiveState;
   const [isGridView, setIsGridView] = useState(false);
   const [localReplayKey, setLocalReplayKey] = useState(0);
   const type = params?.type;
 
   const states = useMemo(() => {
-    if (!type) return [{ id: 'static', label: 'Static' }];
+    if (!type) return [{ id: 'static', label: t('preview.states.static', { defaultValue: 'Static' }) }];
 
     return [
-      { id: 'static', label: 'Static' },
-      { id: 'load', label: 'Load' },
-      { id: 'hover', label: 'Hover' },
-      { id: 'click', label: 'Click' },
+      { id: 'static', label: t('preview.states.static', { defaultValue: 'Static' }) },
+      { id: 'load', label: t('preview.states.load', { defaultValue: 'Load' }) },
+      { id: 'hover', label: t('preview.states.hover', { defaultValue: 'Hover' }) },
+      { id: 'click', label: t('preview.states.click', { defaultValue: 'Click' }) },
     ].filter(
       (item) =>
         item.id === 'static' || isStateAllowedForType(item.id, type)
     );
-  }, [type]);
+  }, [t, type]);
 
   useEffect(() => {
     if (!states.some((item) => item.id === activeState)) {
@@ -757,7 +827,12 @@ const PreviewArea = ({
 
         {isLoad && (
           <button
-            onClick={() => setLocalReplayKey((value) => value + 1)}
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setLocalReplayKey((value) => value + 1);
+            }}
             style={{
               position: 'absolute',
               top: 12,
@@ -777,14 +852,14 @@ const PreviewArea = ({
               zIndex: 20,
             }}
           >
-            <RotateCcw size={14} /> Play
+            <RotateCcw size={14} /> {t('common.play')}
           </button>
         )}
 
         <PreviewElement
           params={params}
           state={state.id}
-          replayKey={isLoad ? localReplayKey : 0}
+          replayKey={isLoad ? `${localReplayKey}-${refreshKey}` : 0}
         />
       </div>
     );
@@ -841,8 +916,13 @@ const PreviewArea = ({
             >
               {states.map((state) => (
                 <button
+                  type="button"
                   key={state.id}
-                  onClick={() => setActiveState(state.id)}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setActiveState(state.id);
+                  }}
                   style={{
                     padding: '6px 12px',
                     borderRadius: 8,
@@ -876,7 +956,12 @@ const PreviewArea = ({
           }}
         >
           <button
-            onClick={() => setIsGridView(false)}
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setIsGridView(false);
+            }}
             style={{
               padding: '6px 16px',
               background: !isGridView ? 'var(--button-bg)' : 'transparent',
@@ -888,11 +973,16 @@ const PreviewArea = ({
               cursor: 'pointer',
             }}
           >
-            Один стан
+            {t('preview.singleState')}
           </button>
 
           <button
-            onClick={() => setIsGridView(true)}
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setIsGridView(true);
+            }}
             style={{
               padding: '6px 16px',
               background: isGridView ? 'var(--button-bg)' : 'transparent',
@@ -904,7 +994,7 @@ const PreviewArea = ({
               cursor: 'pointer',
             }}
           >
-            Вітрина
+            {t('preview.showcase')}
           </button>
         </div>
       </div>

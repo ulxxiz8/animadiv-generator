@@ -2,28 +2,42 @@ import React, { useState } from 'react';
 import { Search, SearchX } from 'lucide-react';
 import Card from '../components/Card';
 import { libraryItems } from '../data/libraryItems';
+import { useTranslation } from '../i18n/useTranslation';
 
 const categoryFilters = [
-  { label: 'All', value: 'All' },
-  { label: 'Buttons', value: 'Buttons' },
-  { label: 'Typography', value: 'Typography' },
-  { label: 'Inputs', value: 'Inputs' },
-  { label: 'Images', value: 'Images' },
-  { label: 'Links', value: 'Links' },
-  { label: 'Blocks', value: 'Blocks' },
+  { labelKey: 'library.categories.All', value: 'All' },
+  { labelKey: 'library.categories.Buttons', value: 'Buttons' },
+  { labelKey: 'library.categories.Typography', value: 'Typography' },
+  { labelKey: 'library.categories.Inputs', value: 'Inputs' },
+  { labelKey: 'library.categories.Images', value: 'Images' },
+  { labelKey: 'library.categories.Links', value: 'Links' },
+  { labelKey: 'library.categories.Blocks', value: 'Blocks' },
 ];
 
 const Library = () => {
+  const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
 
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredItems = libraryItems.filter((item) => {
+    const translatedName = t(item.nameKey, { defaultValue: item.name });
+    const translatedCategory = t(item.categoryKey, { defaultValue: item.category });
+    const translatedTags = (item.tagKeys || []).map((key, index) =>
+      t(key, { defaultValue: item.tags?.[index] || '' })
+    );
     const matchesCategory =
       activeCategory === 'All' || item.category === activeCategory;
     const matchesSearch =
       !normalizedSearch ||
-      [item.name, item.motionStyle, ...(item.tags || [])]
+      [
+        item.name,
+        translatedName,
+        item.motionStyle,
+        translatedCategory,
+        ...(item.tags || []),
+        ...translatedTags,
+      ]
         .join(' ')
         .toLowerCase()
         .includes(normalizedSearch);
@@ -94,7 +108,7 @@ const Library = () => {
                   letterSpacing: 0,
                 }}
               >
-                Library
+                {t('library.title')}
               </h1>
               <p
                 style={{
@@ -104,7 +118,7 @@ const Library = () => {
                   lineHeight: 1.45,
                 }}
               >
-                Editable single elements with stable hover previews.
+                {t('library.subtitle')}
               </p>
             </div>
 
@@ -125,7 +139,7 @@ const Library = () => {
               <input
                 type="text"
                 value={searchTerm}
-                placeholder="Search elements"
+                placeholder={t('library.searchPlaceholder')}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="lib-search"
                 style={{
@@ -181,7 +195,7 @@ const Library = () => {
                       cursor: 'pointer',
                     }}
                   >
-                    {filter.label}
+                    {t(filter.labelKey)}
                   </button>
                 );
               })}
@@ -201,7 +215,7 @@ const Library = () => {
                 whiteSpace: 'nowrap',
               }}
             >
-              {filteredItems.length} items
+              {t('common.items', { count: filteredItems.length })}
             </span>
           </div>
         </header>
@@ -218,7 +232,7 @@ const Library = () => {
           >
             <SearchX size={28} color="var(--text-muted)" style={{ marginBottom: 12 }} />
             <div style={{ fontSize: 18, fontWeight: 850, color: 'var(--text-main)' }}>
-              No matching elements found
+              {t('library.noResults')}
             </div>
           </div>
         ) : (

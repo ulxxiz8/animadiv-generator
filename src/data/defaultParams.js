@@ -9,8 +9,8 @@ export const initialParams = {
 };
 
 export const elementTypes = [
-  { label: 'Блок (Div)', value: 'div' },
-  { label: 'Кнопка (Button)', value: 'button' },
-  { label: 'Іконка (Icon)', value: 'span' },
-  { label: 'Картка (Card)', value: 'article' },
+  { labelKey: 'data.elements.div', label: 'Block (Div)', value: 'div' },
+  { labelKey: 'data.elements.button', label: 'Button', value: 'button' },
+  { labelKey: 'data.elements.span', label: 'Icon', value: 'span' },
+  { labelKey: 'data.elements.article', label: 'Card', value: 'article' },
 ];

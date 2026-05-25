@@ -20,6 +20,7 @@ import {
   getPreferredPreviewState,
   getPreviewStatesForType,
 } from '../utils/previewState';
+import { useTranslation } from '../i18n/useTranslation';
 
 const modalButtonBase = {
   height: 40,
@@ -54,88 +55,91 @@ const secondaryButtonStyle = {
   color: 'var(--text-main, #111827)',
 };
 
-const MobileUnavailableBlock = () => (
-  <div
-    style={{
-      background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 24,
-      padding: '48px 32px',
-      maxWidth: 360,
-      width: '100%',
-      textAlign: 'center',
-      boxShadow: 'rgba(0, 0, 0, 0.06) 0px 4px 24px',
-    }}
-  >
+const MobileUnavailableBlock = () => {
+  const { t } = useTranslation();
+
+  return (
     <div
       style={{
-        width: 64,
-        height: 64,
-        borderRadius: 16,
-        background: 'var(--card-dark-bg)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        margin: '0px auto 24px',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 24,
+        padding: '48px 32px',
+        maxWidth: 360,
+        width: '100%',
+        textAlign: 'center',
+        boxShadow: 'rgba(0, 0, 0, 0.06) 0px 4px 24px',
       }}
     >
-      <MonitorSmartphone
-        size={28}
-        color="var(--primary)"
-        strokeWidth={1.75}
-      />
+      <div
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: 16,
+          background: 'var(--card-dark-bg)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0px auto 24px',
+        }}
+      >
+        <MonitorSmartphone
+          size={28}
+          color="var(--primary)"
+          strokeWidth={1.75}
+        />
+      </div>
+      <h2
+        style={{
+          fontSize: 22,
+          fontWeight: 900,
+          color: 'var(--text-main)',
+          margin: '0px 0px 12px',
+          lineHeight: 1.15,
+          letterSpacing: '-0.01em',
+        }}
+      >
+        {t('handoff.unavailableTitle')}
+      </h2>
+      <p
+        style={{
+          fontSize: 15,
+          color: 'var(--text-muted)',
+          lineHeight: 1.55,
+          margin: '0px 0px 32px',
+        }}
+      >
+        {t('mobileBlock.body')}
+      </p>
+      <a
+        href="/"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: 46,
+          padding: '0px 24px',
+          background: 'var(--card-dark-bg)',
+          color: 'var(--primary)',
+          borderRadius: 999,
+          fontWeight: 800,
+          fontSize: 14,
+          textDecoration: 'none',
+          border: '1px solid var(--card-dark-border)',
+          transition: 'opacity 0.15s',
+        }}
+        onMouseEnter={(event) => {
+          event.currentTarget.style.opacity = '0.75';
+        }}
+        onMouseLeave={(event) => {
+          event.currentTarget.style.opacity = '1';
+        }}
+      >
+        {t('mobileBlock.home')}
+      </a>
     </div>
-    <h2
-      style={{
-        fontSize: 22,
-        fontWeight: 900,
-        color: 'var(--text-main)',
-        margin: '0px 0px 12px',
-        lineHeight: 1.15,
-        letterSpacing: '-0.01em',
-      }}
-    >
-      Генератор недоступний на мобільному
-    </h2>
-    <p
-      style={{
-        fontSize: 15,
-        color: 'var(--text-muted)',
-        lineHeight: 1.55,
-        margin: '0px 0px 32px',
-      }}
-    >
-      Ця сторінка потребує більшого екрана. Відкрийте її на комп'ютері для
-      повноцінної роботи.
-    </p>
-    <a
-      href="/"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: 46,
-        padding: '0px 24px',
-        background: 'var(--card-dark-bg)',
-        color: 'var(--primary)',
-        borderRadius: 999,
-        fontWeight: 800,
-        fontSize: 14,
-        textDecoration: 'none',
-        border: '1px solid var(--card-dark-border)',
-        transition: 'opacity 0.15s',
-      }}
-      onMouseEnter={(event) => {
-        event.currentTarget.style.opacity = '0.75';
-      }}
-      onMouseLeave={(event) => {
-        event.currentTarget.style.opacity = '1';
-      }}
-    >
-      На головну
-    </a>
-  </div>
-);
+  );
+};
 
 const copyText = async (text) => {
   if (navigator.clipboard?.writeText) {
@@ -213,7 +217,11 @@ const CodeBlock = ({ value }) => {
   );
 };
 
-const CodePanel = ({ label, value, copied, onCopy }) => (
+const CodePanel = ({ label, value, copied, onCopy }) => {
+  const { t } = useTranslation();
+  const copyLabel = label === 'HTML' ? t('handoff.copyHtml') : t('handoff.copyCss');
+
+  return (
   <section
     aria-label={`${label} code`}
     style={{
@@ -253,13 +261,14 @@ const CodePanel = ({ label, value, copied, onCopy }) => (
         ) : (
           <Copy size={15} style={{ flex: '0 0 auto' }} />
         )}
-        <span style={{ lineHeight: 1 }}>Copy {label}</span>
+        <span style={{ lineHeight: 1 }}>{copyLabel}</span>
       </button>
     </div>
 
     <CodeBlock value={value} />
   </section>
-);
+  );
+};
 
 const escapePreviewHtml = (value = '') =>
   String(value)
@@ -347,6 +356,29 @@ const getPreviewHtml = (bundle = {}, params) => {
 
 const PREVIEW_CANVAS_BACKGROUND = '#F9FAFB';
 
+const PREVIEW_THEME_CSS = `
+:root {
+  --primary: #D6F854;
+  --bg-color: #F9FAFB;
+  --surface: #FFFFFF;
+  --surface-alt: #F9FAFB;
+  --surface-subtle: #F3F4F6;
+  --text-main: #111827;
+  --text-muted: #6B7280;
+  --text-soft: #9CA3AF;
+  --border: #E5E7EB;
+  --border-strong: #1F2937;
+  --control-border: #D1D5DB;
+  --button-bg: #111827;
+  --button-text: #D6F854;
+  --button-secondary-text: #374151;
+  --card-dark-bg: #111827;
+  --card-dark-text: #FFFFFF;
+  --card-dark-soft: #9CA3AF;
+  --card-dark-border: #1F2937;
+}
+`;
+
 const extractKeyframes = (css = '') =>
   String(css)
     .match(/@keyframes[^{]+{(?:[^{}]+{[^{}]*}\s*)+}/g)
@@ -368,6 +400,10 @@ const getStateCss = (css = '', state = 'load') => {
 
   const disableLoadAnimation = `
 .animadiv-preview-root .animadiv-element {
+  animation: none !important;
+}
+
+.animadiv-preview-root .animadiv-item {
   animation: none !important;
 }
 `;
@@ -428,6 +464,8 @@ const createPreviewDocument = (bundle = {}, params, state = 'load') => {
     .animadiv-preview-root > * {
       max-width: 100%;
     }
+
+    ${PREVIEW_THEME_CSS}
 
     ${css}
 
@@ -520,10 +558,15 @@ const PreviewHint = ({ state }) => {
 };
 
 const HandoffPreview = ({ bundle, params, previewState }) => {
+  const { t } = useTranslation();
   const iframeRef = useRef(null);
+  const [iframeReplayKey, setIframeReplayKey] = useState(0);
   const states = useMemo(
-    () => getPreviewStatesForType(params?.type),
-    [params?.type]
+    () =>
+      params
+        ? getPreviewStatesForType(params?.type)
+        : [{ id: 'static', label: 'Static' }],
+    [params]
   );
   const selectedState = useMemo(() => {
     if (states.some((state) => state.id === previewState)) {
@@ -542,26 +585,36 @@ const HandoffPreview = ({ bundle, params, previewState }) => {
   const replayLoadAnimation = () => {
     const frameWindow = iframeRef.current?.contentWindow;
 
-    if (!frameWindow) return;
-
-    if (frameWindow.__animadivReplayLoad?.()) {
+    if (!frameWindow) {
+      setIframeReplayKey((value) => value + 1);
       return;
     }
 
-    frameWindow.postMessage({ type: 'animadiv:replay-load' }, '*');
+    try {
+      if (frameWindow.__animadivReplayLoad?.()) {
+        return;
+      }
 
-    const element = frameWindow.document?.querySelector(
-      '.animadiv-preview-root .animadiv-element'
-    );
+      frameWindow.postMessage({ type: 'animadiv:replay-load' }, '*');
 
-    if (element?.parentNode) {
-      element.parentNode.replaceChild(element.cloneNode(true), element);
+      const element = frameWindow.document?.querySelector(
+        '.animadiv-preview-root .animadiv-element'
+      );
+
+      if (element?.parentNode) {
+        element.parentNode.replaceChild(element.cloneNode(true), element);
+        return;
+      }
+    } catch {
+      // Fall through to iframe-level replay when browser access is restricted.
     }
+
+    setIframeReplayKey((value) => value + 1);
   };
 
   return (
     <section
-      aria-label="Preview"
+      aria-label={t('aria.preview')}
       style={{
         minWidth: 0,
         background: 'var(--surface-alt, #F9FAFB)',
@@ -589,7 +642,7 @@ const HandoffPreview = ({ bundle, params, previewState }) => {
             lineHeight: 1.1,
           }}
         >
-          Preview
+          {t('common.preview')}
         </strong>
       </div>
 
@@ -628,13 +681,14 @@ const HandoffPreview = ({ bundle, params, previewState }) => {
             }}
           >
             <RotateCcw size={15} style={{ flex: '0 0 auto' }} />
-            <span style={{ lineHeight: 1 }}>Play</span>
+            <span style={{ lineHeight: 1 }}>{t('common.play')}</span>
           </button>
         )}
 
         <iframe
+          key={`${selectedState}-${iframeReplayKey}`}
           ref={iframeRef}
-          title="Developer handoff preview"
+          title={t('handoff.previewTitle')}
           srcDoc={srcDoc}
           style={{
             display: 'block',
@@ -661,6 +715,7 @@ const DeveloperHandoffModal = ({
   bundle: bundleOverride,
   previewState,
 }) => {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState('');
   const [isMobile, setIsMobile] = useState(() =>
     typeof window === 'undefined' ? false : window.innerWidth < 860
@@ -679,7 +734,7 @@ const DeveloperHandoffModal = ({
     if (bundleOverride) {
       const payload = {
         id: 'inline-ui-kit-bundle',
-        title: title || 'AnimaDiv UI Kit section',
+        title: title || t('templates.uiKitSection'),
         createdAt: '',
         bundle: bundleOverride,
         previewState,
@@ -692,7 +747,7 @@ const DeveloperHandoffModal = ({
     }
 
     return null;
-  }, [bundleOverride, css, handoffId, open, params, previewState, title]);
+  }, [bundleOverride, css, handoffId, open, params, previewState, t, title]);
 
   useEffect(() => {
     if (!open) return;
@@ -742,7 +797,7 @@ const DeveloperHandoffModal = ({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Передати розробнику"
+        aria-label={t('aria.developerHandoff')}
         style={{
           position: 'fixed',
           inset: 0,
@@ -768,7 +823,7 @@ const DeveloperHandoffModal = ({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Передати розробнику"
+      aria-label={t('aria.developerHandoff')}
       style={{
         position: 'fixed',
         inset: 0,
@@ -810,8 +865,7 @@ const DeveloperHandoffModal = ({
         >
           <div style={{ minWidth: 0 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>
-              Передати розробнику
-            </h2>
+              {t('handoff.title')}</h2>
             <p
               style={{
                 margin: '4px 0 0',
@@ -819,14 +873,14 @@ const DeveloperHandoffModal = ({
                 fontSize: 13,
               }}
             >
-              {handoff?.title || title || 'Generated AnimaDiv code'}
+              {handoff?.title || title || t('handoff.generatedCode')}
             </p>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('aria.close')}
             style={{
               width: 36,
               height: 36,
@@ -888,7 +942,7 @@ const DeveloperHandoffModal = ({
               ) : (
                 <LinkIcon size={15} style={{ flex: '0 0 auto' }} />
               )}
-              <span style={{ lineHeight: 1 }}>Copy link</span>
+              <span style={{ lineHeight: 1 }}>{t('handoff.copyLink')}</span>
             </button>
             <button
               type="button"
@@ -900,7 +954,7 @@ const DeveloperHandoffModal = ({
               style={secondaryButtonStyle}
             >
               <ExternalLink size={15} style={{ flex: '0 0 auto' }} />
-              <span style={{ lineHeight: 1 }}>Open</span>
+              <span style={{ lineHeight: 1 }}>{t('common.open')}</span>
             </button>
           </div>
 
@@ -926,10 +980,9 @@ const DeveloperHandoffModal = ({
                 marginBottom: 6,
               }}
             >
-              Інструкція для розробника
+              {t('handoff.instructionTitle')}
             </strong>
-            Скопіюйте HTML у розмітку, а CSS у stylesheet. Посилання `Copy link`
-            відкриває цю саму модалку з кодом без додаткового експорту.
+            {t('handoff.instructionText')}
           </div>
 
           <HandoffPreview
@@ -969,3 +1022,6 @@ const DeveloperHandoffModal = ({
 };
 
 export default DeveloperHandoffModal;
+
+
+

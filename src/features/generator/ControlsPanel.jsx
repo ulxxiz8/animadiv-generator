@@ -24,21 +24,23 @@ import {
   Zap,
   Accessibility,
 } from 'lucide-react';
+import { useTranslation } from '../../i18n/useTranslation';
 
 const figmaElements = [
   {
     id: 'block',
+    labelKey: 'library.types.block',
     label: 'Container',
     icon: <Square size={16} strokeDasharray="2 2" />,
   },
-  { id: 'button', label: 'Button', icon: <MousePointer2 size={16} /> },
-  { id: 'input', label: 'Input', icon: <TextCursorInput size={16} /> },
-  { id: 'textarea', label: 'Textarea', icon: <FormInput size={16} /> },
-  { id: 'checkbox', label: 'Checkbox', icon: <CheckSquare size={16} /> },
-  { id: 'radio', label: 'Radio', icon: <CircleDot size={16} /> },
-  { id: 'text', label: 'Typography', icon: <Type size={16} /> },
-  { id: 'image', label: 'Image', icon: <ImageIcon size={16} /> },
-  { id: 'link', label: 'Link', icon: <Link2 size={16} /> },
+  { id: 'button', labelKey: 'library.types.button', label: 'Button', icon: <MousePointer2 size={16} /> },
+  { id: 'input', labelKey: 'library.types.input', label: 'Input', icon: <TextCursorInput size={16} /> },
+  { id: 'textarea', labelKey: 'library.types.textarea', label: 'Textarea', icon: <FormInput size={16} /> },
+  { id: 'checkbox', labelKey: 'library.types.checkbox', label: 'Checkbox', icon: <CheckSquare size={16} /> },
+  { id: 'radio', labelKey: 'library.types.radio', label: 'Radio', icon: <CircleDot size={16} /> },
+  { id: 'text', labelKey: 'library.types.text', label: 'Typography', icon: <Type size={16} /> },
+  { id: 'image', labelKey: 'library.types.image', label: 'Image', icon: <ImageIcon size={16} /> },
+  { id: 'link', labelKey: 'library.types.link', label: 'Link', icon: <Link2 size={16} /> },
 ];
 
 const fontFamilies = [
@@ -61,7 +63,7 @@ const twoColumnGridStyle = {
   ...panelBlockStyle,
 };
 
-const AccordionSection = ({ title, children, defaultOpen = true }) => {
+const AccordionSection = ({ title, children, defaultOpen = true, badge }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
     <div
@@ -88,7 +90,24 @@ const AccordionSection = ({ title, children, defaultOpen = true }) => {
           wordBreak: 'break-word',
         }}
       >
-        {title}
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {title}
+          {badge && (
+            <span
+              style={{
+                background: 'var(--button-bg)',
+                color: 'var(--button-text)',
+                fontSize: '9px',
+                fontWeight: '900',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                letterSpacing: '0.04em',
+              }}
+            >
+              {badge}
+            </span>
+          )}
+        </span>
         {isOpen ? (
           <ChevronUp size={16} color="currentColor" />
         ) : (
@@ -123,6 +142,7 @@ const ControlsPanel = ({
   onReset,
   onReplay,
 }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('design');
   const [localActiveMotionState, setLocalActiveMotionState] = useState('load');
   const activeMotionState =
@@ -165,10 +185,6 @@ const ControlsPanel = ({
     () => new Set(availablePresets.map((preset) => preset.id)),
     [availablePresets]
   );
-  const defaultPresetId = useMemo(
-    () => availablePresets.find((preset) => preset.id !== 'none')?.id || 'none',
-    [availablePresets]
-  );
   const scaleRange = currentAnimParams.scaleRange || [1, 1];
   const rawPresetVal = currentAnimParams.presetId || 'none';
   const currentPresetVal = availablePresetIds.has(rawPresetVal)
@@ -190,44 +206,26 @@ const ControlsPanel = ({
     rawPresetVal,
   ]);
 
-  useEffect(() => {
-    if (params && currentPresetVal === 'none' && defaultPresetId !== 'none') {
-      onUpdateAnimation(currentMotionState, 'presetId', defaultPresetId);
-    }
-  }, [
-    currentMotionState,
-    currentPresetVal,
-    defaultPresetId,
-    onUpdateAnimation,
-    params,
-  ]);
-
   if (!params || !params.styles)
-    return <div style={{ padding: 20 }}>Loading...</div>;
+    return <div style={{ padding: 20 }}>{t('common.loading')}</div>;
 
-  // РОЗУМНА ФІЛЬТРАЦІЯ ЧЕРЕЗ UNIFIED CONTRACT
   const getSupportedControls = () => {
     if (!hasPreset) return [];
     const paramsSet = new Set();
 
     let targetId = currentPresetVal;
-    // Фізика - це окремий рушій, який замінює базові пресети
     if (currentAnimParams.usePhysics) {
       if (currentPresetVal === 'scale') targetId = 'physicsScale';
       if (currentPresetVal === 'slide') targetId = 'physicsBounce';
     }
 
-    // ✅ БЕРЕМО КОНТРАКТ ІЗ БАЗИ ДАНИХ
     const supportedParams = PRESET_SUPPORTED_PARAMS[targetId] || [];
-
-    // Додаємо всі підтримувані параметри з контракту у загальний список
     supportedParams.forEach((param) => paramsSet.add(param));
     return Array.from(paramsSet);
   };
 
   const supportedControls = getSupportedControls();
 
-  // 🛑 СУВОРИЙ АУДИТ: Тільки ті параметри, які реально підключені до рушія
   const WORKING_CONTROLS = [
     'duration',
     'delay',
@@ -252,18 +250,13 @@ const ControlsPanel = ({
   ];
 
   const isSupported = (key) => {
-    // 1. Відсікаємо все, що не імплементовано в рушії (напр. zoomIntensity)
     if (!WORKING_CONTROLS.includes(key)) return false;
-
-    // 2. Відсікаємо stagger для елементів, які не розбиваються на літери
     if (
       ['iterationCount', 'fillMode'].includes(key) &&
       currentMotionState !== 'load'
     ) {
       return false;
     }
-
-    // 3. Якщо перевірку пройдено - перевіряємо, чи підтримує це поточний пресет
     return supportedControls.includes(key);
   };
   const hasPlaybackParams = isSupported('direction');
@@ -338,16 +331,6 @@ const ControlsPanel = ({
 
   const handleMotionStateClick = (state) => {
     setActiveMotionState(state);
-
-    const presetId = params?.animations?.[state]?.presetId || 'none';
-    const stateDefault =
-      getAvailablePresetsForType(params?.type, state).find(
-        (preset) => preset.id !== 'none'
-      )?.id || 'none';
-
-    if (presetId === 'none' && stateDefault !== 'none') {
-      onUpdateAnimation(state, 'presetId', stateDefault);
-    }
   };
 
   const handleTokenApply = (tokenId) => {
@@ -441,7 +424,67 @@ const ControlsPanel = ({
                 accentColor: 'var(--button-bg)',
               }}
             />{' '}
-            Увімкнути
+            {t('common.enable', { defaultValue: 'Enable' })}
+          </label>
+        )}
+      </div>
+    );
+  };
+
+  const renderAnimField = (key, label, type, options = [], step = 1) => {
+    const value = currentAnimParams[key];
+    const onChange = (val) => handleAnimChange(key, val);
+    const getSelectValue = (rawValue) =>
+      options.find((opt) => String(opt.value) === rawValue)?.value ?? rawValue;
+
+    return (
+      <div key={key} style={panelBlockStyle}>
+        <label style={labelStyle}>{label}</label>
+        {type === 'select' && (
+          <select
+            value={value !== undefined ? value : ''}
+            onChange={(e) => onChange(getSelectValue(e.target.value))}
+            style={inputStyle}
+          >
+            {options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        )}
+        {type === 'number' && (
+          <input
+            type="number"
+            step={step}
+            value={value !== undefined ? value : 0}
+            onChange={(e) => onChange(Number(e.target.value))}
+            style={inputStyle}
+          />
+        )}
+        {type === 'checkbox' && (
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: '600',
+              color: 'var(--text-main)',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={Boolean(value)}
+              onChange={(e) => onChange(e.target.checked)}
+              style={{
+                width: '16px',
+                height: '16px',
+                accentColor: 'var(--button-bg)',
+              }}
+            />
+            {t('common.enable', { defaultValue: 'Enable' })}
           </label>
         )}
       </div>
@@ -455,25 +498,25 @@ const ControlsPanel = ({
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {renderSettingField('shadowEnabled', 'Shadow', 'checkbox')}
+        {renderSettingField('shadowEnabled', t('controls.labels.shadow'), 'checkbox')}
         {settings.shadowEnabled && (
           <>
             <ColorPicker
-              label="Shadow Color"
+              label={t('controls.labels.shadowColor')}
               value={settings.shadowColor || '#111827'}
               onChange={(val) => onSpecificSettingChange('shadowColor', val)}
             />
             <RangeSlider
-              label="Shadow Blur (px)"
-              min={0}
+              label={t('controls.labels.shadowOffsetX', { defaultValue: 'Shadow Offset X' })}
+              min={-80}
               max={80}
               step={1}
-              value={settings.shadowBlur ?? 18}
+              value={settings.shadowOffsetX ?? 0}
               unit=""
-              onChange={(val) => onSpecificSettingChange('shadowBlur', val)}
+              onChange={(val) => onSpecificSettingChange('shadowOffsetX', val)}
             />
             <RangeSlider
-              label="Shadow Offset Y (px)"
+              label={t('controls.labels.shadowOffsetY')}
               min={-40}
               max={80}
               step={1}
@@ -482,7 +525,25 @@ const ControlsPanel = ({
               onChange={(val) => onSpecificSettingChange('shadowOffsetY', val)}
             />
             <RangeSlider
-              label="Shadow Opacity"
+              label={t('controls.labels.shadowBlur')}
+              min={0}
+              max={80}
+              step={1}
+              value={settings.shadowBlur ?? 18}
+              unit=""
+              onChange={(val) => onSpecificSettingChange('shadowBlur', val)}
+            />
+            <RangeSlider
+              label={t('controls.labels.shadowSpread', { defaultValue: 'Shadow Spread' })}
+              min={-40}
+              max={80}
+              step={1}
+              value={settings.shadowSpread ?? 0}
+              unit=""
+              onChange={(val) => onSpecificSettingChange('shadowSpread', val)}
+            />
+            <RangeSlider
+              label={t('controls.labels.shadowOpacity')}
               min={0}
               max={1}
               step={0.05}
@@ -496,6 +557,309 @@ const ControlsPanel = ({
     );
   };
 
+  // =====================================================================
+  // STATE-SPECIFIC OVERRIDES — показуються тільки у відповідному стані
+  // =====================================================================
+  const renderStateOverrides = () => {
+    const s = params.specificSettings || {};
+
+    // Static is preview-only now. It is not configurable from Motion.
+
+
+    // HOVER state overrides
+    if (currentMotionState === 'hover') {
+      const showBackgroundControls = currentPresetVal === 'backgroundChange';
+      const showBorderControls = [
+        'borderColorChange',
+        'borderAnimation',
+      ].includes(currentPresetVal);
+
+      const sharedHoverControls = (
+        <>
+          {showBackgroundControls && (
+            <>
+              <ColorPicker
+                label="Hover Background"
+                value={currentAnimParams.hoverBackgroundColor || s.hoverBackground || '#374151'}
+                onChange={(val) => handleAnimChange('hoverBackgroundColor', val)}
+              />
+              {renderAnimField('hoverUseGradient', 'Use Hover Gradient', 'checkbox')}
+              {currentAnimParams.hoverUseGradient && (
+                <div style={twoColumnGridStyle}>
+                  <ColorPicker
+                    label="Hover From"
+                    value={currentAnimParams.hoverGradientFrom || '#111827'}
+                    onChange={(val) => handleAnimChange('hoverGradientFrom', val)}
+                  />
+                  <ColorPicker
+                    label="Hover To"
+                    value={currentAnimParams.hoverGradientTo || '#334155'}
+                    onChange={(val) => handleAnimChange('hoverGradientTo', val)}
+                  />
+                </div>
+              )}
+            </>
+          )}
+          {showBorderControls && (
+            <>
+              <ColorPicker
+                label="Hover Border"
+                value={currentAnimParams.hoverBorderColor || params.styles.borderColor || '#4F46E5'}
+                onChange={(val) => handleAnimChange('hoverBorderColor', val)}
+              />
+              {renderAnimField('borderAnimationType', 'Border Animation', 'select', [
+                { label: 'Color', value: 'color' },
+                { label: 'Grow', value: 'grow' },
+                { label: 'Glow', value: 'glow' },
+                { label: 'Dashed', value: 'dashed' },
+              ])}
+            </>
+          )}
+          {currentPresetVal === 'opacityChange' &&
+            renderAnimField('hoverOpacity', 'Hover Opacity', 'number')}
+          {['scaleUp', 'scaleDown'].includes(currentPresetVal) &&
+            renderAnimField('hoverScale', 'Hover Scale', 'number')}
+          {currentPresetVal === 'lift' &&
+            renderAnimField('hoverTranslateY', 'Hover Translate Y', 'number')}
+          {['rotate', 'tilt'].includes(currentPresetVal) &&
+            renderAnimField('hoverRotate', 'Hover Rotate', 'number')}
+        </>
+      );
+
+      if (params.type === 'button') {
+        return (
+          <>
+            <div
+              style={{
+                padding: '10px 12px',
+                borderRadius: '10px',
+                background: 'var(--surface-muted)',
+                border: '1px solid var(--border)',
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                fontWeight: '600',
+                lineHeight: 1.4,
+              }}
+            >
+              {t('controls.stateMessages.hoverOnly')}
+            </div>
+            <ColorPicker
+              label={t('controls.labels.hoverFill')}
+              value={s.hoverBackground || '#374151'}
+              onChange={(val) => onSpecificSettingChange('hoverBackground', val)}
+            />
+            <ColorPicker
+              label={t('controls.labels.hoverTextColor')}
+              value={s.hoverColor || '#ffffff'}
+              onChange={(val) => onSpecificSettingChange('hoverColor', val)}
+            />
+            {sharedHoverControls}
+          </>
+        );
+      }
+
+      if (params.type === 'link') {
+        return (
+          <>
+            <div
+              style={{
+                padding: '10px 12px',
+                borderRadius: '10px',
+                background: 'var(--surface-muted)',
+                border: '1px solid var(--border)',
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                fontWeight: '600',
+                lineHeight: 1.4,
+              }}
+            >
+              {t('controls.stateMessages.hoverOnly')}
+            </div>
+            <ColorPicker
+              label={t('controls.labels.hoverColor')}
+              value={s.hoverColor || '#3730A3'}
+              onChange={(val) => onSpecificSettingChange('hoverColor', val)}
+            />
+            {renderSettingField('underline', t('controls.labels.underlineOnHover'), 'select', [
+              { label: t('options.none'), value: 'none' },
+              { label: t('options.always'), value: 'always' },
+              { label: t('options.hover'), value: 'hover' },
+            ])}
+            {sharedHoverControls}
+          </>
+        );
+      }
+
+      if (params.type === 'input' || params.type === 'textarea') {
+        return (
+          <>
+            <div
+              style={{
+                padding: '10px 12px',
+                borderRadius: '10px',
+                background: 'var(--surface-muted)',
+                border: '1px solid var(--border)',
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                fontWeight: '600',
+                lineHeight: 1.4,
+              }}
+            >
+              {t('controls.stateMessages.focusHover')}
+            </div>
+            <ColorPicker
+              label={t('controls.labels.focusBorderColor')}
+              value={s.focusBorderColor || '#4F46E5'}
+              onChange={(val) => onSpecificSettingChange('focusBorderColor', val)}
+            />
+            {sharedHoverControls}
+          </>
+        );
+      }
+
+      if (params.type === 'image') {
+        return (
+          <>
+            <div
+              style={{
+                padding: '10px 12px',
+                borderRadius: '10px',
+                background: 'var(--surface-muted)',
+                border: '1px solid var(--border)',
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                fontWeight: '600',
+                lineHeight: 1.4,
+              }}
+            >
+              {t('controls.stateMessages.imageHover')}
+            </div>
+            <RangeSlider
+              label={t('controls.labels.hoverScale')}
+              min={1}
+              max={1.5}
+              step={0.01}
+              value={s.hoverScale || 1.05}
+              unit=""
+              onChange={(val) => onSpecificSettingChange('hoverScale', val)}
+            />
+            {sharedHoverControls}
+          </>
+        );
+      }
+
+      return (
+        sharedHoverControls || (
+          <div
+            style={{
+              padding: '10px 12px',
+              borderRadius: '10px',
+              background: 'var(--surface-muted)',
+              border: '1px solid var(--border)',
+              fontSize: '11px',
+              color: 'var(--text-muted)',
+              fontWeight: '600',
+            }}
+          >
+            {t('controls.stateMessages.noHover')}
+          </div>
+        )
+      );
+    }
+
+    // CLICK state overrides
+    if (currentMotionState === 'click') {
+      const sharedClickControls = (
+        <>
+          {['scaleDown', 'elasticBounce'].includes(currentPresetVal) &&
+            renderAnimField('clickScale', 'Click Scale', 'number', [], 0.01)}
+          {currentPresetVal === 'pressDown' &&
+            renderAnimField('clickTranslateY', 'Press Distance', 'number')}
+          {currentPresetVal === 'ripple' && (
+            <ColorPicker
+              label="Ripple Color"
+              value={currentAnimParams.rippleColor || 'rgba(255, 255, 255, 0.45)'}
+              onChange={(val) => handleAnimChange('rippleColor', val)}
+            />
+          )}
+          {['elasticBounce', 'rotateClick', 'flash', 'shakeClick'].includes(
+            currentPresetVal
+          ) &&
+            renderAnimField('clickDuration', 'Click Duration', 'number')}
+        </>
+      );
+
+      if (params.type === 'button') {
+        return (
+          <>
+            <div
+              style={{
+                padding: '10px 12px',
+                borderRadius: '10px',
+                background: 'var(--surface-muted)',
+                border: '1px solid var(--border)',
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                fontWeight: '600',
+                lineHeight: 1.4,
+              }}
+            >
+              {t('controls.stateMessages.clickOnly')}
+            </div>
+            <RangeSlider
+              label={t('controls.labels.pressScale')}
+              min={0.8}
+              max={1}
+              step={0.01}
+              value={s.activeScale || 0.95}
+              unit=""
+              onChange={(val) => onSpecificSettingChange('activeScale', val)}
+            />
+            {sharedClickControls}
+          </>
+        );
+      }
+
+      return (
+        sharedClickControls || (
+          <div
+            style={{
+              padding: '10px 12px',
+              borderRadius: '10px',
+              background: 'var(--surface-muted)',
+              border: '1px solid var(--border)',
+              fontSize: '11px',
+              color: 'var(--text-muted)',
+              fontWeight: '600',
+            }}
+          >
+            {t('controls.stateMessages.noClick')}
+          </div>
+        )
+      );
+    }
+
+    // LOAD state — немає state overrides, тільки анімація
+    return (
+      <div
+        style={{
+          padding: '10px 12px',
+          borderRadius: '10px',
+          background: 'var(--surface-muted)',
+          border: '1px solid var(--border)',
+          fontSize: '11px',
+          color: 'var(--text-muted)',
+          fontWeight: '600',
+        }}
+      >
+        {t('controls.stateMessages.load')}
+      </div>
+    );
+  };
+
+  // =====================================================================
+  // ELEMENT-SPECIFIC SETTINGS (завжди видимі, не залежать від стану)
+  // =====================================================================
   const renderSpecificSettings = () => {
     switch (params.type) {
       case 'block':
@@ -526,13 +890,81 @@ const ControlsPanel = ({
               { label: 'Auto', value: 'auto' },
               { label: 'Scroll', value: 'scroll' },
             ])}
-            {renderSettingField('backgroundMode', 'Background Type', 'select', [
-              { label: 'Color', value: 'color' },
+            {renderSettingField('backgroundType', 'Background Type', 'select', [
+              { label: 'Solid', value: 'solid' },
               { label: 'Gradient', value: 'gradient' },
-              { label: 'Image', value: 'image' },
             ])}
-            {params.specificSettings.backgroundMode === 'gradient' &&
-              renderSettingField('backgroundGradient', 'Gradient CSS', 'text')}
+            {params.specificSettings.backgroundType === 'solid' && (
+              <ColorPicker
+                label="Background Color"
+                value={
+                  params.specificSettings.backgroundColor ||
+                  params.styles.backgroundColor ||
+                  '#F9FAFB'
+                }
+                onChange={(val) => {
+                  onSpecificSettingChange('backgroundColor', val);
+                  onStyleChange('backgroundColor', val);
+                }}
+              />
+            )}
+            {params.specificSettings.backgroundType === 'gradient' && (
+              <>
+                {renderSettingField('gradientType', 'Gradient Type', 'select', [
+                  { label: 'Linear', value: 'linear' },
+                  { label: 'Radial', value: 'radial' },
+                ])}
+                <div style={twoColumnGridStyle}>
+                  <ColorPicker
+                    label="From"
+                    value={params.specificSettings.gradientColorFrom || '#111827'}
+                    onChange={(val) =>
+                      onSpecificSettingChange('gradientColorFrom', val)
+                    }
+                  />
+                  <ColorPicker
+                    label="To"
+                    value={params.specificSettings.gradientColorTo || '#334155'}
+                    onChange={(val) =>
+                      onSpecificSettingChange('gradientColorTo', val)
+                    }
+                  />
+                </div>
+                {renderSettingField('gradientColorMiddle', 'Middle Color (optional)', 'text')}
+                {params.specificSettings.gradientType !== 'radial' ? (
+                  <RangeSlider
+                    label="Angle"
+                    min={0}
+                    max={360}
+                    step={1}
+                    value={params.specificSettings.gradientAngle ?? 135}
+                    unit="deg"
+                    onChange={(val) => onSpecificSettingChange('gradientAngle', val)}
+                  />
+                ) : (
+                  renderSettingField('gradientPosition', 'Radial Position', 'select', [
+                    { label: 'Center', value: 'center' },
+                    { label: 'Top', value: 'top' },
+                    { label: 'Bottom', value: 'bottom' },
+                    { label: 'Left', value: 'left' },
+                    { label: 'Right', value: 'right' },
+                  ])
+                )}
+                <div
+                  style={{
+                    height: 42,
+                    borderRadius: 10,
+                    border: '1px solid var(--border)',
+                    background:
+                      params.specificSettings.gradientCss ||
+                      (params.specificSettings.gradientType === 'radial'
+                        ? `radial-gradient(circle at ${params.specificSettings.gradientPosition || 'center'}, ${params.specificSettings.gradientColorFrom || '#111827'} 0%, ${params.specificSettings.gradientColorMiddle ? `${params.specificSettings.gradientColorMiddle} 50%, ` : ''}${params.specificSettings.gradientColorTo || '#334155'} 100%)`
+                        : `linear-gradient(${params.specificSettings.gradientAngle ?? 135}deg, ${params.specificSettings.gradientColorFrom || '#111827'} 0%, ${params.specificSettings.gradientColorMiddle ? `${params.specificSettings.gradientColorMiddle} 50%, ` : ''}${params.specificSettings.gradientColorTo || '#334155'} 100%)`),
+                  }}
+                />
+                {renderSettingField('gradientCss', 'Custom Gradient CSS', 'textarea')}
+              </>
+            )}
             {params.specificSettings.backgroundMode === 'image' &&
               renderSettingField(
                 'backgroundImage',
@@ -587,16 +1019,6 @@ const ControlsPanel = ({
                 { label: 'Heavy', value: 850 },
               ])}
             </div>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-                gap: '12px',
-              }}
-            >
-              {renderSettingField('hoverBackground', 'Hover Fill', 'color')}
-              {renderSettingField('hoverColor', 'Hover Text', 'color')}
-            </div>
           </>
         );
       case 'input':
@@ -622,7 +1044,6 @@ const ControlsPanel = ({
                 { label: 'Password', value: 'password' },
               ])}
             </div>
-            {renderSettingField('focusBorderColor', 'Focus Border', 'color')}
             <div style={twoColumnGridStyle}>
               {renderSettingField('validationState', 'Validation', 'select', [
                 { label: 'None', value: 'none' },
@@ -664,6 +1085,10 @@ const ControlsPanel = ({
                 { label: 'Normal', value: 400 },
                 { label: 'Bold', value: 700 },
                 { label: 'Black', value: 900 },
+              ])}
+              {renderSettingField('fontStyle', 'Style', 'select', [
+                { label: 'Normal', value: 'normal' },
+                { label: 'Italic', value: 'italic' },
               ])}
             </div>
             <div
@@ -731,6 +1156,10 @@ const ControlsPanel = ({
                 { label: 'Semibold', value: 600 },
                 { label: 'Bold', value: 700 },
               ])}
+              {renderSettingField('fontStyle', 'Style', 'select', [
+                { label: 'Normal', value: 'normal' },
+                { label: 'Italic', value: 'italic' },
+              ])}
             </div>
             <div
               style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
@@ -792,13 +1221,11 @@ const ControlsPanel = ({
                 { label: 'Medium', value: 500 },
                 { label: 'Bold', value: 700 },
               ])}
+              {renderSettingField('fontStyle', 'Style', 'select', [
+                { label: 'Normal', value: 'normal' },
+                { label: 'Italic', value: 'italic' },
+              ])}
             </div>
-            {renderSettingField('underline', 'Underline', 'select', [
-              { label: 'None', value: 'none' },
-              { label: 'Always', value: 'always' },
-              { label: 'Hover', value: 'hover' },
-            ])}
-            {renderSettingField('hoverColor', 'Hover Color', 'color')}
           </>
         );
       case 'textarea':
@@ -820,7 +1247,6 @@ const ControlsPanel = ({
                 { label: 'Both', value: 'both' },
               ])}
             </div>
-            {renderSettingField('focusBorderColor', 'Focus Border', 'color')}
             <div style={twoColumnGridStyle}>
               {renderSettingField('fontSize', 'Font Size (px)', 'number')}
               {renderSettingField('validationState', 'Validation', 'select', [
@@ -912,7 +1338,7 @@ const ControlsPanel = ({
             gap: '8px',
           }}
         >
-          <Paintbrush size={16} /> Design
+          <Paintbrush size={16} /> {t('controls.tabs.design')}
         </button>
         <button
           onClick={() => setActiveTab('motion')}
@@ -935,14 +1361,14 @@ const ControlsPanel = ({
             gap: '8px',
           }}
         >
-          <Activity size={16} /> Motion
+          <Activity size={16} /> {t('controls.tabs.motion')}
         </button>
       </div>
 
       <div style={{ flex: 1 }}>
         {activeTab === 'design' && (
           <>
-            <AccordionSection title="Component Type" defaultOpen={true}>
+            <AccordionSection title={t('controls.sections.componentType')} defaultOpen={true}>
               <div
                 style={{
                   display: 'grid',
@@ -994,25 +1420,28 @@ const ControlsPanel = ({
                     >
                       {el.icon}
                     </span>{' '}
-                    {el.label}
+                    {t(el.labelKey, { defaultValue: el.label })}
                   </button>
                 ))}
               </div>
             </AccordionSection>
+
+            {/* ELEMENT-SPECIFIC SETTINGS — завжди видимі */}
             {params.specificSettings &&
               Object.keys(params.specificSettings).length > 0 && (
-                <AccordionSection title="Specific Settings" defaultOpen={true}>
+                <AccordionSection title={t('controls.sections.elementSettings')} defaultOpen={true}>
                   {renderSpecificSettings()}
                 </AccordionSection>
               )}
+
             {hasDimensionControls && (
               <AccordionSection
-                title="Dimensions & Box Model"
+                title={t('controls.sections.dimensions')}
                 defaultOpen={false}
               >
                 {showWidthControl && (
                   <RangeSlider
-                    label="Width (px)"
+                    label={t('controls.labels.width')}
                     min={20}
                     max={600}
                     step={1}
@@ -1023,7 +1452,7 @@ const ControlsPanel = ({
                 )}
                 {showHeightControl && (
                   <RangeSlider
-                    label="Height (px)"
+                    label={t('controls.labels.height')}
                     min={20}
                     max={600}
                     step={1}
@@ -1037,7 +1466,7 @@ const ControlsPanel = ({
                 )}
                 {showPaddingControl && (
                   <RangeSlider
-                    label="Padding (px)"
+                    label={t('controls.labels.padding')}
                     min={0}
                     max={100}
                     step={1}
@@ -1048,7 +1477,7 @@ const ControlsPanel = ({
                 )}
                 {!isChoiceControl && (
                   <RangeSlider
-                    label="Margin (px)"
+                    label={t('controls.labels.margin')}
                     min={0}
                     max={120}
                     step={1}
@@ -1059,18 +1488,18 @@ const ControlsPanel = ({
                 )}
               </AccordionSection>
             )}
-            <AccordionSection title="Position & Layer" defaultOpen={false}>
+            <AccordionSection title={t('controls.sections.positionLayer')} defaultOpen={false}>
               <div style={twoColumnGridStyle}>
                 <div style={panelBlockStyle}>
-                  <label style={labelStyle}>Position</label>
+                  <label style={labelStyle}>{t('controls.labels.position')}</label>
                   <select
                     value={params.styles.position || 'relative'}
                     onChange={(e) => onStyleChange('position', e.target.value)}
                     style={inputStyle}
                   >
-                    <option value="relative">Relative</option>
-                    <option value="absolute">Absolute</option>
-                    <option value="fixed">Fixed</option>
+                    <option value="relative">{t('options.relative')}</option>
+                    <option value="absolute">{t('options.absolute')}</option>
+                    <option value="fixed">{t('options.fixed')}</option>
                   </select>
                 </div>
                 <div style={panelBlockStyle}>
@@ -1087,24 +1516,24 @@ const ControlsPanel = ({
               </div>
             </AccordionSection>
             {hasAppearanceControls && (
-              <AccordionSection title="Appearance" defaultOpen={false}>
+              <AccordionSection title={t('controls.sections.appearance')} defaultOpen={false}>
                 {showBackgroundControl && (
                   <ColorPicker
-                    label="Background Fill"
+                    label={t('controls.labels.backgroundFill')}
                     value={params.styles.backgroundColor || 'transparent'}
                     onChange={(val) => onStyleChange('backgroundColor', val)}
                   />
                 )}
                 {showTextColorControl && (
                   <ColorPicker
-                    label="Text Color"
+                    label={t('controls.labels.textColor')}
                     value={params.styles.color || '#111827'}
                     onChange={(val) => onStyleChange('color', val)}
                   />
                 )}
                 {showOpacityControl && (
                   <RangeSlider
-                    label="Opacity"
+                    label={t('controls.labels.opacity')}
                     min={0}
                     max={1}
                     step={0.05}
@@ -1120,7 +1549,7 @@ const ControlsPanel = ({
                 {showBorderControls && (
                   <>
                     <RangeSlider
-                      label="Corner Radius (px)"
+                      label={t('controls.labels.cornerRadius')}
                       min={0}
                       max={100}
                       step={1}
@@ -1129,7 +1558,7 @@ const ControlsPanel = ({
                       onChange={(val) => onStyleChange('borderRadius', val)}
                     />
                     <RangeSlider
-                      label="Border Width (px)"
+                      label={t('controls.labels.borderWidth')}
                       min={0}
                       max={20}
                       step={1}
@@ -1139,7 +1568,7 @@ const ControlsPanel = ({
                     />
                     {params.styles.borderWidth > 0 && (
                       <ColorPicker
-                        label="Border Color"
+                        label={t('controls.labels.borderColor')}
                         value={params.styles.borderColor || '#E5E7EB'}
                         onChange={(val) => onStyleChange('borderColor', val)}
                       />
@@ -1153,11 +1582,11 @@ const ControlsPanel = ({
         )}
 
         {/* ============================================================== */}
-        {/* ВКЛАДКА MOTION З 100% ФІЛЬТРАЦІЄЮ ПАРАМЕТРІВ */}
+        {/* ВКЛАДКА MOTION */}
         {/* ============================================================== */}
         {activeTab === 'motion' && (
           <>
-            <AccordionSection title="Trigger State" defaultOpen={true}>
+            <AccordionSection title={t('controls.sections.triggerState')} defaultOpen={true}>
               <div
                 style={{
                   display: 'flex',
@@ -1199,8 +1628,17 @@ const ControlsPanel = ({
               </div>
             </AccordionSection>
 
+            {/* STATE-SPECIFIC STYLE OVERRIDES */}
+            <AccordionSection
+              title={t('controls.sections.stateStyles')}
+              badge={currentMotionState.toUpperCase()}
+              defaultOpen={true}
+            >
+              {renderStateOverrides()}
+            </AccordionSection>
+
             {isSupported('motionToken') && (
-              <AccordionSection title="Preset Tokens" defaultOpen={true}>
+              <AccordionSection title={t('controls.sections.presetTokens')} defaultOpen={true}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {Object.keys(MOTION_TOKENS || {}).map((tokenId) => (
                     <button
@@ -1224,17 +1662,16 @@ const ControlsPanel = ({
                         transition: 'all 0.2s',
                       }}
                     >
-                      {MOTION_TOKENS[tokenId].name.split(' ')[0]}
+                      {t(MOTION_TOKENS[tokenId].nameKey, { defaultValue: MOTION_TOKENS[tokenId].name })}
                     </button>
                   ))}
                 </div>
               </AccordionSection>
             )}
 
-            <AccordionSection title="Core Behavior" defaultOpen={true}>
-              {/* === ПЕРШИЙ БЛОК: Головний ефект (Завжди активний) === */}
+            <AccordionSection title={t('controls.sections.coreBehavior')} defaultOpen={true}>
               <div style={{ marginBottom: '16px' }}>
-                <label style={labelStyle}>Primary Effect</label>
+                <label style={labelStyle}>{t('controls.labels.primaryEffect')}</label>
                 <select
                   value={currentPresetVal}
                   onChange={(e) => handleAnimChange('presetId', e.target.value)}
@@ -1242,7 +1679,7 @@ const ControlsPanel = ({
                 >
                   {availablePresets.map((preset) => (
                     <option key={preset.id} value={preset.id}>
-                      {preset.name}
+                      {t(preset.nameKey, { defaultValue: preset.name })}
                     </option>
                   ))}
                 </select>
@@ -1259,7 +1696,7 @@ const ControlsPanel = ({
               >
                 {isSupported('duration') && (
                   <RangeSlider
-                    label="Duration (ms)"
+                    label={t('controls.labels.duration')}
                     min={50}
                     max={3000}
                     step={50}
@@ -1273,7 +1710,7 @@ const ControlsPanel = ({
                 )}
                 {isSupported('delay') && (
                   <RangeSlider
-                    label="Delay (ms)"
+                    label={t('controls.labels.delay')}
                     min={0}
                     max={2000}
                     step={50}
@@ -1289,7 +1726,7 @@ const ControlsPanel = ({
                       pointerEvents: isPhysicsOn ? 'none' : 'auto',
                     }}
                   >
-                    <label style={labelStyle}>Easing (Timing Function)</label>
+                    <label style={labelStyle}>{t('controls.labels.easing')}</label>
                     <select
                       value={currentAnimParams.easing || 'ease'}
                       onChange={(e) => {
@@ -1300,7 +1737,7 @@ const ControlsPanel = ({
                     >
                       {easingOptions.map((opt) => (
                         <option key={opt.value} value={opt.value}>
-                          {opt.label}
+                            {t(opt.labelKey, { defaultValue: opt.label })}
                         </option>
                       ))}
                     </select>
@@ -1309,9 +1746,8 @@ const ControlsPanel = ({
               </div>
             </AccordionSection>
 
-            {/* ТЕПЕР PHYSICS ДІЙСНО З'ЯВИТЬСЯ ДЛЯ SCALE І SLIDE */}
             {isSupported('usePhysics') && (
-              <AccordionSection title="Physics Engine" defaultOpen={false}>
+              <AccordionSection title={t('controls.sections.physicsEngine')} defaultOpen={false}>
                 <label
                   style={{
                     display: 'flex',
@@ -1345,7 +1781,7 @@ const ControlsPanel = ({
                       padding: '2px',
                     }}
                   />{' '}
-                  Enable Physics
+                  {t('controls.labels.enablePhysics')}
                 </label>
                 <div
                   style={{
@@ -1357,7 +1793,7 @@ const ControlsPanel = ({
                   }}
                 >
                   <RangeSlider
-                    label="Stiffness (Жорсткість)"
+                    label={t('controls.labels.stiffness')}
                     min={10}
                     max={300}
                     step={5}
@@ -1366,7 +1802,7 @@ const ControlsPanel = ({
                     onChange={(val) => handleAnimChange('stiffness', val)}
                   />
                   <RangeSlider
-                    label="Damping (Загасання/Тертя)"
+                    label={t('controls.labels.damping')}
                     min={2}
                     max={40}
                     step={1}
@@ -1375,7 +1811,7 @@ const ControlsPanel = ({
                     onChange={(val) => handleAnimChange('damping', val)}
                   />
                   <RangeSlider
-                    label="Mass (Маса)"
+                    label={t('controls.labels.mass')}
                     min={0.1}
                     max={5}
                     step={0.1}
@@ -1389,7 +1825,7 @@ const ControlsPanel = ({
 
             {hasPlaybackParams && (
               <AccordionSection
-                title="Playback & Direction"
+                title={t('controls.sections.playbackDirection')}
                 defaultOpen={false}
               >
                 <div
@@ -1418,16 +1854,16 @@ const ControlsPanel = ({
                           }
                           style={inputStyle}
                         >
-                          <option value="1">1 (Once)</option>
+                          <option value="1">{t('options.once')}</option>
                           <option value="2">2</option>
                           <option value="3">3</option>
-                          <option value="infinite">Infinite</option>
+                          <option value="infinite">{t('options.infinite')}</option>
                         </select>
                       </div>
                     )}
                     {isSupported('direction') && (
                       <div>
-                        <label style={labelStyle}>Slide Direction</label>
+                        <label style={labelStyle}>{t('controls.labels.slideDirection')}</label>
                         <select
                           value={currentAnimParams.direction || 'bottom'}
                           onChange={(e) =>
@@ -1435,10 +1871,10 @@ const ControlsPanel = ({
                           }
                           style={inputStyle}
                         >
-                          <option value="bottom">Bottom</option>
-                          <option value="top">Top</option>
-                          <option value="left">Left</option>
-                          <option value="right">Right</option>
+                          <option value="bottom">{t('options.bottom')}</option>
+                          <option value="top">{t('options.top')}</option>
+                          <option value="left">{t('options.left')}</option>
+                          <option value="right">{t('options.right')}</option>
                         </select>
                       </div>
                     )}
@@ -1460,16 +1896,16 @@ const ControlsPanel = ({
                           }
                           style={inputStyle}
                         >
-                          <option value="none">None</option>
-                          <option value="forwards">Forwards</option>
-                          <option value="backwards">Backwards</option>
-                          <option value="both">Both</option>
+                          <option value="none">{t('options.none')}</option>
+                          <option value="forwards">{t('options.forwards')}</option>
+                          <option value="backwards">{t('options.backwards')}</option>
+                          <option value="both">{t('options.both')}</option>
                         </select>
                       </div>
                     )}
                     {isSupported('motionAxis') && (
                       <div>
-                        <label style={labelStyle}>Motion Axis</label>
+                        <label style={labelStyle}>{t('controls.labels.motionAxis')}</label>
                         <select
                           value={currentAnimParams.motionAxis || 'all'}
                           onChange={(e) =>
@@ -1477,9 +1913,9 @@ const ControlsPanel = ({
                           }
                           style={inputStyle}
                         >
-                          <option value="all">All (X & Y)</option>
-                          <option value="x">X Axis Only</option>
-                          <option value="y">Y Axis Only</option>
+                          <option value="all">{t('options.allAxes')}</option>
+                          <option value="x">{t('options.xAxis')}</option>
+                          <option value="y">{t('options.yAxis')}</option>
                         </select>
                       </div>
                     )}
@@ -1489,7 +1925,7 @@ const ControlsPanel = ({
             )}
 
             {hasVisualParams && (
-              <AccordionSection title="Transform & Visuals" defaultOpen={false}>
+              <AccordionSection title={t('controls.sections.transformVisuals')} defaultOpen={false}>
                 <div
                   style={{
                     display: 'flex',
@@ -1501,7 +1937,7 @@ const ControlsPanel = ({
                 >
                   {isSupported('transformOrigin') && (
                     <div>
-                      <label style={labelStyle}>Transform Origin</label>
+                      <label style={labelStyle}>{t('controls.labels.transformOrigin')}</label>
                       <select
                         value={currentAnimParams.transformOrigin || 'center'}
                         onChange={(e) =>
@@ -1509,20 +1945,20 @@ const ControlsPanel = ({
                         }
                         style={inputStyle}
                       >
-                        <option value="center">Center</option>
-                        <option value="top">Top</option>
-                        <option value="bottom">Bottom</option>
-                        <option value="left">Left</option>
-                        <option value="right">Right</option>
-                        <option value="top left">Top Left</option>
-                        <option value="bottom right">Bottom Right</option>
+                        <option value="center">{t('options.center')}</option>
+                        <option value="top">{t('options.top')}</option>
+                        <option value="bottom">{t('options.bottom')}</option>
+                        <option value="left">{t('options.left')}</option>
+                        <option value="right">{t('options.right')}</option>
+                        <option value="top left">{t('options.topLeft')}</option>
+                        <option value="bottom right">{t('options.bottomRight')}</option>
                       </select>
                     </div>
                   )}
 
                   {isSupported('intensity') && (
                     <RangeSlider
-                      label="Intensity / Deformation (%)"
+                      label={t('controls.labels.intensity')}
                       min={0}
                       max={200}
                       step={1}
@@ -1540,7 +1976,7 @@ const ControlsPanel = ({
                   )}
                   {isSupported('zoomIntensity') && (
                     <RangeSlider
-                      label="Zoom Intensity (%)"
+                      label={t('controls.labels.zoomIntensity')}
                       min={0}
                       max={200}
                       step={1}
@@ -1555,7 +1991,7 @@ const ControlsPanel = ({
                   )}
                   {isSupported('blurAmount') && (
                     <RangeSlider
-                      label="Blur Amount (px)"
+                      label={t('controls.labels.blurAmount')}
                       min={0}
                       max={50}
                       step={1}
@@ -1569,7 +2005,7 @@ const ControlsPanel = ({
                   )}
                   {isSupported('rotationAngle') && (
                     <RangeSlider
-                      label="Rotation Angle (deg)"
+                      label={t('controls.labels.rotationAngle')}
                       min={-360}
                       max={360}
                       step={1}
@@ -1580,7 +2016,7 @@ const ControlsPanel = ({
                   )}
                   {isSupported('floatingAmount') && (
                     <RangeSlider
-                      label="Floating Distance (px)"
+                      label={t('controls.labels.floatingDistance')}
                       min={0}
                       max={100}
                       step={1}
@@ -1593,7 +2029,7 @@ const ControlsPanel = ({
                   )}
                   {isSupported('hoverDepth') && (
                     <RangeSlider
-                      label="Hover Depth (px)"
+                      label={t('controls.labels.hoverDepth')}
                       min={0}
                       max={100}
                       step={1}
@@ -1604,7 +2040,7 @@ const ControlsPanel = ({
                   )}
                   {isSupported('stagger') && (
                     <RangeSlider
-                      label="Stagger Children (ms)"
+                      label={t('controls.labels.staggerChildren')}
                       min={0}
                       max={1000}
                       step={50}
@@ -1620,7 +2056,7 @@ const ControlsPanel = ({
                   {isSupported('scaleRange') && (
                     <div>
                       <label style={labelStyle}>
-                        Scale Range (Start &rarr; End)
+                        {t('controls.labels.scaleRange')}
                       </label>
                       <div
                         style={{
@@ -1664,7 +2100,7 @@ const ControlsPanel = ({
               </AccordionSection>
             )}
 
-            <AccordionSection title="Accessibility" defaultOpen={false}>
+            <AccordionSection title={t('controls.sections.accessibility')} defaultOpen={false}>
               <label
                 style={{
                   display: 'flex',
@@ -1705,7 +2141,7 @@ const ControlsPanel = ({
                       : 'currentColor'
                   }
                 />
-                Reduced Motion (Safe Mode)
+                {t('controls.labels.reducedMotion')}
               </label>
               <p
                 style={{
@@ -1715,9 +2151,7 @@ const ControlsPanel = ({
                   lineHeight: 1.4,
                 }}
               >
-                Автоматично зрізає агресивні відскоки пружин, зменшує відстань
-                зсуву та вимикає нескінченні циклічні анімації для комфорту
-                вестибулярного апарату.
+                {t('controls.stateMessages.reducedMotion')}
               </p>
             </AccordionSection>
           </>
@@ -1741,14 +2175,14 @@ const ControlsPanel = ({
         }}
       >
         <Button onClick={onReplay} style={{ flex: '1 1 120px' }}>
-          Відтворити
+          {t('common.play')}
         </Button>
         <Button
           variant="secondary"
           onClick={onReset}
           style={{ flex: '1 1 120px' }}
         >
-          Скинути
+          {t('common.reset')}
         </Button>
       </div>
     </div>
@@ -1756,3 +2190,4 @@ const ControlsPanel = ({
 };
 
 export default ControlsPanel;
+

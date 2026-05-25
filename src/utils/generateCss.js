@@ -1,5 +1,10 @@
 import { generateAnimationCSS } from './animationEngine';
 import { sanitizeAnimationsForType } from './semanticMapping';
+import {
+  getBaseTransform,
+  getBoxShadow,
+  getResolvedBackground,
+} from './motionSystem';
 
 const PX_FIELDS = new Set([
   'width',
@@ -16,44 +21,16 @@ const PX_FIELDS = new Set([
 const toKebabCase = (value) =>
   value.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
 
+const clampOpacity = (value, fallback = 1) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(1, Math.max(0, numeric));
+};
+
 const formatStyleValue = (key, value) => {
   if (value === undefined || value === null || value === '') return null;
   if (typeof value === 'number' && PX_FIELDS.has(key)) return `${value}px`;
   return String(value);
-};
-
-const colorToRgba = (color = '#111827', opacity = 0.16) => {
-  if (String(color).startsWith('rgba(')) return color;
-  if (String(color).startsWith('rgb(')) {
-    return String(color).replace('rgb(', 'rgba(').replace(')', `, ${opacity})`);
-  }
-
-  const hex = String(color).replace('#', '');
-  if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(hex)) {
-    return `rgba(17, 24, 39, ${opacity})`;
-  }
-
-  const normalized =
-    hex.length === 3
-      ? hex
-          .split('')
-          .map((char) => char + char)
-          .join('')
-      : hex;
-  const value = parseInt(normalized, 16);
-  const r = (value >> 16) & 255;
-  const g = (value >> 8) & 255;
-  const b = value & 255;
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-};
-
-const getShadowStyle = (settings = {}) => {
-  if (!settings.shadowEnabled) return null;
-
-  return `0 ${settings.shadowOffsetY ?? 6}px ${settings.shadowBlur ?? 18}px ${colorToRgba(
-    settings.shadowColor,
-    settings.shadowOpacity ?? 0.16
-  )}`;
 };
 
 const styleObjectToCss = (styles = {}, indent = '  ') =>
@@ -83,11 +60,24 @@ const getAnimationConfig = (animations = {}, state) => ({
 const getMotionConfig = (params = {}, state) => {
   const settings = params.specificSettings || {};
   const styles = params.styles || {};
+  const stateConfig = getAnimationConfig(params.animations || {}, state);
 
   return {
-    ...getAnimationConfig(params.animations || {}, state),
+    ...stateConfig,
     shadowColor: settings.shadowColor,
     shadowOpacity: settings.shadowOpacity,
+    shadowOffsetX: settings.shadowOffsetX,
+    shadowOffsetY: settings.shadowOffsetY,
+    shadowBlur: settings.shadowBlur,
+    shadowSpread: settings.shadowSpread,
+    shadowEnabled: settings.shadowEnabled,
+    hoverBackgroundColor:
+      settings.hoverBackground || stateConfig.hoverBackgroundColor,
+    hoverBorderColor: stateConfig.hoverBorderColor || styles.borderColor,
+    borderColor: styles.borderColor,
+    borderWidth: styles.borderWidth,
+    borderStyle: styles.borderStyle,
+    borderRadius: styles.borderRadius,
     accentColor:
       settings.color ||
       settings.checkColor ||
@@ -96,7 +86,6 @@ const getMotionConfig = (params = {}, state) => {
       styles.borderColor,
     backgroundColor: styles.backgroundColor,
     color: styles.color,
-    borderColor: styles.borderColor,
   };
 };
 
@@ -109,14 +98,14 @@ const normalizeExportSelectors = (css) =>
 const getBaseStyles = (params = {}) => {
   const styles = params.styles || {};
   const settings = params.specificSettings || {};
+  const staticConfig = params.animations?.static || {};
   const background =
-    settings.backgroundMode === 'gradient'
-      ? settings.backgroundGradient
-      : settings.backgroundMode === 'image' && settings.backgroundImage
+    settings.backgroundMode === 'image' && settings.backgroundImage
         ? `url("${settings.backgroundImage}")`
-        : styles.backgroundColor;
+        : getResolvedBackground(settings, styles);
   const baseStyles = {
     ...styles,
+    '--base-transform': getBaseTransform(staticConfig),
     background,
     backgroundSize: settings.backgroundMode === 'image' ? 'cover' : undefined,
     backgroundPosition: settings.backgroundMode === 'image' ? 'center' : undefined,
@@ -127,19 +116,23 @@ const getBaseStyles = (params = {}) => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    opacity: 1,
+    opacity: clampOpacity(styles.opacity, 1),
     visibility: 'visible',
+    transform: 'var(--base-transform)',
+    transformOrigin: staticConfig.transformOrigin || 'center',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-    cursor: settings.cursor || 'pointer',
+    cursor: settings.disabled ? 'not-allowed' : settings.cursor || 'pointer',
     fontSize: settings.fontSize || 14,
     fontWeight: settings.fontWeight || 600,
+    fontStyle: settings.fontStyle || 'normal',
+    fontSynthesisWeight: 'auto',
   };
 
-  const shadow = getShadowStyle(settings);
+  const shadow = getBoxShadow(settings);
   if (shadow) baseStyles.boxShadow = shadow;
 
   if (Number(styles.borderWidth) > 0) {
-    baseStyles.border = `${styles.borderWidth}px solid ${
+    baseStyles.border = `${styles.borderWidth}px ${styles.borderStyle || 'solid'} ${
       styles.borderColor || 'currentColor'
     }`;
   }
@@ -157,8 +150,15 @@ const getBaseStyles = (params = {}) => {
   }
 
   if (params.type === 'button') {
+    baseStyles.display = 'inline-flex';
+    baseStyles.alignItems = 'center';
+    baseStyles.justifyContent = 'center';
+    baseStyles.appearance = 'none';
+    baseStyles.fontFamily = settings.fontFamily || 'inherit';
+    baseStyles.lineHeight = settings.lineHeight || 1;
     baseStyles.whiteSpace = 'pre-wrap';
     baseStyles.textAlign = 'center';
+    baseStyles.border = Number(styles.borderWidth) > 0 ? baseStyles.border : 'none';
   }
 
   if (params.type === 'input') {
@@ -168,7 +168,7 @@ const getBaseStyles = (params = {}) => {
     baseStyles.whiteSpace = 'nowrap';
     baseStyles.overflow = 'hidden';
     baseStyles.textOverflow = 'ellipsis';
-    if (settings.disabled) baseStyles.filter = 'opacity(0.5)';
+    if (settings.disabled) baseStyles.opacity = clampOpacity(styles.opacity, 1) * 0.5;
   }
 
   if (params.type === 'textarea') {
@@ -190,10 +190,11 @@ const getBaseStyles = (params = {}) => {
       baseStyles.minHeight = styles.minHeight || rows * 24 + 24;
     }
 
-    if (settings.disabled) baseStyles.opacity = 0.5;
+    if (settings.disabled) baseStyles.opacity = clampOpacity(styles.opacity, 1) * 0.5;
   }
 
   if (params.type === 'text') {
+    baseStyles.display = 'block';
     baseStyles.fontSize = settings.fontSize || 24;
     baseStyles.fontWeight = settings.fontWeight || 800;
     baseStyles.fontFamily = settings.fontFamily || 'inherit';
@@ -229,6 +230,11 @@ const getBaseStyles = (params = {}) => {
     baseStyles.border = 'none';
     baseStyles.width = 'auto';
     baseStyles.height = 'auto';
+    baseStyles.padding = 0;
+    baseStyles.margin = 0;
+    baseStyles.background = 'transparent';
+    baseStyles.boxShadow = 'none';
+    if (settings.disabled) baseStyles.opacity = clampOpacity(styles.opacity, 1) * 0.5;
   }
 
   return baseStyles;
@@ -254,6 +260,23 @@ const getSemanticChildRules = (params = {}) => {
       fontWeight: settings.fontWeight || 500,
       color: styles.color,
       fontFamily: settings.fontFamily || 'inherit',
+      fontStyle: settings.fontStyle || 'normal',
+      background: 'transparent',
+    }),
+  ];
+};
+
+
+const getPlaceholderRules = (params = {}) => {
+  if (!['input', 'textarea'].includes(params.type)) return [];
+  const styles = params.styles || {};
+  return [
+    createRule('.animadiv-element::placeholder', {
+      color: styles.color || '#111827',
+      opacity: 1,
+    }),
+    createRule('.animadiv-element:disabled', {
+      cursor: 'not-allowed',
     }),
   ];
 };
@@ -299,6 +322,7 @@ const getStateRule = (
         ? '  animation: none;'
         : '';
   const styles = [
+    normalizeExportSelectors(motionData.css),
     styleObjectToCss(extraStyles),
     transitionStylesToCss(motionData.transitionStyles),
     animationRule,
@@ -321,6 +345,7 @@ export const generateFullCSS = (params = {}) => {
     animations: sanitizeAnimationsForType(params.type, params.animations),
   };
   const loadConfig = getMotionConfig(sanitizedParams, 'load');
+  const staticConfig = getMotionConfig(sanitizedParams, 'static');
   const hoverConfig = getMotionConfig(sanitizedParams, 'hover');
   const clickConfig = getMotionConfig(sanitizedParams, 'click');
 
@@ -342,10 +367,17 @@ export const generateFullCSS = (params = {}) => {
     'animadiv-element',
     'click'
   );
+  const staticData = generateAnimationCSS(
+    staticConfig.presetId,
+    staticConfig,
+    'animadiv-element',
+    'static'
+  );
 
   const baseSection = getSection('Base styles', [
     createRule('.animadiv-element', getBaseStyles(sanitizedParams)),
     ...getSemanticChildRules(sanitizedParams),
+    ...getPlaceholderRules(sanitizedParams),
   ]);
 
   const loadSection = getSection('Load animation', [
@@ -354,6 +386,15 @@ export const generateFullCSS = (params = {}) => {
           animation: loadData.animationStr,
         })
       : '',
+  ]);
+
+  const staticSection = getSection('Static loop animation', [
+    staticData.animationStr && staticData.animationStr !== 'none'
+      ? createRule('.animadiv-element', {
+          animation: staticData.animationStr,
+        })
+      : '',
+    normalizeExportSelectors(staticData.css),
   ]);
 
   const hoverSection = getSection('Hover styles', [
@@ -379,14 +420,18 @@ export const generateFullCSS = (params = {}) => {
 
   const keyframesSection = getSection(
     'Keyframes',
-    [loadData.keyframes, hoverData.keyframes, clickData.keyframes].map(
-      normalizeExportSelectors
-    )
+    [
+      staticData.keyframes,
+      loadData.keyframes,
+      hoverData.keyframes,
+      clickData.keyframes,
+    ].map(normalizeExportSelectors)
   );
 
   return [
     '/* Generated by AnimaDiv */',
     baseSection,
+    staticSection,
     loadSection,
     hoverSection,
     clickSection,

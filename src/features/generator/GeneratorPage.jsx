@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import ControlsPanel from './ControlsPanel';
 import PreviewArea from './PreviewArea';
 import CodeOutput from './CodeOutput';
@@ -21,14 +21,43 @@ const normalizeAnimationConfig = (config) => {
   };
 };
 
-const normalizeSavedParams = (savedParams) => ({
-  ...savedParams,
-  animations: sanitizeAnimationsForType(savedParams.type, {
-    load: normalizeAnimationConfig(savedParams.animations?.load),
-    hover: normalizeAnimationConfig(savedParams.animations?.hover),
-    click: normalizeAnimationConfig(savedParams.animations?.click),
-  }),
-});
+const normalizeSavedParams = (savedParams) => {
+  const type = savedParams.type || 'button';
+  const defaults = createElement(type) || createElement('button');
+  const savedSettings = savedParams.specificSettings || {};
+  const savedStyles = savedParams.styles || {};
+  const migratedSettings = {
+    ...defaults.specificSettings,
+    ...savedSettings,
+  };
+
+  if (!savedSettings.backgroundType && savedSettings.backgroundMode) {
+    migratedSettings.backgroundType =
+      savedSettings.backgroundMode === 'color'
+        ? 'solid'
+        : savedSettings.backgroundMode;
+  }
+
+  if (!savedSettings.gradientCss && savedSettings.backgroundGradient) {
+    migratedSettings.gradientCss = savedSettings.backgroundGradient;
+  }
+
+  return {
+    ...defaults,
+    ...savedParams,
+    styles: {
+      ...defaults.styles,
+      ...savedStyles,
+    },
+    specificSettings: migratedSettings,
+    animations: sanitizeAnimationsForType(type, {
+      load: normalizeAnimationConfig(savedParams.animations?.load),
+      static: normalizeAnimationConfig(savedParams.animations?.static),
+      hover: normalizeAnimationConfig(savedParams.animations?.hover),
+      click: normalizeAnimationConfig(savedParams.animations?.click),
+    }),
+  };
+};
 
 // Функція ініціалізації стану
 const getInitialState = () => {
@@ -50,7 +79,7 @@ const getInitialState = () => {
     ...defaultElement,
     animations: {
       load: {
-        presetId: 'fade',
+        presetId: 'fadeIn',
         duration: 500,
         easing: 'ease-out',
         intensity: 100,
@@ -60,6 +89,12 @@ const getInitialState = () => {
         duration: 200,
         easing: 'ease',
         intensity: 100,
+      },
+      static: {
+        ...DEFAULT_ANIMATION_CONFIG,
+        presetId: 'none',
+        duration: 1800,
+        easing: 'ease-in-out',
       },
       click: {
         presetId: 'none',
@@ -74,7 +109,7 @@ const getInitialState = () => {
 const GeneratorPage = () => {
   const [params, setParams] = useState(getInitialState);
   const [refreshKey, setRefreshKey] = useState(0);
-  const initialPreviewState = getPreferredPreviewState(params);
+  const initialPreviewState = params.initialPreviewState || params.initialMotionState || getPreferredPreviewState(params);
   const [activePreviewState, setActivePreviewState] =
     useState(initialPreviewState);
   const [activeMotionState, setActiveMotionState] =
@@ -96,7 +131,13 @@ const GeneratorPage = () => {
 
   // 2. ОНОВЛЕННЯ БАЗОВИХ СТИЛІВ (width, height, background...)
   const handleStyleChange = (key, value) => {
-    setParams((prev) => updateElementStyle(prev, key, value));
+    setParams((prev) => {
+      const next = updateElementStyle(prev, key, value);
+      if (key === 'backgroundColor') {
+        return updateSpecificSetting(next, 'backgroundColor', value);
+      }
+      return next;
+    });
   };
 
   // 3. ОНОВЛЕННЯ СПЕЦИФІЧНИХ НАЛАШТУВАНЬ (текст кнопки, тип інпута...)
@@ -123,7 +164,10 @@ const GeneratorPage = () => {
     setParams(getInitialState());
   };
 
-  const handleReplay = () => setRefreshKey((prev) => prev + 1);
+  const handleReplay = useCallback(() => {
+    setActivePreviewState(activeMotionState);
+    setRefreshKey((prev) => prev + 1);
+  }, [activeMotionState]);
 
   const handleMotionStateChange = (state) => {
     setActiveMotionState(state);
@@ -132,11 +176,9 @@ const GeneratorPage = () => {
 
   const handlePreviewStateChange = (state) => {
     setActivePreviewState(state);
-
-    if (state !== 'static') {
-      setActiveMotionState(state);
-    }
+    setActiveMotionState(state);
   };
+
 
   // CSS генератор тимчасово може видавати помилки, поки ми його не оновимо, це ок
   const fullCss = useMemo(() => generateFullCSS(params), [params]);
@@ -151,23 +193,8 @@ const GeneratorPage = () => {
   useEffect(() => {
     const timer = window.setTimeout(handleReplay, 0);
     return () => window.clearTimeout(timer);
-  }, [params.animations?.load?.presetId]);
+  }, [handleReplay, params.animations?.load?.presetId]);
 
-  useEffect(() => {
-    const preferredState = getPreferredPreviewState(params);
-
-    if (
-      activePreviewState !== preferredState &&
-      params.animations?.[activePreviewState]?.presetId === 'none'
-    ) {
-      const timer = window.setTimeout(() => {
-        setActivePreviewState(preferredState);
-        setActiveMotionState(preferredState);
-      }, 0);
-
-      return () => window.clearTimeout(timer);
-    }
-  }, [activePreviewState, params]);
 
   return (
     <main className="main-container">
