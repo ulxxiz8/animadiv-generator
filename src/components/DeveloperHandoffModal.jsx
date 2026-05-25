@@ -2,13 +2,20 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckCircle,
   Copy,
+  ExternalLink,
+  Link as LinkIcon,
   MonitorSmartphone,
   MousePointer2,
   Pointer,
   RotateCcw,
   X,
 } from 'lucide-react';
-import { createCodeBundle } from '../utils/developerHandoff';
+import {
+  createCodeBundle,
+  createDeveloperHandoff,
+  createDeveloperHandoffUrl,
+  readDeveloperHandoff,
+} from '../utils/developerHandoff';
 import {
   getPreferredPreviewState,
   getPreviewStatesForType,
@@ -35,11 +42,18 @@ const modalButtonBase = {
 const getPrimaryButtonStyle = (active = false) => ({
   ...modalButtonBase,
   minWidth: 118,
-  border: '1px solid var(--button-bg, #111827)',
-  background: active ? '#D6F854' : 'var(--button-bg, #111827)',
-  color: active ? '#111827' : '#D6F854',
+  border: active ? '1px solid var(--primary, #D6F854)' : '1px solid var(--card-dark-border, #1F2937)',
+  background: active ? 'var(--primary, #D6F854)' : 'var(--card-dark-bg, #111827)',
+  color: active ? '#111827' : 'var(--primary, #D6F854)',
 });
 
+const secondaryButtonStyle = {
+  ...modalButtonBase,
+  minWidth: 94,
+  border: '1px solid var(--border, #E5E7EB)',
+  background: 'var(--surface, #FFFFFF)',
+  color: 'var(--text-main, #111827)',
+};
 
 const MobileUnavailableBlock = () => {
   const { t } = useTranslation();
@@ -204,18 +218,8 @@ const CodeBlock = ({ value }) => {
 };
 
 const CodePanel = ({ label, value, copied, onCopy }) => {
-  const { language } = useTranslation();
-  const copyLabel = copied
-    ? language === 'ua'
-      ? 'Готово'
-      : 'Copied'
-    : label === 'HTML'
-      ? language === 'ua'
-        ? 'Копіювати HTML'
-        : 'Copy HTML'
-      : language === 'ua'
-        ? 'Копіювати CSS'
-        : 'Copy CSS';
+  const { t } = useTranslation();
+  const copyLabel = label === 'HTML' ? t('handoff.copyHtml') : t('handoff.copyCss');
 
   return (
   <section
@@ -437,24 +441,28 @@ const createPreviewDocument = (bundle = {}, params, state = 'load') => {
     html,
     body {
       width: 100%;
-      min-height: 100%;
+      height: 100%;
+      min-height: 0;
       margin: 0;
+      overflow: hidden;
     }
 
     body {
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: ${previewBackground};
-      background-size: 24px 24px;
       color: #111827;
-      padding: 28px;
+      padding: 0;
     }
 
     .animadiv-preview-root {
       width: 100%;
-      min-height: calc(100vh - 56px);
+      height: 100%;
+      min-height: 0;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 28px;
+      overflow: hidden;
     }
 
     .animadiv-preview-root > * {
@@ -464,6 +472,23 @@ const createPreviewDocument = (bundle = {}, params, state = 'load') => {
     ${PREVIEW_THEME_CSS}
 
     ${css}
+
+    .animadiv-preview-root .animadiv-stage {
+      width: 100% !important;
+      min-height: 100% !important;
+      height: 100% !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      background: transparent !important;
+      overflow: hidden !important;
+    }
+
+    .animadiv-preview-root .animadiv-ui-kit {
+      max-width: min(520px, 100%) !important;
+    }
 
     .animadiv-preview-root button.animadiv-element,
     .animadiv-preview-root a.animadiv-element[role="button"] {
@@ -507,7 +532,7 @@ ${html}
   </main>
   <script>
     window.__animadivReplayLoad = function () {
-      var element = document.querySelector('.animadiv-preview-root .animadiv-element');
+      var element = document.querySelector('.animadiv-preview-root .animadiv-element, .animadiv-preview-root .animadiv-ui-kit');
       if (!element || !element.parentNode) return false;
 
       var clone = element.cloneNode(true);
@@ -561,7 +586,7 @@ const HandoffPreview = ({ bundle, params, previewState }) => {
     () =>
       params
         ? getPreviewStatesForType(params?.type)
-        : [{ id: 'static', label: 'Static' }],
+        : [{ id: 'load', label: 'Load' }],
     [params]
   );
   const selectedState = useMemo(() => {
@@ -661,10 +686,10 @@ const HandoffPreview = ({ bundle, params, previewState }) => {
               zIndex: 3,
               height: 34,
               minWidth: 82,
-              border: '1px solid var(--button-bg, #111827)',
+              border: '1px solid var(--card-dark-border, #1F2937)',
               borderRadius: 10,
-              background: 'var(--button-bg, #111827)',
-              color: 'var(--button-text, #D6F854)',
+              background: 'var(--card-dark-bg, #111827)',
+              color: 'var(--primary, #D6F854)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -707,34 +732,43 @@ const DeveloperHandoffModal = ({
   params,
   css,
   title,
+  handoffId,
   bundle: bundleOverride,
   previewState,
 }) => {
-  const { t, language } = useTranslation();
+  const { t } = useTranslation();
   const [copied, setCopied] = useState('');
   const [isMobile, setIsMobile] = useState(() =>
     typeof window === 'undefined' ? false : window.innerWidth < 860
   );
 
-  const labels = useMemo(
-    () =>
-      language === 'ua'
-        ? {
-            title: 'Передати розробнику',
-            subtitle: 'Згенерований код AnimaDiv',
-            instructionTitle: 'Інструкція для розробника',
-            instructionText:
-              'Скопіюйте HTML та CSS нижче і передайте розробнику. Preview показує, як елемент має виглядати в інтерфейсі.',
-          }
-        : {
-            title: 'Developer handoff',
-            subtitle: 'Generated AnimaDiv code',
-            instructionTitle: 'Developer instructions',
-            instructionText:
-              'Copy the HTML and CSS below and send them to the developer. The preview shows how the element should look in the interface.',
-          },
-    [language]
-  );
+  const handoff = useMemo(() => {
+    if (!open) return null;
+
+    if (handoffId) {
+      const saved = readDeveloperHandoff(handoffId);
+      if (saved) {
+        return { ...saved, url: createDeveloperHandoffUrl(saved) };
+      }
+    }
+
+    if (bundleOverride) {
+      const payload = {
+        id: 'inline-ui-kit-bundle',
+        title: title || t('templates.uiKitSection'),
+        createdAt: '',
+        bundle: bundleOverride,
+        previewState,
+      };
+      return { ...payload, url: createDeveloperHandoffUrl(payload) };
+    }
+
+    if (params) {
+      return createDeveloperHandoff({ params, css, title, previewState });
+    }
+
+    return null;
+  }, [bundleOverride, css, handoffId, open, params, previewState, t, title]);
 
   useEffect(() => {
     if (!open) return;
@@ -764,12 +798,12 @@ const DeveloperHandoffModal = ({
 
   const bundle = useMemo(() => {
     if (bundleOverride) return bundleOverride;
+    if (handoff?.bundle) return handoff.bundle;
     if (params) return createCodeBundle(params, css);
     return { html: '', css: '', combined: '' };
-  }, [bundleOverride, css, params]);
-  const previewParams = params;
-  const activePreviewState = previewState;
-  const modalTitle = title || params?.name || params?.type || labels.subtitle;
+  }, [bundleOverride, css, handoff, params]);
+  const previewParams = params || handoff?.params;
+  const activePreviewState = previewState || handoff?.previewState;
 
   if (!open) return null;
 
@@ -852,7 +886,7 @@ const DeveloperHandoffModal = ({
         >
           <div style={{ minWidth: 0 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>
-              {labels.title}</h2>
+              {t('handoff.title')}</h2>
             <p
               style={{
                 margin: '4px 0 0',
@@ -860,7 +894,7 @@ const DeveloperHandoffModal = ({
                 fontSize: 13,
               }}
             >
-              {modalTitle}
+              {handoff?.title || title || t('handoff.generatedCode')}
             </p>
           </div>
 
@@ -898,29 +932,51 @@ const DeveloperHandoffModal = ({
         >
           <div
             style={{
-              background: 'var(--surface-alt, #F9FAFB)',
-              border: '1px solid var(--border, #E5E7EB)',
-              borderRadius: 16,
-              padding: '14px 16px',
-              color: 'var(--text-muted, #6B7280)',
-              fontSize: 13,
-              lineHeight: 1.5,
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1fr) auto auto',
+              gap: 12,
+              alignItems: 'center',
             }}
           >
-            <strong
+            <input
+              readOnly
+              value={handoff?.url || ''}
               style={{
-                display: 'block',
+                height: 42,
+                minWidth: 0,
+                border: '1px solid var(--border, #E5E7EB)',
+                borderRadius: 12,
+                padding: '0 14px',
+                background: 'var(--control-bg, #F9FAFB)',
                 color: 'var(--text-main, #111827)',
                 fontSize: 13,
-                fontWeight: 900,
-                lineHeight: 1.1,
-                letterSpacing: '-0.01em',
-                marginBottom: 6,
+                outline: 'none',
               }}
+            />
+            <button
+              type="button"
+              onClick={() => handleCopy('link', handoff?.url || '')}
+              style={getPrimaryButtonStyle(copied === 'link')}
             >
-              {labels.instructionTitle}
-            </strong>
-            {labels.instructionText}
+              {copied === 'link' ? (
+                <CheckCircle size={15} style={{ flex: '0 0 auto' }} />
+              ) : (
+                <LinkIcon size={15} style={{ flex: '0 0 auto' }} />
+              )}
+              <span style={{ lineHeight: 1 }}>{t('handoff.copyLink')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (handoff?.url) {
+                  window.open(handoff.url, '_blank', 'noopener,noreferrer');
+                }
+              }}
+              style={secondaryButtonStyle}
+            >
+              <ExternalLink size={15} style={{ flex: '0 0 auto' }} />
+              <span style={{ lineHeight: 1 }}>{t('common.open')}</span>
+            </button>
           </div>
 
           <HandoffPreview

@@ -1021,4 +1021,6 @@ const PreviewArea = ({
   );
 };
 
+export { PreviewElement };
+
 export default PreviewArea;
