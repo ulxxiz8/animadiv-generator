@@ -378,48 +378,107 @@ const fallbackLayouts = {
 
 /* ─── Utilities ────────────────────────────────────────────────────────────── */
 
+const UI_KIT_THEME = {
+  background: '#F9FAFB',
+  surface: '#FFFFFF',
+  surfaceSubtle: '#F3F4F6',
+  textMain: '#111827',
+  textMuted: '#6B7280',
+  textSoft: '#9CA3AF',
+  border: '#E5E7EB',
+  accent: '#D6F854',
+  dark: '#111827',
+};
+
+const resolveCssValue = (value) => {
+  if (typeof value !== 'string') return value;
+
+  return value
+    .replaceAll('var(--surface)', UI_KIT_THEME.surface)
+    .replaceAll('var(--surface-alt)', UI_KIT_THEME.background)
+    .replaceAll('var(--surface-subtle)', UI_KIT_THEME.surfaceSubtle)
+    .replaceAll('var(--bg-color)', UI_KIT_THEME.background)
+    .replaceAll('var(--text-main)', UI_KIT_THEME.textMain)
+    .replaceAll('var(--text-muted)', UI_KIT_THEME.textMuted)
+    .replaceAll('var(--text-soft)', UI_KIT_THEME.textSoft)
+    .replaceAll('var(--border)', UI_KIT_THEME.border)
+    .replaceAll('var(--control-border)', '#D1D5DB')
+    .replaceAll('var(--primary)', UI_KIT_THEME.accent)
+    .replaceAll('var(--button-bg)', UI_KIT_THEME.dark)
+    .replaceAll('var(--button-text)', UI_KIT_THEME.accent);
+};
+
 const toKebabCase = (value) =>
   String(value).replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
 
+const normalizeCssValue = (key, value) => {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value === 'number') {
+    const unitless = new Set(['opacity', 'zIndex', 'fontWeight', 'lineHeight', 'flexGrow', 'flexShrink']);
+    return unitless.has(key) ? String(value) : `${value}px`;
+  }
+  return resolveCssValue(value);
+};
+
 const styleToCss = (styles = {}, indent = '  ') =>
   Object.entries(styles)
-    .map(
-      ([key, value]) =>
-        `${indent}${toKebabCase(key)}: ${typeof value === 'number' ? `${value}px` : value};`
-    )
+    .map(([key, value]) => {
+      const resolved = normalizeCssValue(key, value);
+      if (resolved === null) return '';
+      return `${indent}${toKebabCase(key)}: ${resolved};`;
+    })
+    .filter(Boolean)
     .join('\n');
 
 const getLayoutDefinition = (layoutId) =>
   customLayouts[layoutId] || fallbackLayouts[layoutId] || fallbackLayouts.hero;
 
+const getItemLabel = (item, t) =>
+  item.labelKey ? t(item.labelKey, item.labelParams || {}) : item.label;
+
+const createAnimationCss = (globalPreset, staggerDelay) => {
+  const preset = animationPresets.find((item) => item.id === globalPreset);
+  if (!preset || preset.id === 'none') {
+    return { keyframes: '', animationName: '', baseAnimation: '' };
+  }
+
+  const animationName = `animadiv_${preset.id.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+  const keyframes =
+    typeof preset.keyframes === 'function'
+      ? `@keyframes ${animationName} {\n${preset.keyframes({ intensity: 72 })}\n}\n\n`
+      : '';
+
+  return {
+    keyframes,
+    animationName,
+    baseAnimation: `\n  animation-name: ${animationName};\n  animation-duration: 640ms;\n  animation-fill-mode: both;\n  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);`,
+    staggerDelay,
+  };
+};
+
 const createCollectionBundle = (layoutId, globalPreset, staggerDelay, t) => {
   const definition = getLayoutDefinition(layoutId);
-  const preset = animationPresets.find((item) => item.id === globalPreset);
-  const animationName = preset && preset.id !== 'none' ? `ag_${preset.id}` : '';
-  const keyframes =
-    animationName && typeof preset.keyframes === 'function'
-      ? `@keyframes ${animationName} {\n${preset.keyframes({ intensity: 100 })}\n}\n\n`
-      : '';
+  const { keyframes, baseAnimation } = createAnimationCss(globalPreset, staggerDelay);
   const className = `animadiv-${layoutId}`;
+
   const itemMarkup = definition.items
     .map(
       (item) =>
-        `  <div class="animadiv-item" data-block="${item.id}">${
-          item.labelKey ? t(item.labelKey, item.labelParams || {}) : item.label
-        }</div>`
+        `    <div class="animadiv-item" data-block="${item.id}">${getItemLabel(item, t)}</div>`
     )
     .join('\n');
-  const html = `<section class="animadiv-ui-kit ${className}">\n${itemMarkup}\n</section>`;
+
+  const html = `<div class="animadiv-stage">\n  <section class="animadiv-ui-kit ${className}">\n${itemMarkup}\n  </section>\n</div>`;
+
   const itemCss = definition.items
-    .map(
-      (item, index) =>
-        `.${className} .animadiv-item:nth-child(${index + 1}) {\n${styleToCss(item.style)}\n  animation-delay: ${index * staggerDelay}ms;\n}`
-    )
+    .map((item, index) => {
+      const delay = Number(staggerDelay) * index;
+      const delayRule = baseAnimation ? `\n  animation-delay: ${delay}ms;` : '';
+      return `.${className} .animadiv-item:nth-child(${index + 1}) {\n${styleToCss(item.style)}${delayRule}\n}`;
+    })
     .join('\n\n');
-  const animationCss = animationName
-    ? `\n  animation-name: ${animationName};\n  animation-duration: 600ms;\n  animation-fill-mode: both;\n  animation-timing-function: ease-out;`
-    : '';
-  const css = `${keyframes}.${className} {\n${styleToCss(definition.container)}\n}\n\n.${className} .animadiv-item {\n  border: 1px solid var(--border);\n  border-radius: 16px;\n  background: var(--surface);\n  padding: 16px;\n  color: var(--text-main);\n  font-size: 13px;\n  font-weight: 750;\n  display: flex;\n  align-items: center;${animationCss}\n}\n\n${itemCss}`;
+
+  const css = `${keyframes}html, body {\n  margin: 0;\n  width: 100%;\n  min-height: 100vh;\n  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;\n  background: ${UI_KIT_THEME.background};\n  color: ${UI_KIT_THEME.textMain};\n}\n\n.animadiv-stage {\n  width: 100%;\n  min-height: 100vh;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  box-sizing: border-box;\n  padding: 40px;\n}\n\n.${className} {\n${styleToCss(definition.container)}\n}\n\n.${className} .animadiv-item {\n  box-sizing: border-box;\n  border: 1px solid ${UI_KIT_THEME.border};\n  border-radius: 16px;\n  background: ${UI_KIT_THEME.surface};\n  padding: 16px;\n  color: ${UI_KIT_THEME.textMain};\n  font-size: 13px;\n  font-weight: 750;\n  line-height: 1.2;\n  display: flex;\n  align-items: center;\n  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);${baseAnimation}\n}\n\n${itemCss}\n\n@media (max-width: 720px) {\n  .animadiv-stage {\n    padding: 24px;\n  }\n\n  .${className} {\n    width: 100%;\n    max-width: 100%;\n  }\n}`;
 
   return {
     html,
@@ -502,7 +561,7 @@ const TemplateCard = ({ template, onSelect }) => {
 const Collections = () => {
   const { t } = useTranslation();
   const [selectedLayoutId, setSelectedLayoutId] = useState(null);
-  const [globalPreset, setGlobalPreset] = useState('fade');
+  const [globalPreset, setGlobalPreset] = useState('fade-in');
   const [staggerDelay, setStaggerDelay] = useState(100);
   const [isPlaying, setIsPlaying] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);

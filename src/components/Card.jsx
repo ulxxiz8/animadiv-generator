@@ -5,8 +5,6 @@ import {
   CheckCircle,
   Code2,
   ExternalLink,
-  MousePointer2,
-  Pointer,
   Trash2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -51,6 +49,10 @@ const LEGACY_PRESET_MAP = {
   zoomReveal: 'zoomIn',
   blurReveal: 'blurIn',
   glowAppear: 'blurIn',
+  fadeByWord: 'fadeIn',
+  fadeByLetter: 'fadeIn',
+  typewriter: 'fadeIn',
+  underlineDraw: 'revealUp',
   floatingSection: 'float',
   floatingImage: 'float',
   staggerReveal: 'revealUp',
@@ -212,7 +214,7 @@ const getLibraryPreferredState = (params, item) => {
   if (hasAnimation(params, 'hover')) return 'hover';
   if (hasAnimation(params, 'click')) return 'click';
   if (hasAnimation(params, 'load')) return 'load';
-  return 'load';
+  return 'static';
 };
 
 const isDarkPreview = (item) => {
@@ -797,51 +799,6 @@ const LibraryPreviewElement = ({ params, state, replayKey, forceHovered = false,
   );
 };
 
-
-const InteractionHint = ({ state, visible }) => {
-  if (!visible) return null;
-
-  const isClick = state === 'click';
-  const Icon = isClick ? Pointer : MousePointer2;
-
-  return (
-    <div
-      aria-hidden="true"
-      style={{
-        position: 'absolute',
-        right: 18,
-        bottom: 18,
-        width: 34,
-        height: 34,
-        borderRadius: 999,
-        background: 'rgba(17,24,39,0.88)',
-        color: '#D6F854',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: '0 12px 26px rgba(15,23,42,0.22)',
-        pointerEvents: 'none',
-        zIndex: 5,
-        animation: isClick
-          ? 'animadiv-library-hint-click 1.8s infinite ease-in-out'
-          : 'animadiv-library-hint-hover 2.2s infinite ease-in-out',
-      }}
-    >
-      <Icon size={18} />
-      <style>{`
-        @keyframes animadiv-library-hint-hover {
-          0%, 100% { transform: translate(0, 0); opacity: 0.78; }
-          50% { transform: translate(-5px, -5px); opacity: 1; }
-        }
-        @keyframes animadiv-library-hint-click {
-          0%, 100% { transform: translateY(0) scale(1); opacity: 0.78; }
-          50% { transform: translateY(3px) scale(0.9); opacity: 1; }
-        }
-      `}</style>
-    </div>
-  );
-};
-
 const Preview = ({ item, replayKey, isHovered, isPressed }) => {
   const params = useMemo(() => normalizeLibraryItemForGenerator(item), [item]);
   const baseState = getLibraryPreferredState(params, item) || getPreferredPreviewState(params);
@@ -877,11 +834,6 @@ const Preview = ({ item, replayKey, isHovered, isPressed }) => {
         replayKey={replayKey}
         forceHovered={isHovered && state === 'hover'}
         forceClicked={isPressed && state === 'click'}
-      />
-
-      <InteractionHint
-        state={state}
-        visible={!isHovered && !isPressed && (state === 'hover' || state === 'click')}
       />
     </div>
   );
@@ -1022,19 +974,19 @@ const Card = ({ item, mode = 'library', onSavedChange }) => {
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
             <ActionButton onClick={useInGenerator} primary>
-              <ExternalLink size={14} /> {t('common.edit')}
+              <ExternalLink size={14} /> Edit
             </ActionButton>
 
             <ActionButton onClick={toggleSave} active={isSaved && mode !== 'mysets'}>
               {mode === 'mysets' ? (
-                <><Trash2 size={14} /> {t('common.remove')}</>
+                <><Trash2 size={14} /> Remove</>
               ) : (
-                <>{isSaved ? <CheckCircle size={14} /> : <Bookmark size={14} />} {t('common.save')}</>
+                <>{isSaved ? <CheckCircle size={14} /> : <Bookmark size={14} />} Save</>
               )}
             </ActionButton>
 
             <ActionButton onClick={() => setIsHandoffOpen(true)}>
-              <Code2 size={14} /> {t('common.code')}
+              <Code2 size={14} /> Code
             </ActionButton>
           </div>
         </div>

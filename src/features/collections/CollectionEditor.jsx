@@ -27,11 +27,11 @@ const EditableElement = ({
         onSelect(id);
       }}
       style={{
-        border: isSelected ? '2px solid #111827' : '1px solid #E5E7EB',
+        border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border)',
         borderRadius: '16px',
-        background: '#FFFFFF',
+        background: 'var(--surface)',
         padding: '16px',
-        color: isSelected ? '#111827' : '#6B7280',
+        color: isSelected ? 'var(--text-main)' : 'var(--text-muted)',
         fontSize: '13px',
         fontWeight: isSelected ? '900' : '750',
         display: 'flex',
@@ -266,7 +266,7 @@ const CollectionEditor = ({
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        background: '#F9FAFB',
+        background: 'var(--bg-color)',
         minHeight: 0,
       }}
     >
@@ -276,8 +276,8 @@ const CollectionEditor = ({
       <div
         style={{
           padding: '14px 18px',
-          borderBottom: '1px solid #E5E7EB',
-          background: '#FFFFFF',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--surface)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -286,7 +286,7 @@ const CollectionEditor = ({
       >
         <div
           style={{
-            color: '#111827',
+            color: 'var(--text-main)',
             fontSize: 15,
             fontWeight: 900,
           }}
@@ -295,7 +295,7 @@ const CollectionEditor = ({
           type="button"
           onClick={onBack}
           style={{
-            color: '#6B7280',
+            color: 'var(--text-muted)',
             background: 'none',
             border: '1px solid transparent',
             borderRadius: 12,
@@ -315,7 +315,7 @@ const CollectionEditor = ({
           alignItems: 'center',
           justifyContent: 'center',
           padding: '40px',
-          background: '#F9FAFB',
+          background: 'var(--bg-color)',
           minHeight: 0,
         }}
       >

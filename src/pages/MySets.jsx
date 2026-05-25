@@ -53,8 +53,9 @@ const MySets = () => {
         .mysets-cta {
           display: inline-block;
           padding: 12px 24px;
-          background: var(--text-main);
+          background: var(--card-dark-bg);
           color: var(--primary);
+          border: 1px solid var(--card-dark-border);
           text-decoration: none;
           border-radius: 10px;
           font-weight: 800;

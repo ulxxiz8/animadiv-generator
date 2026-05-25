@@ -39,7 +39,7 @@ const CollectionControls = ({
             style={{
               fontSize: 12,
               fontWeight: 900,
-              color: '#111827',
+              color: 'var(--text-main)',
               textTransform: 'uppercase',
               marginBottom: 16,
               letterSpacing: '0.03em',
@@ -51,7 +51,7 @@ const CollectionControls = ({
               style={{
                 display: 'block',
                 fontSize: 11,
-                color: '#6B7280',
+                color: 'var(--text-muted)',
                 textTransform: 'none',
                 marginTop: 5,
                 letterSpacing: 0,
@@ -67,7 +67,7 @@ const CollectionControls = ({
               display: 'block',
               fontSize: 13,
               fontWeight: 800,
-              color: '#374151',
+              color: 'var(--button-secondary-text)',
               marginBottom: 8,
             }}
           >
@@ -80,10 +80,10 @@ const CollectionControls = ({
               width: '100%',
               padding: '11px 12px',
               borderRadius: 12,
-              border: '1px solid #E5E7EB',
+              border: '1px solid var(--control-border)',
               fontSize: 14,
-              color: '#111827',
-              background: '#FFFFFF',
+              color: 'var(--text-main)',
+              background: 'var(--control-bg)',
               outline: 'none',
               cursor: 'pointer',
               boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
@@ -112,7 +112,7 @@ const CollectionControls = ({
               style={{
                 fontSize: 13,
                 fontWeight: 800,
-                color: '#374151',
+                color: 'var(--button-secondary-text)',
               }}
             >
               {t('collections.staggerDelay')}
@@ -120,9 +120,9 @@ const CollectionControls = ({
             <span
               style={{
                 fontSize: 12,
-                color: '#111827',
+                color: 'var(--text-main)',
                 fontWeight: 900,
-                background: '#D6F854',
+                background: 'var(--primary)',
                 padding: '4px 7px',
                 borderRadius: 8,
                 lineHeight: 1,
@@ -141,13 +141,13 @@ const CollectionControls = ({
             style={{
               width: '100%',
               cursor: 'pointer',
-              accentColor: '#111827',
+              accentColor: 'var(--button-bg)',
             }}
           />
           <p
             style={{
               fontSize: 12,
-              color: '#9CA3AF',
+              color: 'var(--text-soft)',
               margin: '9px 0 0',
               lineHeight: 1.45,
             }}

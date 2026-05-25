@@ -42,9 +42,9 @@ const modalButtonBase = {
 const getPrimaryButtonStyle = (active = false) => ({
   ...modalButtonBase,
   minWidth: 118,
-  border: '1px solid var(--button-bg, #111827)',
-  background: active ? '#D6F854' : 'var(--button-bg, #111827)',
-  color: active ? '#111827' : '#D6F854',
+  border: active ? '1px solid var(--primary, #D6F854)' : '1px solid var(--card-dark-border, #1F2937)',
+  background: active ? 'var(--primary, #D6F854)' : 'var(--card-dark-bg, #111827)',
+  color: active ? '#111827' : 'var(--primary, #D6F854)',
 });
 
 const secondaryButtonStyle = {
@@ -565,7 +565,7 @@ const HandoffPreview = ({ bundle, params, previewState }) => {
     () =>
       params
         ? getPreviewStatesForType(params?.type)
-        : [{ id: 'static', label: 'Static' }],
+        : [{ id: 'load', label: 'Load' }],
     [params]
   );
   const selectedState = useMemo(() => {
@@ -665,10 +665,10 @@ const HandoffPreview = ({ bundle, params, previewState }) => {
               zIndex: 3,
               height: 34,
               minWidth: 82,
-              border: '1px solid var(--button-bg, #111827)',
+              border: '1px solid var(--card-dark-border, #1F2937)',
               borderRadius: 10,
-              background: 'var(--button-bg, #111827)',
-              color: 'var(--button-text, #D6F854)',
+              background: 'var(--card-dark-bg, #111827)',
+              color: 'var(--primary, #D6F854)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -956,33 +956,6 @@ const DeveloperHandoffModal = ({
               <ExternalLink size={15} style={{ flex: '0 0 auto' }} />
               <span style={{ lineHeight: 1 }}>{t('common.open')}</span>
             </button>
-          </div>
-
-          <div
-            style={{
-              background: 'var(--surface-alt, #F9FAFB)',
-              border: '1px solid #E5E7EB',
-              borderRadius: 16,
-              padding: '14px 16px',
-              color: '#6B7280',
-              fontSize: 13,
-              lineHeight: 1.5,
-            }}
-          >
-            <strong
-              style={{
-                display: 'block',
-                color: 'var(--text-main, #111827)',
-                fontSize: 13,
-                fontWeight: 900,
-                lineHeight: 1.1,
-                letterSpacing: '-0.01em',
-                marginBottom: 6,
-              }}
-            >
-              {t('handoff.instructionTitle')}
-            </strong>
-            {t('handoff.instructionText')}
           </div>
 
           <HandoffPreview

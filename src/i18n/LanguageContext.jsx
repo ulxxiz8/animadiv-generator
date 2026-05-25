@@ -3,7 +3,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { translations } from './translations';
 
 const STORAGE_KEY = 'animadiv-language';
-const DEFAULT_LANGUAGE = 'en';
+const DEFAULT_LANGUAGE = 'ua';
 const SUPPORTED_LANGUAGES = ['en', 'ua'];
 
 const LanguageContext = createContext(null);

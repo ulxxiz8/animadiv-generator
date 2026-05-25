@@ -6,7 +6,6 @@ import { useTranslation } from '../../i18n/useTranslation';
 const TABS = [
   { id: 'html', label: 'HTML' },
   { id: 'css', label: 'CSS' },
-  { id: 'combined', labelKey: 'codeOutput.combined', label: 'Combined' },
 ];
 
 const copyText = async (value) => {
@@ -193,7 +192,7 @@ const CollectionCodeOutput = ({ bundle, title }) => {
         <button
           type="button"
           onClick={() => {
-            const handoff = createDeveloperHandoffFromBundle({ bundle, title });
+            const handoff = createDeveloperHandoffFromBundle({ bundle, title, previewState: 'load' });
             setHandoffId(handoff.id);
             setIsHandoffOpen(true);
           }}

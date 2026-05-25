@@ -186,9 +186,9 @@ const Library = () => {
                       padding: '0 12px',
                       borderRadius: 999,
                       border: isActive
-                        ? '1px solid var(--text-main)'
+                        ? '1px solid var(--card-dark-border)'
                         : '1px solid var(--border)',
-                      background: isActive ? 'var(--text-main)' : 'var(--surface)',
+                      background: isActive ? 'var(--card-dark-bg)' : 'var(--surface)',
                       color: isActive ? 'var(--primary)' : 'var(--button-secondary-text)',
                       fontSize: 12,
                       fontWeight: 850,
@@ -208,7 +208,7 @@ const Library = () => {
                 height: 34,
                 padding: '0 12px',
                 borderRadius: 999,
-                background: 'var(--text-main)',
+                background: 'var(--card-dark-bg)',
                 color: 'var(--primary)',
                 fontSize: 12,
                 fontWeight: 850,

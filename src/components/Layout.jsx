@@ -44,7 +44,7 @@ const LanguageSwitcher = () => {
               minWidth: 36,
               border: 'none',
               borderRadius: 7,
-              background: active ? 'var(--text-main)' : 'transparent',
+              background: active ? 'var(--card-dark-bg)' : 'transparent',
               color: active ? 'var(--primary)' : 'var(--text-muted)',
               fontSize: 12,
               fontWeight: 900,
@@ -280,10 +280,12 @@ const Layout = () => {
         /* ── Header responsive ── */
         .header-nav-desktop { display: flex; gap: 4px; }
         .header-burger.theme-btn { display: none; }
+        .desktop-language-switcher { display: inline-flex; }
 
         @media (max-width: 860px) {
           .header-nav-desktop { display: none; }
           .header-burger.theme-btn { display: inline-flex; }
+          .desktop-language-switcher { display: none; }
         }
 
         /* ── Mobile drawer ── */
@@ -457,7 +459,9 @@ const Layout = () => {
 
         {/* Right side */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-          <LanguageSwitcher />
+          <div className="desktop-language-switcher">
+            <LanguageSwitcher />
+          </div>
 
           <button
             type="button"

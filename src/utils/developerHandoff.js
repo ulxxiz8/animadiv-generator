@@ -93,13 +93,14 @@ export const createDeveloperHandoff = ({
   };
 };
 
-export const createDeveloperHandoffFromBundle = ({ bundle, title }) => {
+export const createDeveloperHandoffFromBundle = ({ bundle, title, previewState = 'load' }) => {
   const id = `handoff_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const payload = {
     id,
     title: title || 'AnimaDiv UI Kit section',
     createdAt: new Date().toISOString(),
     bundle,
+    previewState,
   };
 
   localStorage.setItem(
