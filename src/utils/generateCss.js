@@ -21,12 +21,6 @@ const PX_FIELDS = new Set([
 const toKebabCase = (value) =>
   value.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
 
-const clampOpacity = (value, fallback = 1) => {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return fallback;
-  return Math.min(1, Math.max(0, numeric));
-};
-
 const formatStyleValue = (key, value) => {
   if (value === undefined || value === null || value === '') return null;
   if (typeof value === 'number' && PX_FIELDS.has(key)) return `${value}px`;
@@ -51,6 +45,12 @@ const createRule = (selector, styles) => {
 };
 
 const uniqueBlocks = (blocks) => [...new Set(blocks.filter(Boolean))];
+
+const encodeSvgColor = (color = '#FFFFFF') =>
+  String(color).replace('#', '%23').replace(/\s/g, '');
+
+const getCheckboxCheckSvg = (color = '#FFFFFF') =>
+  `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.4 6.6 11.5 12.8 4.5' fill='none' stroke='${encodeSvgColor(color)}' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`;
 
 const getAnimationConfig = (animations = {}, state) => ({
   presetId: 'none',
@@ -95,6 +95,23 @@ const normalizeExportSelectors = (css) =>
     .replaceAll('.is-hovered', ':hover')
     .replaceAll('.is-clicked', ':active');
 
+
+const getPageStyles = () => ({
+  margin: 0,
+  width: '100%',
+  minHeight: '100vh',
+});
+
+const getStageStyles = () => ({
+  width: '100%',
+  minHeight: '100vh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  boxSizing: 'border-box',
+  padding: '40px',
+});
+
 const getBaseStyles = (params = {}) => {
   const styles = params.styles || {};
   const settings = params.specificSettings || {};
@@ -116,16 +133,15 @@ const getBaseStyles = (params = {}) => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    opacity: clampOpacity(styles.opacity, 1),
+    opacity: styles.opacity ?? 1,
     visibility: 'visible',
     transform: 'var(--base-transform)',
     transformOrigin: staticConfig.transformOrigin || 'center',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-    cursor: settings.disabled ? 'not-allowed' : settings.cursor || 'pointer',
+    cursor: settings.cursor || 'pointer',
     fontSize: settings.fontSize || 14,
     fontWeight: settings.fontWeight || 600,
     fontStyle: settings.fontStyle || 'normal',
-    fontSynthesisWeight: 'auto',
   };
 
   const shadow = getBoxShadow(settings);
@@ -153,11 +169,15 @@ const getBaseStyles = (params = {}) => {
     baseStyles.display = 'inline-flex';
     baseStyles.alignItems = 'center';
     baseStyles.justifyContent = 'center';
+    baseStyles.verticalAlign = 'middle';
     baseStyles.appearance = 'none';
+    baseStyles.WebkitAppearance = 'none';
     baseStyles.fontFamily = settings.fontFamily || 'inherit';
-    baseStyles.lineHeight = settings.lineHeight || 1;
-    baseStyles.whiteSpace = 'pre-wrap';
+    baseStyles.lineHeight = settings.lineHeight || 'normal';
+    baseStyles.whiteSpace = 'normal';
     baseStyles.textAlign = 'center';
+    baseStyles.textDecoration = 'none';
+    baseStyles.userSelect = 'none';
     baseStyles.border = Number(styles.borderWidth) > 0 ? baseStyles.border : 'none';
   }
 
@@ -168,7 +188,7 @@ const getBaseStyles = (params = {}) => {
     baseStyles.whiteSpace = 'nowrap';
     baseStyles.overflow = 'hidden';
     baseStyles.textOverflow = 'ellipsis';
-    if (settings.disabled) baseStyles.opacity = clampOpacity(styles.opacity, 1) * 0.5;
+    if (settings.disabled) baseStyles.filter = 'opacity(0.5)';
   }
 
   if (params.type === 'textarea') {
@@ -190,7 +210,7 @@ const getBaseStyles = (params = {}) => {
       baseStyles.minHeight = styles.minHeight || rows * 24 + 24;
     }
 
-    if (settings.disabled) baseStyles.opacity = clampOpacity(styles.opacity, 1) * 0.5;
+    if (settings.disabled) baseStyles.opacity = 0.5;
   }
 
   if (params.type === 'text') {
@@ -230,14 +250,21 @@ const getBaseStyles = (params = {}) => {
     baseStyles.border = 'none';
     baseStyles.width = 'auto';
     baseStyles.height = 'auto';
-    baseStyles.padding = 0;
-    baseStyles.margin = 0;
-    baseStyles.background = 'transparent';
-    baseStyles.boxShadow = 'none';
-    if (settings.disabled) baseStyles.opacity = clampOpacity(styles.opacity, 1) * 0.5;
   }
 
   return baseStyles;
+};
+
+
+const getPlaceholderRules = (params = {}) => {
+  if (params.type !== 'input' && params.type !== 'textarea') return [];
+  const styles = params.styles || {};
+  return [
+    createRule('.animadiv-element::placeholder', {
+      color: styles.color || '#111827',
+      opacity: 1,
+    }),
+  ];
 };
 
 const getSemanticChildRules = (params = {}) => {
@@ -246,37 +273,82 @@ const getSemanticChildRules = (params = {}) => {
 
   if (params.type !== 'checkbox' && params.type !== 'radio') return [];
 
+  const controlColor =
+    params.type === 'checkbox'
+      ? settings.color || '#111827'
+      : settings.color || '#4F46E5';
+  const checkColor = settings.checkColor || '#FFFFFF';
+  const controlSize = settings.size || 24;
+
+  const inputSelector =
+    params.type === 'checkbox'
+      ? '.animadiv-element input[type="checkbox"]'
+      : '.animadiv-element input[type="radio"]';
+
+  const inputBase = createRule(inputSelector, {
+    appearance: 'none',
+    WebkitAppearance: 'none',
+    width: controlSize,
+    height: controlSize,
+    flexShrink: 0,
+    margin: 0,
+    display: 'inline-grid',
+    placeContent: 'center',
+    cursor: 'inherit',
+    background: '#FFFFFF',
+    border: `2px solid ${controlColor}`,
+    borderRadius: params.type === 'checkbox' ? '6px' : '50%',
+    transition: 'background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
+  });
+
+  const checkedBase = createRule(`${inputSelector}:checked`, {
+    backgroundColor: params.type === 'checkbox' ? controlColor : '#FFFFFF',
+    backgroundImage: params.type === 'checkbox' ? getCheckboxCheckSvg(checkColor) : undefined,
+    backgroundRepeat: params.type === 'checkbox' ? 'no-repeat' : undefined,
+    backgroundPosition: params.type === 'checkbox' ? 'center' : undefined,
+    backgroundSize: params.type === 'checkbox' ? '76% 76%' : undefined,
+    borderColor: controlColor,
+  });
+
+  const marker =
+    params.type === 'checkbox'
+      ? ''
+      : createRule(`${inputSelector}:checked::after`, {
+          content: '""',
+          width: '50%',
+          height: '50%',
+          borderRadius: '50%',
+          background: controlColor,
+        });
+
   return [
-    createRule('.animadiv-element input', {
-      width: settings.size || 24,
-      height: settings.size || 24,
-      accentColor:
-        params.type === 'checkbox'
-          ? settings.color || '#111827'
-          : settings.color || '#4F46E5',
-    }),
+    inputBase,
+    checkedBase,
+    marker,
     createRule('.animadiv-element span', {
       fontSize: settings.fontSize || 14,
       fontWeight: settings.fontWeight || 500,
+      fontStyle: settings.fontStyle || 'normal',
       color: styles.color,
       fontFamily: settings.fontFamily || 'inherit',
-      fontStyle: settings.fontStyle || 'normal',
       background: 'transparent',
     }),
   ];
 };
 
 
-const getPlaceholderRules = (params = {}) => {
-  if (!['input', 'textarea'].includes(params.type)) return [];
-  const styles = params.styles || {};
+const getContentRules = (params = {}) => {
+  if (!['button', 'link'].includes(params.type)) return [];
   return [
-    createRule('.animadiv-element::placeholder', {
-      color: styles.color || '#111827',
-      opacity: 1,
-    }),
-    createRule('.animadiv-element:disabled', {
-      cursor: 'not-allowed',
+    createRule('.animadiv-element > .animadiv-content', {
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      minWidth: 0,
+      lineHeight: 'inherit',
+      textAlign: 'center',
+      pointerEvents: 'none',
     }),
   ];
 };
@@ -375,9 +447,12 @@ export const generateFullCSS = (params = {}) => {
   );
 
   const baseSection = getSection('Base styles', [
+    createRule('html, body', getPageStyles()),
+    createRule('.animadiv-stage', getStageStyles()),
     createRule('.animadiv-element', getBaseStyles(sanitizedParams)),
-    ...getSemanticChildRules(sanitizedParams),
     ...getPlaceholderRules(sanitizedParams),
+    ...getSemanticChildRules(sanitizedParams),
+    ...getContentRules(sanitizedParams),
   ]);
 
   const loadSection = getSection('Load animation', [

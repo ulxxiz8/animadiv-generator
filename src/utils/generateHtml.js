@@ -109,6 +109,10 @@ const renderAnimatedContent = (params, value, fallback = '') => {
   return renderContent(text);
 };
 
+
+const renderInlineContent = (params, value, fallback = '') =>
+  renderAnimatedContent(params, value, fallback).trim();
+
 const getTextTag = (tag) => {
   const allowedTags = new Set(['p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
   return allowedTags.has(tag) ? tag : 'p';
@@ -124,13 +128,9 @@ export const generateHtml = (params = {}) => {
   switch (type) {
     case 'button':
       if (settings.actionType === 'link') {
-        return `<a ${classAttr} href="${escapeAttr(settings.href || '#')}" target="${escapeAttr(settings.target || '_self')}" role="button">
-  ${renderAnimatedContent(params, settings.text || content, 'Button')}
-</a>`;
+        return `<a ${classAttr} href="${escapeAttr(settings.href || '#')}" target="${escapeAttr(settings.target || '_self')}" role="button"><span class="animadiv-content">${renderInlineContent(params, settings.text || content, 'Button')}</span></a>`;
       }
-      return `<button ${classAttr}>
-  ${renderAnimatedContent(params, settings.text || content, 'Button')}
-</button>`;
+      return `<button ${classAttr} type="button"><span class="animadiv-content">${renderInlineContent(params, settings.text || content, 'Button')}</span></button>`;
 
     case 'input':
       return `<input ${classAttr} type="${escapeAttr(settings.inputType || 'text')}" placeholder="${escapeAttr(settings.placeholder || '')}"${settings.disabled ? ' disabled' : ''}${settings.validationState === 'error' ? ' aria-invalid="true"' : ''} />`;
@@ -140,18 +140,14 @@ export const generateHtml = (params = {}) => {
 
     case 'text': {
       const textTag = getTextTag(settings.tag || tag);
-      return `<${textTag} ${classAttr}>
-  ${renderAnimatedContent(params, settings.content || content, 'Text')}
-</${textTag}>`;
+      return `<${textTag} ${classAttr}>${renderInlineContent(params, settings.content || content, 'Text')}</${textTag}>`;
     }
 
     case 'image':
       return `<img ${classAttr} src="${escapeAttr(settings.src || '')}" alt="${escapeAttr(settings.alt || 'image')}" loading="${escapeAttr(settings.loading || 'lazy')}" />`;
 
     case 'link':
-      return `<a ${classAttr} href="${escapeAttr(settings.href || '#')}" target="${escapeAttr(settings.target || '_self')}">
-  ${renderAnimatedContent(params, settings.text || content, 'Link')}
-</a>`;
+      return `<a ${classAttr} href="${escapeAttr(settings.href || '#')}" target="${escapeAttr(settings.target || '_self')}"><span class="animadiv-content">${renderInlineContent(params, settings.text || content, 'Link')}</span></a>`;
 
     case 'checkbox':
       return `<label ${classAttr}>
