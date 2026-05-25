@@ -179,16 +179,6 @@ const GeneratorPage = () => {
     setActiveMotionState(state);
   };
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const preferredState = params.initialPreviewState || getPreferredPreviewState(params);
-      setActivePreviewState(preferredState);
-      setActiveMotionState(preferredState);
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [params]);
-
   // CSS генератор тимчасово може видавати помилки, поки ми його не оновимо, це ок
   const fullCss = useMemo(() => generateFullCSS(params), [params]);
 

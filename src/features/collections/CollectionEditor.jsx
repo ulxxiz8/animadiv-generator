@@ -67,6 +67,7 @@ const CollectionEditor = ({
   isPlaying,
   refreshKey,
   onPlay,
+  minimalPreview = false,
 }) => {
   const { t } = useTranslation();
   const [activeElementId, setActiveElementId] = useState(null);
@@ -260,6 +261,43 @@ const CollectionEditor = ({
     }
   };
 
+  const previewCanvas = (
+    <div
+      onClick={() => setActiveElementId(null)}
+      style={{
+        flex: 1,
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '40px',
+        background: 'var(--bg-color)',
+        minHeight: 0,
+        boxSizing: 'border-box',
+      }}
+    >
+      {renderLayout()}
+    </div>
+  );
+
+  if (minimalPreview) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          minHeight: 0,
+          display: 'flex',
+          background: 'var(--bg-color)',
+        }}
+      >
+        <style>{dynamicStyles}</style>
+        {previewCanvas}
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -270,7 +308,6 @@ const CollectionEditor = ({
         minHeight: 0,
       }}
     >
-      {/* 2. ІН'ЄКЦІЯ СТИЛІВ */}
       <style>{dynamicStyles}</style>
 
       <div
@@ -307,20 +344,7 @@ const CollectionEditor = ({
         >{t('common.close')}</button>
       </div>
 
-      <div
-        onClick={() => setActiveElementId(null)}
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '40px',
-          background: 'var(--bg-color)',
-          minHeight: 0,
-        }}
-      >
-        {renderLayout()}
-      </div>
+      {previewCanvas}
     </div>
   );
 };

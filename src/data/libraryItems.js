@@ -608,7 +608,7 @@ const rawLibraryItems = [
     name: 'Word Fade Title',
     content: 'Design with motion',
     collection: 'Typography',
-    motionStyle: 'Load: Fade By Word',
+    motionStyle: 'Load: Word Fade',
     tags: ['typography', 'load', 'word'],
     styles: { color: '#4F46E5' },
     settings: { tag: 'h2', fontSize: 34, fontWeight: 900 },

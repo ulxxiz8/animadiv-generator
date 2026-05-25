@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import DeveloperHandoffModal from '../../components/DeveloperHandoffModal';
-import { createDeveloperHandoffFromBundle } from '../../utils/developerHandoff';
 import { useTranslation } from '../../i18n/useTranslation';
 
 const TABS = [
@@ -12,12 +11,11 @@ const copyText = async (value) => {
   await navigator.clipboard.writeText(value);
 };
 
-const CollectionCodeOutput = ({ bundle, title }) => {
+const CollectionCodeOutput = ({ bundle, title, previewMeta }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('html');
   const [copied, setCopied] = useState(false);
   const [isHandoffOpen, setIsHandoffOpen] = useState(false);
-  const [handoffId, setHandoffId] = useState('');
 
   const renderedCode = bundle?.[activeTab] || '';
   const codeLines = useMemo(() => renderedCode.split('\n'), [renderedCode]);
@@ -192,8 +190,6 @@ const CollectionCodeOutput = ({ bundle, title }) => {
         <button
           type="button"
           onClick={() => {
-            const handoff = createDeveloperHandoffFromBundle({ bundle, title, previewState: 'load' });
-            setHandoffId(handoff.id);
             setIsHandoffOpen(true);
           }}
           style={{
@@ -218,7 +214,10 @@ const CollectionCodeOutput = ({ bundle, title }) => {
       <DeveloperHandoffModal
         open={isHandoffOpen}
         onClose={() => setIsHandoffOpen(false)}
-        handoffId={handoffId}
+        bundle={bundle}
+        title={title}
+        previewState={previewMeta?.previewState || 'load'}
+        collectionPreview={previewMeta}
       />
     </div>
   );
